@@ -39,6 +39,7 @@ const RegisterForm: React.FC = () => {
         username: formData.username,
         email: formData.email,
         password: formData.password,
+        confirmPassword: formData.confirmPassword,
       });
       setSuccess('Conta criada com sucesso! Você já pode fazer login na outra aba.');
       // Clear the form on successful registration
