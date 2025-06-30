@@ -17,9 +17,9 @@ const PORT = process.env.PORT || 3001;
 
 // Configure Cross-Origin Resource Sharing (CORS)
 // 'credentials: true' is essential for allowing the browser to send cookies
-// across different origins (e.g., from frontend at port 5173 to backend at 3001).
+// across different origins (e.g., from frontend at port 5174 to backend at 3001).
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
+  origin: process.env.FRONTEND_URL || 'http://localhost:5174',
   credentials: true,
 }));
 
