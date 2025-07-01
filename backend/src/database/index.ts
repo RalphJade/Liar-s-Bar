@@ -1,8 +1,15 @@
 // src/database/index.ts
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
+import Redis from "ioredis";
 
 dotenv.config();
+
+// Create a new connection to the Redis database.
+const redisClient = new Redis({
+  port: 6379,
+  host: process.env.DB_HOST,
+})
 
 // Create a new connection pool to the PostgreSQL database.
 // The pool manages multiple client connections for better performance.
