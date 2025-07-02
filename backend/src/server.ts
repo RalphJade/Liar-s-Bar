@@ -5,6 +5,7 @@ import cookieParser from 'cookie-parser'; // Imports middleware to parse cookies
 
 import authRouter from './routes/auth.routes';
 import userRouter from './routes/user.routes';
+import lobbyRouter from './routes/lobby.routes'
 import { initializeDatabase } from './database';
 
 dotenv.config();
@@ -36,6 +37,8 @@ app.use(express.json());
 app.use('/api/auth', authRouter);
 // Mount the user-related routes under the /api/users path.
 app.use('/api/users', userRouter);
+// Mount the lobby-related routes unde the /api/lobby path
+app.use('/api/lobby', lobbyRouter);
 
 // A simple health check endpoint to verify that the server is running.
 app.get('/api/health', (req, res) => {
@@ -49,5 +52,6 @@ app.get('/api/health', (req, res) => {
 // Also, initialize the database schema upon server startup.
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log(`🚀 Redis is running on http://localhost:${process.env.REDIS_PORT}`)
   initializeDatabase();
 });

@@ -7,8 +7,8 @@ dotenv.config();
 
 // Create a new connection to the Redis database.
 const redisClient = new Redis({
-  port: 6379,
-  host: process.env.DB_HOST,
+  host: process.env.REDIS_HOST,
+  port: Number(process.env.REDIS_PORT),
 })
 
 // Create a new connection pool to the PostgreSQL database.
@@ -23,7 +23,10 @@ const pool = new Pool({
 
 // Function to create the users table if it doesn't exist.
 // This is useful for development but for production, a migration tool is recommended.
+//It also creates the Redis client
 export const initializeDatabase = async () => {
+  await redisClient.ping();
+
   const client = await pool.connect();
   try {
     await client.query('CREATE EXTENSION IF NOT EXISTS "pgcrypto";');
@@ -44,4 +47,4 @@ export const initializeDatabase = async () => {
   }
 };
 
-export default pool;
+export {pool, redisClient};

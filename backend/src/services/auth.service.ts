@@ -1,4 +1,4 @@
-import pool from '../database';
+import {pool} from '../database';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { RegisterUserInput, LoginUserInput } from '../models/user.model';
