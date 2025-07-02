@@ -18,7 +18,7 @@ export const CreateRoomSchema = z.object({
 );
 
 export const EnterRoomSchema = z.object({
-  roomName: z.string().min(3, 'O nome da sala deve ter ao menos 3 caracteres'),
+  roomCode: z.string().length(5, 'O código da sala deve ter ao menos 5 caracteres'),
   password: z.string().optional(),
 });
 
