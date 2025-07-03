@@ -1,12 +1,9 @@
 import axios from 'axios';
 
-// Creates a pre-configured instance of the Axios client.
 const api = axios.create({
-  // The base URL for all API requests, pointing to our backend server.
+  // Sets the base URL for all API requests to our backend server.
   baseURL: 'http://localhost:3001/api',
-  
-  // This is CRITICAL for cookie-based authentication. It instructs Axios
-  // to include credentials (like cookies) in cross-origin requests.
+  //This instructs Axios to include credentials (like cookies) in all cross-origin requests, allowing the backend to read the auth token
   withCredentials: true,
 });
 
