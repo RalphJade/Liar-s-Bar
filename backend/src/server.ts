@@ -2,11 +2,20 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser'; // Imports middleware to parse cookies from incoming requests
+import url from "url"
+import WebSocket from 'ws';
+import http from "http"
+import stream from "stream"
+import cookie from "cookie"
 
 import authRouter from './routes/auth.routes';
 import userRouter from './routes/user.routes';
 import lobbyRouter from './routes/lobby.routes'
 import { initializeDatabase } from './database';
+import { verifyTokenForWebSocket } from './middlewares/auth.middleware';
+import { CustomWebSocket } from './services/game.service';
+import { initializeGameService } from './services/game.service';
+import { log } from './utils/logger';
 
 dotenv.config();
 
@@ -47,6 +56,54 @@ app.get('/api/health', (req, res) => {
 
 
 // --- Server Initialization ---
+
+const server = http.createServer(app);
+const wss = new WebSocket.Server({ noServer: true });
+
+initializeGameService(wss);
+
+server.on(
+  "upgrade",
+  async (
+    request: http.IncomingMessage,
+    socket: stream.Duplex,
+    head: Buffer
+  ) => {
+    const pathname = request.url ? url.parse(request.url).pathname : "";
+    const wsPathRegex = /^\/ws\/([a-zA-Z0-9]+)$/;
+    const match = pathname?.match(wsPathRegex);
+
+    if (!match) {
+      socket.destroy();
+      return;
+    }
+    const roomCode = match[1];
+
+    const cookies = cookie.parse(request.headers.cookie || "");
+    const tokenFromCookie = cookies.token;
+
+    const clientData = await verifyTokenForWebSocket(tokenFromCookie);
+
+    if (!clientData) {
+      log("Falha na autenticação WebSocket: Token inválido ou ausente.");
+      socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
+      socket.destroy();
+      return;
+    }
+
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      // TypeScript precisa de um casting aqui para adicionar propriedades customizadas
+      const customWs = ws as CustomWebSocket;
+      customWs.clientId = clientData.id;
+      customWs.clientUsername = clientData.username;
+
+      log("Handshake WebSocket bem-sucedido. Cliente autenticado.", {
+        ws: customWs,
+      });
+      wss.emit("connection", customWs, request, roomCode);
+    });
+  }
+);
 
 // Start the server and listen for incoming requests on the specified port.
 // Also, initialize the database schema upon server startup.
