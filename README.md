@@ -1,10 +1,8 @@
-# Application Name
-
-<!-- A badge for the license. You can add more later (e.g., build status). -->
+# Liar`s Bar
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
-A robust and scalable full-stack authentication system built with a modern, decoupled architecture. This project serves as a foundational template for secure web applications, featuring a Node.js backend and a React frontend.
+A robust and scalable full-stack authentication system built with a modern, decoupled architecture. This project serves as a foundational template for secure web applications, featuring a Node.js backend and a lightweight, framework-less frontend built with **Vanilla TypeScript and Vite**.
 
 ## ✨ Features
 
@@ -12,7 +10,7 @@ A robust and scalable full-stack authentication system built with a modern, deco
 - **JWT-based Security**: Session management using secure, `httpOnly` cookies containing JSON Web Tokens (JWT).
 - **Password Hashing**: User passwords are salted and hashed using `bcryptjs`, never stored in plaintext.
 - **Decoupled Architecture**: A clear separation between the backend REST API and the frontend client application.
-- **Responsive UI**: A clean, responsive interface built with React and styled with TailwindCSS, providing a seamless experience on desktop, tablet, and mobile.
+- **Lightweight Frontend**: A clean, responsive Single-Page Application (SPA) built with **vanilla TypeScript** and styled with plain CSS, all powered by the **Vite** build tool for an incredible development experience.
 - **Robust Validation**: Strong, schema-based input validation on the backend using `Zod`.
 
 ## 🛠️ Tech Stack
@@ -20,7 +18,7 @@ A robust and scalable full-stack authentication system built with a modern, deco
 | Area         | Technology                                                          |
 | :----------- | :------------------------------------------------------------------ |
 | **Backend**  | Node.js, Express, TypeScript, PostgreSQL, JWT, Bcrypt.js, Zod, CORS |
-| **Frontend** | React, Vite, TypeScript, TailwindCSS, Axios, React Router           |
+| **Frontend** | **Vite, Vanilla TypeScript, Axios, CSS Custom Properties**          |
 | **Database** | PostgreSQL                                                          |
 | **DevOps**   | Git, GitFlow (feature branches), Conventional Commits               |
 
@@ -28,17 +26,16 @@ A robust and scalable full-stack authentication system built with a modern, deco
 
 This project is structured as a monorepo, containing the backend and frontend in separate packages for clear separation of concerns.
 Use code with caution.
-Markdown
+
 /
 ├── backend/ # Node.js REST API
 │ ├── src/
 │ └── ...
-├── frontend/ # React Client Application
+├── frontend/ # Vanilla TS + Vite Client Application
 │ ├── src/
 │ └── ...
 ├── .gitignore
 └── README.md
-Generated code
 
 ## 🚀 Getting Started
 
@@ -62,13 +59,13 @@ First, clone this repository to your local machine.
 ```bash
 git clone <your-github-repo-url>
 cd <project-folder-name>
-Use code with caution.
+
 2. Configure the Database (PostgreSQL)
 You need to create a dedicated user and database for the application.
 Connect to PostgreSQL as a superuser (e.g., postgres).
 Generated bash
 psql -U postgres
-Use code with caution.
+
 Bash
 Run the following SQL commands:
 Generated sql
@@ -89,16 +86,15 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 
 -- Exit psql
 \q
-Use code with caution.
+
 SQL
 3. Configure Environment Variables
 The backend requires a .env file with credentials and secrets.
-Navigate to the backend directory.
-Create a .env file by copying the example file.
-Generated bash
+Navigate to the backend directory and create a .env file by copying the example file.
+
 cd backend
 cp .env.example .env
-Use code with caution.
+
 Bash
 Open the newly created backend/.env file and fill in the required values.
 Generated env
@@ -114,15 +110,16 @@ DB_NAME=auth_app
 
 # JWT Secret - Use a long, random, and strong string for this!
 JWT_SECRET=a_very_strong_and_long_secret_key_for_jwt_that_is_not_this_one
+JWT_EXPIRES_IN=1d
 
 # Frontend URL (for CORS)
 FRONTEND_URL=http://localhost:5174
-Use code with caution.
+
 Env
 🏃 Running the Application
 You'll need two separate terminal windows to run the backend and frontend concurrently.
 Terminal 1: Start the Backend Server
-Generated bash
+
 # Navigate to the backend directory
 cd backend
 
@@ -131,23 +128,23 @@ npm install
 
 # Start the development server
 npm run dev
-Use code with caution.
+
 Bash
 The backend API will now be running on http://localhost:3001. The server will also attempt to create the users table in the database if it doesn't exist.
 Terminal 2: Start the Frontend Client
-Generated bash
-# Navigate to the frontend directory
+
+# Navigate to the frontend directory (from the root folder)
 cd frontend
 
 # Install dependencies
 npm install
 
-# Start the development server
+# Start the Vite development server
 npm run dev
-Use code with caution.
-Bash
-The React application will now be running on http://localhost:5174 (or the next available port).
+
+The frontend application will now be running on http://localhost:5174.
 You can now open your browser and navigate to http://localhost:5174 to use the application!
+
 📄 License
 This project is licensed under the MIT License. See the LICENSE file for details.
 ```
