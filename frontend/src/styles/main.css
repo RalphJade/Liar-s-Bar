@@ -27,6 +27,17 @@
   --color-feedback-success-bg: #dcfce7;
   --color-feedback-success-text: #166534;
 
+  /* Color Palette (Dark Theme - for Lobby) */
+  --dark-bg: #111827;      /* bg-gray-900 */
+  --dark-card: #1f2937;    /* bg-gray-800 */
+  --dark-input: #374151;   /* bg-gray-700 */
+  --dark-text: #f3f4f6;    /* text-white / gray-100 */
+  --dark-border: #4b5563;  /* border-gray-700 */
+  --dark-yellow: #f59e0b;  /* amber-500 */
+  --dark-yellow-hover: #fbbF24; /* amber-400 */
+  --dark-blue: #3b82f6;    /* blue-500 */
+  --dark-blue-hover: #60a5fa; /* blue-400 */
+
   /* Typography & Spacing */
   --font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -41,12 +52,25 @@
  * ----------------------------------------------------------------
  */
 
+html {
+  box-sizing: border-box;
+}
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
 /* Basic CSS reset for a consistent base across all browsers. */
 body {
   margin: 0;
   font-family: var(--font-family);
   background-color: var(--color-bg-light);
   color: var(--color-text-dark);
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100%; /* Herda a altura do body (que é 100vh no lobby) */
 }
 
 /* A general-purpose container for centering page content vertically and horizontally. */
@@ -57,6 +81,14 @@ body {
   justify-content: center;
   min-height: 100vh;
   padding: 1rem;
+}
+
+/**
+ * Utility class to hide elements completely.
+ * This replaces the functionality of Tailwind's 'hidden' class.
+ */
+.hidden {
+  display: none !important;
 }
 
 /**
@@ -233,4 +265,194 @@ body {
 }
 .homepage-logout-button {
   margin-top: 2rem;
+}
+
+/**
+ * ================================================================
+ * LOBBY PAGE STYLES - NOVO
+ * ================================================================
+ */
+
+/* Aplica o tema escuro quando o corpo tem a classe 'lobby-theme' */
+body.lobby-theme {
+  margin: 0;
+  background-color: var(--dark-bg);
+  color: var(--dark-text);
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.lobby-navbar {
+  background-color: var(--dark-card);
+  padding: 1rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-shrink: 0; /* Previne que a navbar encolha */
+}
+.lobby-navbar h1 {
+  font-size: 1.5rem;
+  font-weight: bold;
+}
+.lobby-navbar .user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.lobby-navbar .button {
+  width: auto; /* Botões na navbar não ocupam 100% da largura */
+  padding: 0.5rem 1rem;
+}
+
+.lobby-main {
+  flex-grow: 1; /* Ocupa todo o espaço vertical restante */
+  padding: 1rem;
+  display: flex;
+  gap: 1rem;
+  overflow: hidden; /* Previne scroll no nível do main */
+}
+
+/* Colunas do Layout */
+.lobby-main-column {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  overflow: hidden; 
+}
+.lobby-side-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Card adaptado para o tema escuro do lobby */
+.lobby-main .card {
+  background-color: var(--dark-card);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  max-width: none; /* Remove a largura máxima do card de autenticação */
+}
+
+.lobby-main .card-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 10rem;
+  align-items: center;
+  margin-bottom: 1rem;
+  border-bottom: 1px solid var(--dark-border);
+  padding-bottom: 1rem;
+}
+.lobby-main .card-title {
+  font-size: 2rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.lobby-header-controls {
+  display: flex;
+  justify-content: flex-end; /* Alinha o conteúdo (input e botão) à direita */
+  align-items: center;
+  gap: 0.75rem; /* Espaço entre o input e o botão */
+  flex-grow: 1; /* FAZ A MÁGICA: Cresce para ocupar todo o espaço sobrando */
+}
+
+.lobby-header-controls .button {
+  width: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* Input de busca e botões no cabeçalho */
+.lobby-main .form-input {
+  background-color: var(--dark-input);
+  border-color: var(--dark-border);
+  color: var(--dark-text);
+}
+.lobby-main .form-input:focus {
+  border-color: var(--dark-yellow);
+  box-shadow: none;
+}
+.lobby-main .button {
+  width: auto;
+}
+.button-create {
+  background-color: var(--dark-yellow);
+  color: var(--dark-bg);
+}
+.lobby-main .button-create:hover {
+  background-color: var(--dark-yellow-hover);
+}
+.lobby-main .button-chat {
+  background-color: var(--dark-blue);
+}
+.lobby-main .button-chat:hover {
+  background-color: var(--dark-blue-hover);
+}
+.online-user-item {
+  background-color: var(--dark-input);
+  padding: 0.5rem 1rem;
+  border-radius: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.scrollable-list {
+  overflow-y: auto; /* Permite que o conteúdo interno tenha scroll */
+  padding-right: 0.5rem;
+}
+
+#lobbyContainer {
+  flex: 3; /* Pede para ocupar 2 partes do espaço vertical disponível */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Garante que o conteúdo não vaze */
+}
+
+#chatContainer {
+  flex: 2; /* Pede para ocupar 1 parte do espaço vertical disponível */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+#onlineUserList {
+  flex-grow: 1; /* Faz a lista de usuários ocupar o espaço restante na sua coluna */
+}
+
+#chatMessages {
+  flex-grow: 1; /* Faz a área de mensagens ocupar o espaço restante no seu card */
+  margin-bottom: 0.5rem;
+}
+
+#chatForm {
+  display: flex;
+  gap: 0.5rem;
+  flex-shrink: 0;
+  margin: 0;
+}
+
+/* Estilos para o Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay .card {
+  background-color: var(--dark-card);
+  max-width: 400px;
+}
+.modal-overlay .form-title { color: var(--dark-text); }
+.modal-overlay .form-label { color: var(--dark-text); }
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
 }
