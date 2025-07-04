@@ -1,21 +1,21 @@
-import express from 'express';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import cookieParser from 'cookie-parser'; // Imports middleware to parse cookies from incoming requests
-import url from "url"
-import WebSocket from 'ws';
-import http from "http"
-import stream from "stream"
-import cookie from "cookie"
+import express from "express";
+import cors from "cors";
+import dotenv from "dotenv";
+import cookieParser from "cookie-parser"; // Imports middleware to parse cookies from incoming requests
+import { parse } from "url";
+import WebSocket from "ws";
+import http from "http";
+import stream from "stream";
+import * as cookie from "cookie";
 
-import authRouter from './routes/auth.routes';
-import userRouter from './routes/user.routes';
-import lobbyRouter from './routes/lobby.routes'
-import { initializeDatabase } from './database';
-import { verifyTokenForWebSocket } from './middlewares/auth.middleware';
-import { CustomWebSocket } from './services/game.service';
-import { initializeGameService } from './services/game.service';
-import { log } from './utils/logger';
+import authRouter from "./routes/auth.routes";
+import userRouter from "./routes/user.routes";
+import lobbyRouter from "./routes/lobby.routes";
+import { initializeDatabase } from "./database";
+import { verifyTokenForWebSocket } from "./middlewares/auth.middleware";
+import { CustomWebSocket } from "./services/game.service";
+import { initializeGameService } from "./services/game.service";
+import { log } from "./utils/logger";
 
 dotenv.config();
 
@@ -28,10 +28,12 @@ const PORT = process.env.PORT || 3001;
 // Configure Cross-Origin Resource Sharing (CORS)
 // 'credentials: true' is essential for allowing the browser to send cookies
 // across different origins (e.g., from frontend at port 5174 to backend at 3001).
-app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:5174',
-  credentials: true,
-}));
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "http://localhost:5174",
+    credentials: true,
+  })
+);
 
 // Add the cookie-parser middleware to parse cookies attached to the client request object.
 app.use(cookieParser());
@@ -39,21 +41,19 @@ app.use(cookieParser());
 // Add middleware to parse incoming JSON requests.
 app.use(express.json());
 
-
 // --- API Routes ---
 
 // Mount the authentication routes under the /api/auth path.
-app.use('/api/auth', authRouter);
+app.use("/api/auth", authRouter);
 // Mount the user-related routes under the /api/users path.
-app.use('/api/users', userRouter);
+app.use("/api/users", userRouter);
 // Mount the lobby-related routes unde the /api/lobby path
-app.use('/api/lobby', lobbyRouter);
+app.use("/api/lobby", lobbyRouter);
 
 // A simple health check endpoint to verify that the server is running.
-app.get('/api/health', (req, res) => {
-  res.status(200).json({ status: 'UP' });
+app.get("/api/health", (req, res) => {
+  res.status(200).json({ status: "UP" });
 });
-
 
 // --- Server Initialization ---
 
@@ -69,9 +69,12 @@ server.on(
     socket: stream.Duplex,
     head: Buffer
   ) => {
-    const pathname = request.url ? url.parse(request.url).pathname : "";
+    const pathname = request.url ? parse(request.url).pathname : "";
+
     const wsPathRegex = /^\/ws\/([a-zA-Z0-9]+)$/;
+
     const match = pathname?.match(wsPathRegex);
+
 
     if (!match) {
       socket.destroy();
@@ -79,11 +82,16 @@ server.on(
     }
     const roomCode = match[1];
 
+    console.log("Raw cookie header:", request.headers.cookie); // LOG 1: O que vem no header
     const cookies = cookie.parse(request.headers.cookie || "");
+    console.log("Parsed cookies object:", cookies); // LOG 2: O que o cookie.parse retorna
     const tokenFromCookie = cookies.token;
+    console.log("Token extracted from cookie:", tokenFromCookie); // LOG 3: O token final
 
-    const clientData = await verifyTokenForWebSocket(tokenFromCookie);
+    const clientData = verifyTokenForWebSocket(tokenFromCookie);
 
+
+    console.log("Dados do cliente:", clientData);
     if (!clientData) {
       log("Falha na autenticação WebSocket: Token inválido ou ausente.");
       socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
@@ -107,8 +115,10 @@ server.on(
 
 // Start the server and listen for incoming requests on the specified port.
 // Also, initialize the database schema upon server startup.
-app.listen(PORT, () => {
+server.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`🚀 Redis is running on http://localhost:${process.env.REDIS_PORT}`)
+  console.log(
+    `🚀 Redis is running on http://localhost:${process.env.REDIS_PORT}`
+  );
   initializeDatabase();
 });

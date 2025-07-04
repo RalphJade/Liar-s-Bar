@@ -52,11 +52,12 @@ export const verifyTokenForWebSocket = (
   token: string | undefined
 ): UserPayload | null => {
   if (!token) return null;
+  console.log("Verifying token for WebSocket:", token);
 
-  try {
+    console.log()
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as UserPayload;
+
+    console.log("Decoded token for WebSocket:", decoded);
     return decoded;
-  } catch {
-    return null;
-  }
+
 };
