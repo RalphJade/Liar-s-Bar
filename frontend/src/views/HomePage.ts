@@ -1,33 +1,42 @@
 import { getUser, logout } from '../auth/auth.ts';
+import { renderHeader } from './components/Header.ts';
 
 /**
  * Renders the protected home page for an authenticated user.
- * It displays a welcome message and provides a logout functionality.
+ * This page displays a dark, atmospheric welcome message that reflects
+ * the dangerous and mysterious nature of Liar's Bar, where players
+ * engage in high-stakes card games with deadly consequences.
  * @param element The root HTML element to render the page content into.
  */
 export const renderHomePage = (element: HTMLElement) => {
-  // Retrieve the current user's data from the global auth state.
   const user = getUser();
 
-  // A guard clause to prevent rendering if the user data is somehow not available.
   if (!user) {
     element.innerHTML = `<p>Error: User not found.</p>`;
     return;
   }
-
-  // Set the static HTML content for the home page.
+  
+  // Structure the page with header and main content area
   element.innerHTML = `
-    <div class="page-container">
+    <div id="header-container"></div>
+    <main class="page-container">
       <div class="card homepage-card">
-        <h1 class="homepage-title">Login Successful!</h1>
+        <h1 class="homepage-title">Welcome to the Bar</h1>
         <p class="homepage-text">
-          Your username is <span class="username">${user.username}</span>.
+          The cards are dealt, the revolvers are loaded... Are you ready to test your luck and cunning, <span class="username">${user.username}</span>?
         </p>
-        <button id="logout-btn" class="button button-danger homepage-logout-button">Logout</button>
+        <p class="homepage-text" style="margin-top: 1.5rem; font-size: 1rem; color: var(--color-text-medium); font-style: italic;">
+          In this establishment, every hand could be your last. Choose your lies carefully, trust no one, and may fortune favor the bold.
+        </p>
+        <button id="logout-btn" class="button button-danger homepage-logout-button">Leave the Table</button>
       </div>
-    </div>
+    </main>
   `;
 
-  // Attach a click event listener to the logout button after the HTML has been rendered.
+  // Render the header component into its dedicated container
+  const headerContainer = document.getElementById('header-container') as HTMLElement;
+  renderHeader(headerContainer);
+
+  // Attach click event listener to the logout button
   document.getElementById('logout-btn')?.addEventListener('click', () => logout());
 };
