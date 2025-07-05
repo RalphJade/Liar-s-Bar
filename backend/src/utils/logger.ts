@@ -2,7 +2,7 @@ import { CustomWebSocket } from "../services/game.service";
 
 interface LogContext {
   ws?: CustomWebSocket;
-  clientId?: number;
+  clientId?: string;
   clientUsername?: string;
   data?: any;
 }

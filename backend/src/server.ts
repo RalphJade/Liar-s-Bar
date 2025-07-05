@@ -82,16 +82,12 @@ server.on(
     }
     const roomCode = match[1];
 
-    console.log("Raw cookie header:", request.headers.cookie); // LOG 1: O que vem no header
     const cookies = cookie.parse(request.headers.cookie || "");
-    console.log("Parsed cookies object:", cookies); // LOG 2: O que o cookie.parse retorna
     const tokenFromCookie = cookies.token;
-    console.log("Token extracted from cookie:", tokenFromCookie); // LOG 3: O token final
 
     const clientData = verifyTokenForWebSocket(tokenFromCookie);
 
 
-    console.log("Dados do cliente:", clientData);
     if (!clientData) {
       log("Falha na autenticação WebSocket: Token inválido ou ausente.");
       socket.write("HTTP/1.1 401 Unauthorized\r\n\r\n");
