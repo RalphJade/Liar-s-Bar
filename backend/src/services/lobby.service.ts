@@ -1,60 +1,102 @@
-import { redisClient } from "../database";
-import { generateCodeWithFaker } from "../utils/room.util";
-import { CreateRoomInput, EnterRoomInput } from "../models/lobby.model";
+import { WebSocket } from 'ws';
 
-export const createRoom = async (input: CreateRoomInput) => {
-  const { roomName, password } = input;
+// Anexa informações do usuário à instância do WebSocket para fácil acesso.
+interface AuthenticatedWebSocket extends WebSocket {
+  userId: string;
+  username: string;
+}
 
-  // Search for all the values of the room
-  const allRooms = await redisClient.hvals("rooms");
-  const parsedRooms = allRooms.map((room) => JSON.parse(room));
-  const usedNames = new Set(parsedRooms.map((r) => r.roomName));
-  const usedCodes = new Set(parsedRooms.map((r) => r.roomCode));
+// Map para manter o estado dos clientes conectados no lobby.
+// A chave é o userId, e o valor é a própria conexão WebSocket.
+const connectedClients = new Map<string, AuthenticatedWebSocket>();
 
-  if (usedNames.has(roomName)) {
-    throw new Error("Já existe uma sala com esse nome");
-  }
+/**
+ * Adiciona um novo cliente à lista de conectados e notifica a todos.
+ */
+export function handleNewConnection(ws: AuthenticatedWebSocket) {
+  const { userId, username } = ws;
+  
+  // Adiciona o cliente ao nosso "banco de dados em memória" de usuários online.
+  connectedClients.set(userId, ws);
+  console.log(`[Lobby] Usuário conectado: ${username} (ID: ${userId}). Total: ${connectedClients.size}`);
 
-  //Generate an unique code
-  let roomCode = "";
-  do {
-    roomCode = generateCodeWithFaker(); // Ex: "A3B7F"
-  } while (usedCodes.has(roomCode));
+  broadcastOnlineUserList();
+}
 
-  // Create room object
-  const roomData = {
-    roomName,
-    password: password || null,
-    roomCode,
-  };
+/**
+ * Remove um cliente desconectado e notifica a todos.
+ */
+export function handleDisconnect(ws: AuthenticatedWebSocket) {
+  const { userId, username } = ws;
 
-  // Save the room info on Redis
-  await redisClient.hset("rooms", roomName, JSON.stringify(roomData));
+  connectedClients.delete(userId);
+  console.log(`[Lobby] Usuário desconectado: ${username}. Total: ${connectedClients.size}`);
+  
+  broadcastOnlineUserList();
+}
 
-  return roomData;
-};
+/**
+ * Processa uma mensagem de chat recebida de um cliente e a retransmite.
+ */
+export function handleChatMessage(sender: AuthenticatedWebSocket, message: any) {
+    if (typeof message.text !== 'string' || message.text.trim() === '') {
+        return; // Ignora mensagens vazias ou mal formatadas
+    }
 
-export const enterRoom = async (input: EnterRoomInput) => {
-  const { roomCode, password } = input;
+    const chatMessage = {
+        type: 'NEW_CHAT_MESSAGE',
+        payload: {
+            userId: sender.userId,
+            username: sender.username,
+            text: message.text.trim(),
+            timestamp: new Date().toISOString()
+        }
+    };
+    broadcast(chatMessage);
+}
 
-  const allRooms = await redisClient.hvals("rooms");
-  const parsedRooms = allRooms.map((room) => JSON.parse(room));
+/**
+ * Monta a lista de usuários online e a envia para todos os clientes.
+ */
+function broadcastOnlineUserList() {
+    const users = Array.from(connectedClients.values()).map(client => ({
+        userId: client.userId,
+        username: client.username
+    }));
 
-  const room = parsedRooms.find((room) => room.roomCode === roomCode);
+    const message = {
+        type: 'ONLINE_USER_LIST', // Usa sempre o mesmo tipo de mensagem para a lista
+        payload: { users }
+    };
 
-  if (!room) {
-    throw new Error("Sala não encontrada")
-  }
+    broadcast(message);
+}
 
-  if (room.password){
-    if (!password) {
-      throw new Error("Esta sala requer uma senha")
+/**
+ * Envia uma mensagem para TODOS os clientes conectados no lobby.
+ */
+function broadcast(message: object) {
+  const serializedMessage = JSON.stringify(message);
+  for (const client of connectedClients.values()) {
+    if (client.readyState === WebSocket.OPEN) {
+      client.send(serializedMessage);
     }
   }
+}
 
-  if (room.password !== password) {
-    throw new Error("Senha incorreta")
-  }
+/**
+ * Envia a lista atual de usuários online para um cliente específico.
+ */
+function sendOnlineUserList(ws: AuthenticatedWebSocket) {
+    const users = Array.from(connectedClients.values()).map(client => ({
+        userId: client.userId,
+        username: client.username
+    }));
 
-  return room
-};
+    const message = {
+        type: 'ONLINE_USER_LIST',
+        payload: { users }
+    };
+
+    ws.send(JSON.stringify(message));
+}

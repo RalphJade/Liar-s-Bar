@@ -1,26 +1,17 @@
-import express from "express";
-import cors from "cors";
-import dotenv from "dotenv";
-import cookieParser from "cookie-parser"; // Imports middleware to parse cookies from incoming requests
-import { parse } from "url";
-import WebSocket from "ws";
-import http from "http";
-import stream from "stream";
-import * as cookie from "cookie";
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import cookieParser from 'cookie-parser'; // Imports middleware to parse cookies from incoming requests
 
-import authRouter from "./routes/auth.routes";
-import userRouter from "./routes/user.routes";
-import lobbyRouter from "./routes/lobby.routes";
-import { initializeDatabase } from "./database";
-import { verifyTokenForWebSocket } from "./middlewares/auth.middleware";
-import { CustomWebSocket } from "./services/game.service";
-import { initializeGameService } from "./services/game.service";
-import { log } from "./utils/logger";
+import authRouter from './routes/auth.routes';
+import userRouter from './routes/user.routes';
+import { initializeDatabase } from './database';
 
 dotenv.config();
 
 // Initialize the Express application
 const app = express();
+const server = http.createServer(app); // Crie o servidor HTTP
 const PORT = process.env.PORT || 3001;
 
 // --- Middlewares ---
@@ -54,6 +45,7 @@ app.use("/api/lobby", lobbyRouter);
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "UP" });
 });
+
 
 // --- Server Initialization ---
 
@@ -111,10 +103,7 @@ server.on(
 
 // Start the server and listen for incoming requests on the specified port.
 // Also, initialize the database schema upon server startup.
-server.listen(PORT, () => {
+app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(
-    `🚀 Redis is running on http://localhost:${process.env.REDIS_PORT}`
-  );
   initializeDatabase();
 });
