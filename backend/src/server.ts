@@ -2,9 +2,12 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import cookieParser from 'cookie-parser'; // Imports middleware to parse cookies from incoming requests
+
 import http from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import jwt from 'jsonwebtoken';
+import path from 'path'; // Importe o módulo 'path' do Node.js
+
 
 import authRouter from './routes/auth.routes';
 import userRouter from './routes/user.routes';
@@ -33,6 +36,11 @@ app.use(cookieParser());
 
 // Add middleware to parse incoming JSON requests.
 app.use(express.json());
+
+// --- Static File Serving ---
+// Servir arquivos estáticos da pasta 'uploads'. Qualquer requisição para /uploads/...
+// será servida a partir da pasta 'backend/uploads'.
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 
 
 // --- API Routes ---

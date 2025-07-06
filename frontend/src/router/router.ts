@@ -2,6 +2,7 @@ import { renderAuthPage } from '../views/AuthPage.ts';
 import { renderLobbyPage } from '../views/LobbyPage.ts';
 // import { renderHomePage } from '../views/HomePage.ts';
 import { renderProfilePage } from '../views/ProfilePage.ts'; // Import the new page
+import { renderGameBoardPage } from '../views/GameBoardPage.ts'; // Import the game board page
 import { isLoggedIn, isLoading as isAuthLoading } from '../auth/auth.ts';
 
 /**
@@ -13,6 +14,7 @@ const routes = {
   '/': { view: renderAuthPage, protected: false },
   '/home': { view: renderLobbyPage, protected: true },
   '/profile': { view: renderProfilePage, protected: true }, // Add the new profile route
+  '/gameboard': { view: renderGameBoardPage, protected: true }, // Add the new game route
 };
 
 // A utility type to ensure that only valid route paths are used throughout the router.

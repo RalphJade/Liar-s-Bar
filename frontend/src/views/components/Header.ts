@@ -12,6 +12,14 @@ export const renderHeader = (element: HTMLElement) => {
   const user = getUser();
   if (!user) return; // Do not render the header if the user is not logged in.
 
+  // Dynamically create the avatar element based on whether an avatar_url exists
+  const avatarElement = user.avatar_url
+    ? `<img src="http://localhost:3001${user.avatar_url}" alt="${user.username}'s avatar" class="avatar-icon" style="width: 28px; height: 28px; object-fit: cover; padding: 0;"/>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="avatar-icon">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>`;
+
   element.innerHTML = `
     <header class="app-header">
       <div class="header-left">
@@ -28,8 +36,8 @@ export const renderHeader = (element: HTMLElement) => {
         <button id="rules-btn" class="button-rules">Game Rules</button>
       </div>
       <div class="header-right">
-        <div id="user-menu-trigger" class="user-info">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="avatar-icon"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+        <div id="user-profile-link" class="user-info">
+          ${avatarElement}
           <span class="username">${user.username}</span>
         </div>
         <div id="user-dropdown" class="user-dropdown-menu hidden">
