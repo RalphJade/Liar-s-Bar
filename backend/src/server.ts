@@ -11,6 +11,7 @@ import path from 'path'; // Importe o módulo 'path' do Node.js
 
 import authRouter from './routes/auth.routes';
 import userRouter from './routes/user.routes';
+import lobbyRouter from './routes/lobby.routes'
 import { initializeDatabase } from './database';
 import * as lobbyService from './services/lobby.service'; 
 
@@ -49,6 +50,8 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.use('/api/auth', authRouter);
 // Mount the user-related routes under the /api/users path.
 app.use('/api/users', userRouter);
+// Mount the lobby-related routes unde the /api/lobby path
+app.use('/api/lobby', lobbyRouter);
 
 // A simple health check endpoint to verify that the server is running.
 app.get('/api/health', (req, res) => {
@@ -118,7 +121,9 @@ wss.on('connection', (ws: WebSocket & { userId: string, username: string }) => {
 
 // Start the server and listen for incoming requests on the specified port.
 // Also, initialize the database schema upon server startup.
-server.listen(PORT, () => {
+app.listen(PORT, () => {
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log(`🚀 Redis is running on http://localhost:${process.env.REDIS_PORT}`)
   console.log(`🚀 Server (HTTP & WebSocket) is running on http://localhost:${PORT}`);
   initializeDatabase();
 });
