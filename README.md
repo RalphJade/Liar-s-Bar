@@ -1,26 +1,26 @@
-# Liar`s Bar
+# Liar's Bar
 
-![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
-
-A robust and scalable full-stack authentication system built with a modern, decoupled architecture. This project serves as a foundational template for secure web applications, featuring a Node.js backend and a lightweight, framework-less frontend built with **Vanilla TypeScript and Vite**.
+A robust and scalable full-stack web application built with a modern, decoupled architecture. This project features a high-stakes card game theme, "Liar's Bar," with a complete user authentication system, player profiles, and avatar uploads. It serves as a strong foundation for secure and interactive web applications.
 
 ## ✨ Features
 
 - **Secure User Authentication**: Complete flow for user registration and login.
 - **JWT-based Security**: Session management using secure, `httpOnly` cookies containing JSON Web Tokens (JWT).
 - **Password Hashing**: User passwords are salted and hashed using `bcryptjs`, never stored in plaintext.
+- **Player Profiles**: Dedicated profile pages displaying user information and game statistics.
+- **Avatar Uploads**: Users can upload their own avatars, which are stored securely on the server.
 - **Decoupled Architecture**: A clear separation between the backend REST API and the frontend client application.
 - **Lightweight Frontend**: A clean, responsive Single-Page Application (SPA) built with **vanilla TypeScript** and styled with plain CSS, all powered by the **Vite** build tool for an incredible development experience.
 - **Robust Validation**: Strong, schema-based input validation on the backend using `Zod`.
 
 ## 🛠️ Tech Stack
 
-| Area         | Technology                                                          |
-| :----------- | :------------------------------------------------------------------ |
-| **Backend**  | Node.js, Express, TypeScript, PostgreSQL, JWT, Bcrypt.js, Zod, CORS |
-| **Frontend** | **Vite, Vanilla TypeScript, Axios, CSS Custom Properties**          |
-| **Database** | PostgreSQL                                                          |
-| **DevOps**   | Git, GitFlow (feature branches), Conventional Commits               |
+| Area         | Technology                                                                      |
+| :----------- | :------------------------------------------------------------------------------ |
+| **Backend**  | Node.js, Express, TypeScript, PostgreSQL, JWT, Bcrypt.js, Zod, CORS, **Multer** |
+| **Frontend** | **Vite, Vanilla TypeScript, Axios, CSS Custom Properties**                      |
+| **Database** | PostgreSQL                                                                      |
+| **DevOps**   | Git, GitFlow (feature branches), Conventional Commits                           |
 
 ## 📂 Project Structure
 
@@ -30,6 +30,7 @@ Use code with caution.
 /
 ├── backend/ # Node.js REST API
 │ ├── src/
+│ └── uploads/ # Stores user-uploaded avatars (ignored by Git)
 │ └── ...
 ├── frontend/ # Vanilla TS + Vite Client Application
 │ ├── src/
@@ -61,14 +62,13 @@ git clone <your-github-repo-url>
 cd <project-folder-name>
 
 2. Configure the Database (PostgreSQL)
-You need to create a dedicated user and database for the application.
-Connect to PostgreSQL as a superuser (e.g., postgres).
-Generated bash
-psql -U postgres
+You need to create a dedicated user and database for the application. Connect to PostgreSQL as a superuser (e.g., postgres).
 
-Bash
+psql -U postgres
+Use code with caution.
+
 Run the following SQL commands:
-Generated sql
+
 -- Create a new user for the application. Replace 'mysecretpassword' with a strong password.
 CREATE USER app_user WITH PASSWORD 'mysecretpassword';
 
@@ -87,17 +87,18 @@ CREATE EXTENSION IF NOT EXISTS "pgcrypto";
 -- Exit psql
 \q
 
-SQL
+
+Note: The application server will automatically create the users table with the correct schema on its first run.
+
 3. Configure Environment Variables
-The backend requires a .env file with credentials and secrets.
-Navigate to the backend directory and create a .env file by copying the example file.
+The backend requires a .env file with credentials and secrets. Navigate to the backend directory and create a .env file by copying the example file.
 
 cd backend
 cp .env.example .env
+Use code with caution.
 
-Bash
 Open the newly created backend/.env file and fill in the required values.
-Generated env
+
 # Application Port
 PORT=3001
 
@@ -115,7 +116,26 @@ JWT_EXPIRES_IN=1d
 # Frontend URL (for CORS)
 FRONTEND_URL=http://localhost:5174
 
-Env
+
+4. Install Dependencies
+You'll need to install dependencies for both the backend and frontend.
+For the Backend:
+
+# Navigate to the backend directory
+cd backend
+
+# Install all dependencies from package.json
+npm install
+
+For the Frontend:
+
+# Navigate to the frontend directory (from the root folder)
+cd frontend
+
+# Install all dependencies from package.json
+npm install
+
+
 🏃 Running the Application
 You'll need two separate terminal windows to run the backend and frontend concurrently.
 Terminal 1: Start the Backend Server
@@ -123,28 +143,23 @@ Terminal 1: Start the Backend Server
 # Navigate to the backend directory
 cd backend
 
-# Install dependencies
-npm install
-
 # Start the development server
 npm run dev
 
-Bash
-The backend API will now be running on http://localhost:3001. The server will also attempt to create the users table in the database if it doesn't exist.
+
+The backend API will now be running on http://localhost:3001. The server will also create the users table in the database if it doesn't exist and the uploads folder for avatars.
 Terminal 2: Start the Frontend Client
 
 # Navigate to the frontend directory (from the root folder)
 cd frontend
-
-# Install dependencies
-npm install
 
 # Start the Vite development server
 npm run dev
 
 The frontend application will now be running on http://localhost:5174.
 You can now open your browser and navigate to http://localhost:5174 to use the application!
-
 📄 License
 This project is licensed under the MIT License. See the LICENSE file for details.
+
+
 ```

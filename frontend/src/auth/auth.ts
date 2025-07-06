@@ -1,14 +1,20 @@
 import api from '../api/api.ts';
 import { navigate } from '../router/router.ts';
 
-//Defines the shape of the user object
-interface User {
+// Defines the shape of the user object, now with stats and avatar
+export interface User {
   id: string;
   username: string;
   email: string;
+  avatar_url: string | null;
+  matches_played: number;
+  wins: number;
+  successful_bluffs: number;
+  lies_called: number;
+  times_caught_lying: number;
 }
 
-//A simple, module-scoped object to act as our global state store
+// A simple, module-scoped object to act as our global state store
 let state: {
   user: User | null;
   isLoading: boolean;
@@ -17,11 +23,12 @@ let state: {
   isLoading: true,
 };
 
-//Checks if the user is logged in by making an API request to the backend
+// Checks if the user is logged in by making an API request to the backend
 export const checkUserStatus = async () => {
   state.isLoading = true;
   try {
     const response = await api.get('/users/me');
+    // A resposta agora vem em response.data.data.user
     state.user = response.data.data.user;
   } catch (error) {
     state.user = null;
@@ -37,6 +44,14 @@ export const checkUserStatus = async () => {
 export const login = (userData: User) => {
   state.user = userData;
   navigate('/home');
+};
+
+/**
+ * Updates the user state locally. Useful after an avatar upload.
+ * @param updatedUserData - The new user data.
+ */
+export const updateUser = (updatedUserData: User) => {
+  state.user = updatedUserData;
 };
 
 // Logs the user out by notifying the backend to clear the auth cookie and resetting the local state

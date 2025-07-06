@@ -1,4 +1,3 @@
-// src/database/index.ts
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
 
@@ -26,7 +25,14 @@ export const initializeDatabase = async () => {
         username VARCHAR(50) UNIQUE NOT NULL,
         email VARCHAR(255) UNIQUE NOT NULL,
         password_hash VARCHAR(255) NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+        -- Novas colunas adicionadas
+        avatar_url VARCHAR(255) DEFAULT NULL,
+        matches_played INT DEFAULT 0,
+        wins INT DEFAULT 0,
+        successful_bluffs INT DEFAULT 0,
+        lies_called INT DEFAULT 0,
+        times_caught_lying INT DEFAULT 0
       );
     `);
     console.log('Database initialized and "users" table is ready.');
