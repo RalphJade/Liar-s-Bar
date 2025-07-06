@@ -1,11 +1,10 @@
-import { getUser } from '../auth/auth.ts';
+import api from '../api/api.ts';
+import { getUser, updateUser } from '../auth/auth.ts';
 import { navigate } from '../router/router.ts';
 import { renderHeader } from './components/Header.ts';
 
 /**
- * Renders the user's profile page within the dark, atmospheric theme
- * of Liar's Bar. This page displays user information and provides
- * navigation back to the main game area.
+ * Renders the user's profile page, now with stats and avatar upload functionality.
  * @param {HTMLElement} element The root HTML element to render the page content into.
  */
 export const renderProfilePage = (element: HTMLElement) => {
@@ -15,32 +14,113 @@ export const renderProfilePage = (element: HTMLElement) => {
     navigate('/'); // Redirect to login if user data is not available
     return;
   }
+  
+  // Calculate win rate, avoiding division by zero
+  const winRate = user.matches_played > 0 ? ((user.wins / user.matches_played) * 100).toFixed(1) : 0;
+
+  // Dynamically render the avatar or a placeholder
+  const avatarDisplay = user.avatar_url
+    ? `<img src="http://localhost:3001${user.avatar_url}" alt="Your avatar" class="avatar-placeholder" style="border-style: solid; padding: 0; object-fit: cover; cursor: pointer;" />`
+    : `<div class="avatar-placeholder" style="cursor: pointer;"></div>`;
 
   element.innerHTML = `
     <div id="header-container"></div>
     <main class="page-container">
-      <div class="card profile-card">
-        <h1 class="profile-title">Player Profile</h1>
+      <div class="card profile-card" style="max-width: 600px;">
+        <h1 class="profile-title">Player Dossier</h1>
+        
+        <!-- Hidden input for file selection -->
+        <input type="file" id="avatar-input" accept="image/png, image/jpeg" style="display: none;" />
+
+        <div id="profile-feedback-container"></div>
+
+        <div class="profile-avatar-section" id="avatar-container">
+          ${avatarDisplay}
+          <p style="font-size: 0.9rem; color: var(--color-text-medium); margin-top: 0.5rem;">
+            Click on the image to change your avatar (PNG or JPG).
+          </p>
+        </div>
+        
         <div class="profile-info">
           <p><strong>Handle:</strong> ${user.username}</p>
           <p><strong>Contact:</strong> ${user.email}</p>
-          <p><strong>Status:</strong> <span style="color: var(--color-success);">Active Player</span></p>
         </div>
-        <div class="profile-avatar-section">
-          <p style="color: var(--color-text-medium); font-style: italic;">Choose your character avatar:</p>
-          <div class="avatar-placeholder"></div>
-          <p style="font-size: 0.9rem; color: var(--color-text-medium); margin-top: 0.5rem;">
-            Character selection coming soon - Each avatar brings unique presence to the table
-          </p>
+
+        <div class="stats-grid">
+            <h3>Combat Record</h3>
+            <p><strong>Matches Played:</strong> ${user.matches_played}</p>
+            <p><strong>Wins:</strong> ${user.wins}</p>
+            <p><strong>Win Rate:</strong> ${winRate}%</p>
+            <h3>Deception Analysis</h3>
+            <p><strong>Successful Bluffs:</strong> ${user.successful_bluffs}</p>
+            <p><strong>Lies Called Correctly:</strong> ${user.lies_called}</p>
+            <p><strong>Times Caught Lying:</strong> ${user.times_caught_lying}</p>
         </div>
-        <button id="back-home-btn" class="button button-primary">Return to the Bar</button>
+
+        <button id="back-home-btn" class="button button-primary" style="margin-top: 2rem;">Return to the Bar</button>
       </div>
     </main>
   `;
 
+  // --- Add new CSS for the stats grid ---
+  const style = document.createElement('style');
+  style.textContent = `
+    .stats-grid {
+      margin-top: 2rem;
+      text-align: left;
+      border-top: 1px solid var(--color-border);
+      padding-top: 1.5rem;
+    }
+    .stats-grid h3 {
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      color: var(--color-accent-gold);
+      margin-bottom: 1rem;
+    }
+    .stats-grid p {
+      margin-bottom: 0.5rem;
+    }
+  `;
+  element.appendChild(style);
+
   // Render the header component
   const headerContainer = document.getElementById('header-container') as HTMLElement;
   renderHeader(headerContainer);
+  
+  // --- Event Listeners for Avatar Upload ---
+  const avatarContainer = document.getElementById('avatar-container')!;
+  const avatarInput = document.getElementById('avatar-input') as HTMLInputElement;
+  const feedbackContainer = document.getElementById('profile-feedback-container')!;
+
+  // When the avatar display is clicked, trigger the hidden file input.
+  avatarContainer.addEventListener('click', () => {
+    avatarInput.click();
+  });
+
+  // When a file is selected in the input...
+  avatarInput.addEventListener('change', async () => {
+    const file = avatarInput.files?.[0];
+    if (!file) return;
+
+    feedbackContainer.innerHTML = `<div class="form-feedback" style="background-color: #1b2d2a; color: #a6d1c9; border-color: #3ca994;">Uploading...</div>`;
+
+    const formData = new FormData();
+    formData.append('avatar', file);
+
+    try {
+      const response = await api.patch('/users/me/avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      
+      // Update local state and re-render the entire page to show changes.
+      updateUser(response.data.data.user);
+      renderProfilePage(element); // Re-render to show new avatar and clear feedback
+      
+    } catch (err: any) {
+      const message = err.response?.data?.message || 'Upload failed. Please try again.';
+      feedbackContainer.innerHTML = `<div class="form-feedback error">${message}</div>`;
+    }
+  });
 
   // Add navigation back to the main game area
   document.getElementById('back-home-btn')?.addEventListener('click', () => {

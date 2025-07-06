@@ -21,4 +21,4 @@ dist/
 
 # IDE files
 .idea/
-.vscode/
+.vscode/frontend/node_modules/
