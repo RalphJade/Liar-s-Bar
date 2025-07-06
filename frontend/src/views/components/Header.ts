@@ -101,7 +101,7 @@ export const renderHeader = (element: HTMLElement) => {
   const rulesBtn = document.getElementById('rules-btn') as HTMLButtonElement;
   const modalOverlay = document.getElementById('rules-modal-overlay') as HTMLDivElement;
   const closeModalBtn = document.getElementById('close-modal-btn') as HTMLButtonElement;
-  const userMenuTrigger = document.getElementById('user-menu-trigger');
+  const userMenuTrigger = document.getElementById('user-profile-link') as HTMLDivElement;
   const userDropdown = document.getElementById('user-dropdown');
   const profileMenuItem = document.getElementById('profile-menu-item');
   const logoutMenuItem = document.getElementById('logout-menu-item');

@@ -1,24 +1,44 @@
-import { WebSocket } from 'ws';
+import { WebSocket, Server as WebSocketServer } from "ws";
+import { CustomWebSocket } from './game.service';
 
-// Anexa informações do usuário à instância do WebSocket para fácil acesso.
-interface AuthenticatedWebSocket extends WebSocket {
-  userId: string;
-  username: string;
+export function initializeLobbyService(wss: WebSocketServer) {
+  wss.on('connection', (ws: CustomWebSocket) => {
+    // Passa a conexão para o nosso serviço de lobby
+    handleNewConnection(ws);
+
+    ws.on('message', (messageBuffer) => {
+      try {
+        const message = JSON.parse(messageBuffer.toString());
+        // Direciona a mensagem para o handler apropriado
+        if (message.type === 'CHAT_MESSAGE') {
+          handleChatMessage(ws, message.payload);
+        }
+        // Aqui você pode adicionar outros tipos de mensagem (ex: CRIAR_SALA)
+      } catch (error) {
+        console.error('Mensagem WebSocket mal formatada:', messageBuffer.toString());
+      }
+    });
+
+    ws.on('close', () => {
+      // Passa a desconexão para o nosso serviço de lobby
+      handleDisconnect(ws);
+    });
+  });
 }
 
 // Map para manter o estado dos clientes conectados no lobby.
 // A chave é o userId, e o valor é a própria conexão WebSocket.
-const connectedClients = new Map<string, AuthenticatedWebSocket>();
+const connectedClients = new Map<string, CustomWebSocket>();
 
 /**
  * Adiciona um novo cliente à lista de conectados e notifica a todos.
  */
-export function handleNewConnection(ws: AuthenticatedWebSocket) {
-  const { userId, username } = ws;
+export function handleNewConnection(ws: CustomWebSocket) {
+  const { clientId, clientUsername } = ws;
   
   // Adiciona o cliente ao nosso "banco de dados em memória" de usuários online.
-  connectedClients.set(userId, ws);
-  console.log(`[Lobby] Usuário conectado: ${username} (ID: ${userId}). Total: ${connectedClients.size}`);
+  connectedClients.set(clientId, ws);
+  console.log(`[Lobby] Usuário conectado: ${clientUsername} (ID: ${clientId}). Total: ${connectedClients.size}`);
 
   broadcastOnlineUserList();
 }
@@ -26,19 +46,19 @@ export function handleNewConnection(ws: AuthenticatedWebSocket) {
 /**
  * Remove um cliente desconectado e notifica a todos.
  */
-export function handleDisconnect(ws: AuthenticatedWebSocket) {
-  const { userId, username } = ws;
+export function handleDisconnect(ws: CustomWebSocket) {
+  const { clientId, clientUsername } = ws;
 
-  connectedClients.delete(userId);
-  console.log(`[Lobby] Usuário desconectado: ${username}. Total: ${connectedClients.size}`);
-  
+  connectedClients.delete(clientId);
+  console.log(`[Lobby] Usuário desconectado: ${clientUsername} (ID: ${clientId}). Total: ${connectedClients.size}`);
+
   broadcastOnlineUserList();
 }
 
 /**
  * Processa uma mensagem de chat recebida de um cliente e a retransmite.
  */
-export function handleChatMessage(sender: AuthenticatedWebSocket, message: any) {
+export function handleChatMessage(sender: CustomWebSocket, message: any) {
     if (typeof message.text !== 'string' || message.text.trim() === '') {
         return; // Ignora mensagens vazias ou mal formatadas
     }
@@ -46,8 +66,8 @@ export function handleChatMessage(sender: AuthenticatedWebSocket, message: any) 
     const chatMessage = {
         type: 'NEW_CHAT_MESSAGE',
         payload: {
-            userId: sender.userId,
-            username: sender.username,
+            userId: sender.clientId,
+            username: sender.clientUsername,
             text: message.text.trim(),
             timestamp: new Date().toISOString()
         }
@@ -60,8 +80,8 @@ export function handleChatMessage(sender: AuthenticatedWebSocket, message: any) 
  */
 function broadcastOnlineUserList() {
     const users = Array.from(connectedClients.values()).map(client => ({
-        userId: client.userId,
-        username: client.username
+        userId: client.clientId,
+        username: client.clientUsername
     }));
 
     const message = {
@@ -87,10 +107,10 @@ function broadcast(message: object) {
 /**
  * Envia a lista atual de usuários online para um cliente específico.
  */
-function sendOnlineUserList(ws: AuthenticatedWebSocket) {
+function sendOnlineUserList(ws: CustomWebSocket) {
     const users = Array.from(connectedClients.values()).map(client => ({
-        userId: client.userId,
-        username: client.username
+        userId: client.clientId,
+        username: client.clientUsername
     }));
 
     const message = {

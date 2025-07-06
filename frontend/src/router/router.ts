@@ -2,8 +2,6 @@ import { renderAuthPage } from '../views/AuthPage.ts';
 import { renderLobbyPage } from '../views/LobbyPage.ts';
 // import { renderHomePage } from '../views/HomePage.ts';
 import { renderProfilePage } from '../views/ProfilePage.ts'; // Import the new page
-
-import { renderLobbyPage } from '../views/LobbyPage.ts';
 // import { renderHomePage } from '../views/HomePage.ts';
 
 import { renderGameBoardPage } from '../views/GameBoardPage.ts'; // Import the game board page
