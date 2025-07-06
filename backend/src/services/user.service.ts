@@ -1,4 +1,4 @@
-import pool from '../database';
+import { pool } from '../database';
 
 // Finds a user by their ID and returns all their data.
 export const findUserById = async (id: string) => {

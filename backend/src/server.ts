@@ -25,7 +25,6 @@ dotenv.config();
 
 // Initialize the Express application
 const app = express();
-const server = http.createServer(app); // Crie o servidor HTTP
 const PORT = process.env.PORT || 3001;
 
 // --- Middlewares ---
