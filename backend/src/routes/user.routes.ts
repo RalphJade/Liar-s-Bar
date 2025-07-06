@@ -3,31 +3,31 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { protect } from '../middlewares/auth.middleware';
-import { getMeHandler, updateAvatarHandler } from '../controllers/user.controller';
+import { getMeHandler, updateAvatarHandler, getUserByUsernameHandler } from '../controllers/user.controller';
 
 const router = express.Router();
 
 // --- Multer Configuration ---
-// Define the upload folder.
+// Define upload path
 const uploadDir = path.join(__dirname, '..', '..', 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
-// Configure the storage for files, defining where and how they will be saved.
+// Configura o storage para os arquivos, definindo onde e com que nome serão salvos.
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
-    cb(null, uploadDir); // Save files to the 'uploads' folder
+    cb(null, uploadDir); // Salva os arquivos na pasta 'uploads'
   },
   filename: (req, file, cb) => {
-    // Create a unique file name to avoid conflicts.
-    // Example: avatar-userId-timestamp.png
+    // Creat an unique filename for each uploaded file.
+    // Ex: avatar-userId-timestamp.png
     const uniqueSuffix = `${req.user?.id}-${Date.now()}`;
     cb(null, `avatar-${uniqueSuffix}${path.extname(file.originalname)}`);
   },
 });
 
-// Filter files to accept only JPG and PNG images.
+// Filter to allow only specific file types (JPG and PNG).
 const fileFilter = (req: any, file: any, cb: any) => {
   if (file.mimetype === 'image/jpeg' || file.mimetype === 'image/png') {
     cb(null, true);
@@ -39,16 +39,21 @@ const fileFilter = (req: any, file: any, cb: any) => {
 const upload = multer({ storage: storage, fileFilter: fileFilter });
 
 /**
- * Protected route to retrieve full data of the authenticated user.
- * The /me route now uses a dedicated handler to fetch all data from the DB.
+ * Route to get the currently authenticated user's full data.
+ * The 'protect' middleware runs first.
  */
 router.get('/me', protect, getMeHandler);
 
 /**
- * Protected route to update the user's avatar.
- * The 'protect' middleware ensures authentication.
- * The 'upload.single('avatar')' middleware handles the file upload from the 'avatar' field.
+ * Route to update the current user's avatar.
  */
 router.patch('/me/avatar', protect, upload.single('avatar'), updateAvatarHandler);
+
+/**
+ * Route to get another user's public profile by their username.
+ * This is protected; only logged-in users can look up other players.
+ */
+router.get('/:username', protect, getUserByUsernameHandler);
+
 
 export default router;
