@@ -1,12 +1,11 @@
 let socket: WebSocket | null = null;
 
-// Funções para a UI chamar
 let messageHandler: (message: any) => void;
 
 function connect() {
   if (socket && socket.readyState === WebSocket.OPEN) return;
 
-  const wsUrl = `ws://localhost:3001`; // Ajuste se necessário
+  const wsUrl = `ws://localhost:3001`;
   socket = new WebSocket(wsUrl);
 
   socket.onopen = () => console.log('[WS] Conectado ao lobby.');
