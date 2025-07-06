@@ -43,6 +43,17 @@
   --color-feedback-success-bg: #1b2d1b;
   --color-feedback-success-text: #51cf66;
 
+  /* Color Palette (Dark Theme - for Lobby) */
+  --dark-bg: #111827;      /* bg-gray-900 */
+  --dark-card: #1f2937;    /* bg-gray-800 */
+  --dark-input: #374151;   /* bg-gray-700 */
+  --dark-text: #f3f4f6;    /* text-white / gray-100 */
+  --dark-border: #4b5563;  /* border-gray-700 */
+  --dark-yellow: #f59e0b;  /* amber-500 */
+  --dark-yellow-hover: #fbbF24; /* amber-400 */
+  --dark-blue: #3b82f6;    /* blue-500 */
+  --dark-blue-hover: #60a5fa; /* blue-400 */
+
   /* Typography & Spacing */
   --font-family: var(--font-body);
   --border-radius: 0.5rem;
@@ -54,6 +65,13 @@
  * Base & Global Styles
  * ----------------------------------------------------------------
  */
+
+html {
+  box-sizing: border-box;
+}
+*, *:before, *:after {
+  box-sizing: inherit;
+}
 
 /* Basic CSS reset for a consistent base across all browsers. */
 *,
@@ -68,7 +86,10 @@ body {
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
   background-attachment: fixed;
   color: var(--color-text-light);
-  min-height: 100vh;
+  height: 100vh; /* Ocupa 100% da altura da janela de visualização */
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Previne barras de rolagem indesejadas no body */
   position: relative;
 }
 
@@ -99,6 +120,13 @@ body::before {
   z-index: -1;
 }
 
+#app {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; /* Faz o #app crescer para ocupar todo o espaço do body */
+  min-height: 0; /* Correção para bugs de overflow em contêineres flex */
+}
+
 /* A general-purpose container for centering page content vertically and horizontally. */
 .page-container {
   display: flex;
@@ -108,6 +136,14 @@ body::before {
   min-height: calc(100vh - 80px);
   padding: 1rem;
   position: relative;
+}
+
+/**
+ * Utility class to hide elements completely.
+ * This replaces the functionality of Tailwind's 'hidden' class.
+ */
+.hidden {
+  display: none !important;
 }
 
 /**
@@ -260,6 +296,50 @@ body::before {
 }
 
 /**
+ * ================================================================
+ * USER DROPDOWN MENU STYLES
+ * ================================================================
+ */
+
+/* O pai (.header-right) precisa de position: relative para ancorar o dropdown */
+.header-right {
+  position: relative;
+}
+
+.user-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 5px); /* Posiciona logo abaixo do gatilho, com 5px de espaço */
+  right: 0;
+  width: 200px;
+  background: linear-gradient(135deg, #1f1f1f 0%, var(--color-parchment) 100%);
+  border: 2px solid var(--color-wood-light);
+  border-radius: var(--border-radius);
+  box-shadow: var(--shadow-dramatic);
+  z-index: 20; /* Garante que fique acima de outros elementos */
+  padding: 0.5rem 0;
+  overflow: hidden;
+}
+
+.user-dropdown-menu ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.user-dropdown-menu li {
+  padding: 0.75rem 1.5rem;
+  color: var(--color-text-light);
+  cursor: pointer;
+  transition: background-color 0.2s ease, color 0.2s ease;
+  font-weight: 600;
+}
+
+.user-dropdown-menu li:hover {
+  background-color: var(--color-accent-gold);
+  color: var(--color-wood-dark);
+}
+
+/**
  * ----------------------------------------------------------------
  * Modal Styles
  * ----------------------------------------------------------------
@@ -272,7 +352,7 @@ body::before {
   height: 100%;
   background: rgba(0, 0, 0, 0.9);
   backdrop-filter: blur(4px);
-  display: none;
+  display: flex;
   justify-content: center;
   align-items: center;
   z-index: 1000;
@@ -726,4 +806,175 @@ body::before {
 
 .homepage-logout-button {
   margin-top: 2rem;
+}
+
+/**
+ * ================================================================
+ * LOBBY PAGE STYLES - NOVO
+ * ================================================================
+ */
+
+/* Aplica o tema escuro quando o corpo tem a classe 'lobby-theme' */
+.lobby-grid {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  flex-grow: 1;
+  align-items: stretch; /* Faz as colunas terem a mesma altura */
+}
+
+.lobby-main-column {
+  flex: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+.lobby-side-column {
+  flex: 1;
+  min-width: 0;
+}
+
+.lobby-card {
+  display: flex;
+  flex-direction: column;
+  max-width: none;
+  width: 100%;
+  padding: 1.5rem;
+}
+
+.card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid var(--color-wood-light);
+}
+
+.lobby-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  color: var(--color-accent-gold);
+  text-shadow: 1px 1px 3px rgba(0,0,0,0.7);
+}
+
+.lobby-subtitle {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--color-accent-gold);
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 2px solid var(--color-wood-light);
+}
+
+.lobby-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lobby-search {
+  max-width: 250px;
+}
+
+.scrollable-list {
+  overflow-y: auto;
+  flex-grow: 1;
+  padding: 0.25rem;
+}
+.empty-list-message, .online-user-item, .chat-message {
+  padding: 0.75rem;
+  border-radius: 0.25rem;
+  background-color: rgba(0,0,0,0.2);
+  margin-bottom: 0.5rem;
+  border: 1px solid var(--color-border);
+}
+.online-user-item {
+  font-weight: 600;
+}
+.chat-message strong {
+  color: var(--color-accent-gold);
+}
+
+.chat-form {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  flex-shrink: 0;
+}
+
+.button-lobby-create, .button-lobby-send {
+  width: auto;
+  padding: 0.75rem 1.5rem;
+}
+.button-lobby-create {
+  background: linear-gradient(135deg, var(--color-accent-gold) 0%, #b8941f 100%);
+  color: var(--color-wood-dark);
+  white-space: nowrap;
+}
+.button-lobby-create:hover {
+  filter: brightness(1.1);
+  box-shadow: 0 4px 15px rgba(212, 175, 55, 0.2);
+}
+
+.button-lobby-send {
+  background: linear-gradient(135deg, var(--color-primary) 0%, #6b5637 100%);
+}
+.button-lobby-send:hover {
+  background: linear-gradient(135deg, var(--color-primary-hover) 0%, #4a3728 100%);
+}
+
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+#lobbyContainer {
+  flex: 3;
+}
+
+#chatContainer {
+  flex: 2;
+}
+
+/**
+ * ================================================================
+ * SCROLLBAR STYLES - NOVO
+ * ================================================================
+ */
+
+/* Estilo da barra de rolagem para navegadores baseados em WebKit (Chrome, Safari, Edge) */
+.scrollable-list::-webkit-scrollbar {
+  width: 12px; /* Largura da barra */
+}
+
+.scrollable-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3); /* Cor do fundo da trilha */
+  border-radius: 10px;
+}
+
+.scrollable-list::-webkit-scrollbar-thumb {
+  background-color: var(--color-wood-light); /* Cor do "polegar" da barra */
+  border-radius: 10px;
+  border: 3px solid rgba(0, 0, 0, 0.3); /* Cria um padding em volta do polegar */
+}
+
+.scrollable-list::-webkit-scrollbar-thumb:hover {
+  background-color: var(--color-accent-gold); /* Cor ao passar o mouse */
+}
+
+.scrollable-list::-webkit-scrollbar-button {
+  display: none;
+}
+
+/* Estilo da barra de rolagem para Firefox */
+.scrollable-list {
+  scrollbar-width: thin; /* Deixa a barra mais fina */
+  scrollbar-color: var(--color-wood-light) rgba(0, 0, 0, 0.3); /* Cor do polegar e da trilha */
 }

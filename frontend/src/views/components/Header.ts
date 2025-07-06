@@ -1,4 +1,5 @@
-import { getUser } from '../../auth/auth.ts';
+import * as websocket from "../../lobby/websocket.ts"
+import { getUser, logout } from '../../auth/auth.ts';
 import { navigate } from '../../router/router.ts';
 
 /**
@@ -39,10 +40,16 @@ export const renderHeader = (element: HTMLElement) => {
           ${avatarElement}
           <span class="username">${user.username}</span>
         </div>
+        <div id="user-dropdown" class="user-dropdown-menu hidden">
+          <ul>
+            <li id="profile-menu-item">My Profile</li>
+            <li id="logout-menu-item">Leave</li>
+          </ul>
+        </div>
       </div>
     </header>
 
-    <div id="rules-modal-overlay" class="modal-overlay">
+    <div id="rules-modal-overlay" class="modal-overlay hidden">
       <div class="modal-content">
         <button id="close-modal-btn" class="modal-close-btn">×</button>
         <h2 class="modal-title">How to Play Liar's Deck</h2>
@@ -94,7 +101,14 @@ export const renderHeader = (element: HTMLElement) => {
   const rulesBtn = document.getElementById('rules-btn') as HTMLButtonElement;
   const modalOverlay = document.getElementById('rules-modal-overlay') as HTMLDivElement;
   const closeModalBtn = document.getElementById('close-modal-btn') as HTMLButtonElement;
+  const userMenuTrigger = document.getElementById('user-menu-trigger');
+  const userDropdown = document.getElementById('user-dropdown');
+  const profileMenuItem = document.getElementById('profile-menu-item');
+  const logoutMenuItem = document.getElementById('logout-menu-item');
 
+  rulesBtn?.addEventListener('click', () => modalOverlay?.classList.remove('hidden'));
+  closeModalBtn?.addEventListener('click', () => modalOverlay?.classList.add('hidden'));
+  
   const openModal = () => modalOverlay.style.display = 'flex';
   const closeModal = () => modalOverlay.style.display = 'none';
 
@@ -107,8 +121,23 @@ export const renderHeader = (element: HTMLElement) => {
     }
   });
 
-  const profileLink = document.getElementById('user-profile-link') as HTMLDivElement;
-  profileLink.addEventListener('click', () => {
+  userMenuTrigger?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userDropdown?.classList.toggle('hidden');
+  });
+
+  profileMenuItem?.addEventListener('click', () => {
     navigate('/profile');
+    userDropdown?.classList.add('hidden');
+  });
+
+  logoutMenuItem?.addEventListener('click', () => {
+    websocket.disconnect();
+    logout();
+    userDropdown?.classList.add('hidden');
+  });
+
+  window.addEventListener('click', () => {
+    userDropdown?.classList.add('hidden');
   });
 };
