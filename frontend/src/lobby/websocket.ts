@@ -1,5 +1,11 @@
 let socket: WebSocket | null = null;
 
+// Tipos para as mensagens que podem ser enviadas
+interface WebSocketMessage {
+  type: string;
+  payload: any;
+}
+
 // Funções para a UI chamar
 let messageHandler: (message: any) => void;
 
@@ -33,6 +39,14 @@ export function initLobbyConnection(
 ) {
     messageHandler = handler;
     connect();
+}
+
+export function sendWebSocketMessage(messageObject: WebSocketMessage): void {
+    if (socket && socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify(messageObject));
+    } else {
+        console.warn('[WS] Tentativa de enviar mensagem quando o socket não está aberto.');
+    }
 }
 
 export function sendChatMessage(text: string) {

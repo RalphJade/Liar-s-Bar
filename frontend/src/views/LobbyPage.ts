@@ -148,7 +148,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
 
   createRoomForm?.addEventListener('submit', (e) => {
     e.preventDefault();
-    // Lógica para criar sala...
+    websocket.sendWebSocketMessage({"type": "CREATE_ROOM", "payload": {}});
     createRoomModal?.classList.add('hidden');
   });
 
