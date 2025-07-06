@@ -6,4 +6,3 @@ export function generateCodeWithFaker(): string {
 }
 
 const code = generateCodeWithFaker();
-

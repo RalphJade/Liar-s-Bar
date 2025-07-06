@@ -3,7 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser"; // Imports middleware to parse cookies from incoming requests
 import { parse } from "url";
-import WebSocket from "ws";
+import {WebSocket, WebSocketServer} from "ws";
 import http from "http";
 import stream from "stream";
 import * as cookie from "cookie";
@@ -16,11 +16,16 @@ import { verifyTokenForWebSocket } from "./middlewares/auth.middleware";
 import { CustomWebSocket } from "./services/game.service";
 import { initializeGameService } from "./services/game.service";
 import { log } from "./utils/logger";
+import jwt from 'jsonwebtoken';
+import path from 'path'; // Importe o módulo 'path' do Node.js
+import * as lobbyService from './services/lobby.service'; 
+
 
 dotenv.config();
 
 // Initialize the Express application
 const app = express();
+const server = http.createServer(app); // Crie o servidor HTTP
 const PORT = process.env.PORT || 3001;
 
 // --- Middlewares ---
@@ -41,6 +46,10 @@ app.use(cookieParser());
 // Add middleware to parse incoming JSON requests.
 app.use(express.json());
 
+// --- Static File Serving ---
+// Servir arquivos estáticos da pasta 'uploads'. Qualquer requisição para /uploads/...
+// será servida a partir da pasta 'backend/uploads'.
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 // --- API Routes ---
 
 // Mount the authentication routes under the /api/auth path.
@@ -54,7 +63,6 @@ app.use("/api/lobby", lobbyRouter);
 app.get("/api/health", (req, res) => {
   res.status(200).json({ status: "UP" });
 });
-
 // --- Server Initialization ---
 
 const server = http.createServer(app);
@@ -106,8 +114,7 @@ server.on(
 // Also, initialize the database schema upon server startup.
 server.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(
-    `🚀 Redis is running on http://localhost:${process.env.REDIS_PORT}`
-  );
+  console.log(`🚀 Redis is running on http://localhost:${process.env.REDIS_PORT}`)
+  console.log(`🚀 Server (HTTP & WebSocket) is running on http://localhost:${PORT}`);
   initializeDatabase();
 });

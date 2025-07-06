@@ -1,4 +1,5 @@
-import { getUser } from '../../auth/auth.ts';
+import * as websocket from "../../lobby/websocket.ts"
+import { getUser, logout } from '../../auth/auth.ts';
 import { navigate } from '../../router/router.ts';
 
 /**
@@ -10,6 +11,14 @@ import { navigate } from '../../router/router.ts';
 export const renderHeader = (element: HTMLElement) => {
   const user = getUser();
   if (!user) return; // Do not render the header if the user is not logged in.
+
+  // Dynamically create the avatar element based on whether an avatar_url exists
+  const avatarElement = user.avatar_url
+    ? `<img src="http://localhost:3001${user.avatar_url}" alt="${user.username}'s avatar" class="avatar-icon" style="width: 28px; height: 28px; object-fit: cover; padding: 0;"/>`
+    : `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="avatar-icon">
+        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>`;
 
   element.innerHTML = `
     <header class="app-header">
@@ -28,16 +37,19 @@ export const renderHeader = (element: HTMLElement) => {
       </div>
       <div class="header-right">
         <div id="user-profile-link" class="user-info">
-          <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="avatar-icon">
-            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-            <circle cx="12" cy="7" r="4"></circle>
-          </svg>
+          ${avatarElement}
           <span class="username">${user.username}</span>
+        </div>
+        <div id="user-dropdown" class="user-dropdown-menu hidden">
+          <ul>
+            <li id="profile-menu-item">My Profile</li>
+            <li id="logout-menu-item">Leave</li>
+          </ul>
         </div>
       </div>
     </header>
 
-    <div id="rules-modal-overlay" class="modal-overlay">
+    <div id="rules-modal-overlay" class="modal-overlay hidden">
       <div class="modal-content">
         <button id="close-modal-btn" class="modal-close-btn">×</button>
         <h2 class="modal-title">How to Play Liar's Deck</h2>
@@ -89,7 +101,14 @@ export const renderHeader = (element: HTMLElement) => {
   const rulesBtn = document.getElementById('rules-btn') as HTMLButtonElement;
   const modalOverlay = document.getElementById('rules-modal-overlay') as HTMLDivElement;
   const closeModalBtn = document.getElementById('close-modal-btn') as HTMLButtonElement;
+  const userMenuTrigger = document.getElementById('user-menu-trigger');
+  const userDropdown = document.getElementById('user-dropdown');
+  const profileMenuItem = document.getElementById('profile-menu-item');
+  const logoutMenuItem = document.getElementById('logout-menu-item');
 
+  rulesBtn?.addEventListener('click', () => modalOverlay?.classList.remove('hidden'));
+  closeModalBtn?.addEventListener('click', () => modalOverlay?.classList.add('hidden'));
+  
   const openModal = () => modalOverlay.style.display = 'flex';
   const closeModal = () => modalOverlay.style.display = 'none';
 
@@ -102,8 +121,23 @@ export const renderHeader = (element: HTMLElement) => {
     }
   });
 
-  const profileLink = document.getElementById('user-profile-link') as HTMLDivElement;
-  profileLink.addEventListener('click', () => {
+  userMenuTrigger?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    userDropdown?.classList.toggle('hidden');
+  });
+
+  profileMenuItem?.addEventListener('click', () => {
     navigate('/profile');
+    userDropdown?.classList.add('hidden');
+  });
+
+  logoutMenuItem?.addEventListener('click', () => {
+    websocket.disconnect();
+    logout();
+    userDropdown?.classList.add('hidden');
+  });
+
+  window.addEventListener('click', () => {
+    userDropdown?.classList.add('hidden');
   });
 };
