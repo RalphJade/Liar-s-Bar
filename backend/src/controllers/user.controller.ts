@@ -48,7 +48,32 @@ export const getMeHandler = async (req: Request, res: Response, next: NextFuncti
       status: 'success',
       data: { user },
     });
-  } catch (err) {
+  } catch (err: any) {
     next(err);
   }
+};
+
+/**
+ * Handles the request to get a user's public profile by their username.
+ * @param {Request} req The request object, containing the username in params.
+ * @param {Response} res The response object.
+ * @param {NextFunction} next The next middleware function.
+ */
+export const getUserByUsernameHandler = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { username } = req.params;
+        const user = await userService.findUserByUsername(username);
+
+        if (!user) {
+            return res.status(404).json({ status: 'fail', message: 'User not found' });
+        }
+
+        res.status(200).json({
+            status: 'success',
+            data: { user },
+        });
+
+    } catch (err: any) {
+        next(err);
+    }
 };

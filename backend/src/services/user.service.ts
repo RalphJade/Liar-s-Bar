@@ -9,6 +9,20 @@ export const findUserById = async (id: string) => {
   return result.rows[0];
 };
 
+/**
+ * Finds a user by their username and returns their public profile data.
+ * @param {string} username The username to search for.
+ * @returns The user's public data or null if not found.
+ */
+export const findUserByUsername = async (username: string) => {
+  const result = await pool.query('SELECT id, username, avatar_url FROM users WHERE username = $1', [username]);
+  if (result.rows.length === 0) {
+      return null;
+  }
+  return result.rows[0];
+};
+
+
 // Updates the avatar_url for a given user.
 export const updateUserAvatar = async (id: string, avatarUrl: string) => {
   await pool.query('UPDATE users SET avatar_url = $1 WHERE id = $2', [avatarUrl, id]);
