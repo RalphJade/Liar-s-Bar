@@ -6,4 +6,4 @@ export function generateCodeWithFaker(): string {
 }
 
 const code = generateCodeWithFaker();
-console.log(code); // Ex: "A4d9z"
+
