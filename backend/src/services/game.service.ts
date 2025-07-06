@@ -11,23 +11,12 @@ import {
 } from "../models/types.model";
 import { enterRoom } from "./lobby.service";
 import { log } from "../utils/logger";
+import { dealCards, CardGame } from "./cards.service";
 
 export interface CustomWebSocket extends WebSocket {
   clientId: string;
   clientUsername: string;
   currentRoomCode: string;
-}
-
-interface CardGame {
-  deck: Card[];
-  currentPlayerIndex: number;
-  direction: 1 | -1;
-  phase: GamePhase;
-  roundNumber: number;
-  turnTimeLimit: number;
-  turnTimer: NodeJS.Timeout | null;
-  currentCardType: CardType | null;
-  playedCards: Card[];  // ← Mudado de GameCard[] para Card[]
 }
 
 const roomGlobal = new Map<string, Room & { game: CardGame }>();
@@ -58,75 +47,74 @@ export function sendToClient<T extends ServerMessage["type"]>(
   log(`Mensagem enviada para ${ws.clientUsername}: ${type}`);
 }
 
-// Função para criar deck específico do jogo
-function createSpecialDeck(): Card[] {
-  const deck: Card[] = [];
-  const suits = ['hearts', 'diamonds', 'clubs', 'spades'] as const;
-  const cardTypes: CardType[] = ['king', 'queen', 'ace'];
+export function initializeGameService(wss: WebSocketServer): void {
+  wss.on("connection", (ws: CustomWebSocket, request: any) => {
+    log(`Nova conexão WebSocket.`, { ws });
 
-  // Adiciona 6 cartas de cada tipo (rei, dama, ás) - distribui pelos naipes
-  cardTypes.forEach(type => {
-    for (let i = 0; i < CARDS_PER_TYPE; i++) {
-      const suitIndex = i % suits.length;
-      const cardNumber = Math.floor(i / suits.length) + 1;
-      deck.push({
-        id: `${type}_${suits[suitIndex]}_${cardNumber}`,
-        type,
-        suit: suits[suitIndex]
-      });
-    }
-  });
+    userConnections.set(ws.clientId, ws);
 
-  // Adiciona 2 coringas
-  for (let i = 0; i < JOKERS_COUNT; i++) {
-    deck.push({
-      id: `joker_${i + 1}`,
-      type: 'joker'
+
+    ws.on("message", async (message) => {
+      try {
+        const data: ClientMessage = JSON.parse(message.toString());
+        log("Mensagem recebida.", { ws, data });
+        
+        handleClientMessage(ws, data);
+      } catch (error: any) {
+        log("Erro ao parsear mensagem JSON.", { ws, data: { error: error.message, originalMessage: message.toString() } });
+      }
     });
-  }
 
-  // Embaralhar deck
-  for (let i = deck.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
+    ws.on("close", () => {
+      log("Cliente desconectado.", { ws });
+      userConnections.delete(ws.clientId);
+      handlePlayerDisconnect(ws);
+    });
 
-  return deck;
-}
-
-// Função para distribuir cartas
-function dealCards(room: Room & { game: CardGame }): void {
-  const deck = createSpecialDeck();
-  const roomHands = new Map<string, PlayerHand>();
-
-  // Distribui 5 cartas para cada jogador
-  Array.from(room.players.keys()).forEach((playerId, index) => {
-    const playerCards = deck.splice(0, CARDS_PER_PLAYER);
-    roomHands.set(playerId, {
-      cards: playerCards,
-      hasPlayedThisTurn: false,
-      isReady: false,
-      score: 0,
+    ws.on("error", (error) => {
+      log("Erro no WebSocket.", { ws, data: { error: error.message } });
     });
   });
-
-  // Cartas restantes ficam no deck
-  room.game.deck = deck;
-  
-  playerHands.set(room.roomCode, roomHands);
-  log(`Cartas distribuídas na sala ${room.roomCode}. Deck restante: ${deck.length} cartas.`);
 }
 
-// Função para verificar se uma carta pode ser jogada
-function canPlayCard(card: Card, currentCardType: CardType | null): boolean {
-  // Primeira carta da rodada pode ser qualquer uma
-  if (!currentCardType) return true;
-  
-  // Coringa pode ser jogado como qualquer tipo
-  if (card.type === 'joker') return true;
-  
-  // Carta deve ser do mesmo tipo que está sendo jogado
-  return card.type === currentCardType;
+function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
+  const room = roomGlobal.get(ws.currentRoomCode);
+  if (!room) {
+    return sendToClient(ws, "ERROR", { message: "Você não está em uma sala ativa." });
+  }
+
+  const isPlayer = room.players.has(ws.clientId);
+  if (!isPlayer && !room.spectators.has(ws.clientId)) {
+    return sendToClient(ws, "ERROR", { message: "Você não é um participante desta sala." });
+  }
+
+  switch (data.type) {
+    case "CREATE_ROOM":
+      if (isPlayer) {
+        handleCreateRoom(ws, data.payload);
+      } else {
+        sendToClient(ws, "ERROR", { message: "Apenas jogadores podem criar salas." });
+      }
+      break;
+    case "PLAY_CARD":
+      if (isPlayer) handlePlayCard(ws, data.payload);
+      else sendToClient(ws, "ERROR", { message: "Espectadores não podem jogar cartas." });
+      break;
+    case "CLOSE_ROOM":
+      if (isPlayer && room.ownerId === ws.clientId) handleCloseRoom(ws);
+      else sendToClient(ws, "ERROR", { message: "Apenas o dono da sala pode fechá-la." });
+      break;
+    case "READY_FOR_NEXT_GAME":
+      if (isPlayer) handleReadyForNextGame(ws);
+      else sendToClient(ws, "ERROR", { message: "Espectadores não podem ficar prontos." });
+      break;
+    case "CHALLENGE_PLAYER":
+      if (isPlayer) handleChallengePlayer(ws, data.payload);
+      else sendToClient(ws, "ERROR", { message: "Espectadores não podem desafiar outros jogadores." });
+      break;
+    default:
+      sendToClient(ws, "ERROR", { message: `Tipo de mensagem desconhecido: ${data.type}` });
+  }
 }
 
 // Função para obter o próximo jogador
@@ -137,23 +125,6 @@ function getNextPlayer(room: Room & { game: CardGame }): string | null {
   
   room.game.currentPlayerIndex = nextIndex;
   return playerIds[nextIndex];
-}
-
-async function handlePlayerJoinRoom(ws: CustomWebSocket, roomCode: string): Promise<void> {
-  const room = await enterRoom({ roomCode, password: "" });
-  
-  if (!room) {
-    log(`Tentativa de conexão com sala inexistente: ${roomCode}`, { ws });
-    sendToClient(ws, "ERROR", {
-      message: "Sala não encontrada ou já foi fechada.",
-    });
-    ws.close();
-    return;
-  }
-
-  await addPlayerToRoom(ws, room);
-  sendToClient(ws, "JOINED_ROOM", { roomCode });
-  broadcastRoomState(room);
 }
 
 async function addPlayerToRoom(ws: CustomWebSocket, room: Room): Promise<void> {
@@ -239,7 +210,8 @@ function startCardGame(room: Room & { game: CardGame }): void {
   room.game.playedCards = [];
   
   // Distribui cartas
-  dealCards(room);
+  const cards = dealCards(room);
+  playerHands.set(room.roomCode, cards);
   
   // Inicia o turno do primeiro jogador
   const firstPlayerId = Array.from(room.players.keys())[0];
@@ -464,73 +436,72 @@ function broadcastToOthers<T extends ServerMessage["type"]>(
   });
 }
 
-export function initializeGameService(wss: WebSocketServer): void {
-  wss.on("connection", (ws: CustomWebSocket, request: any, roomCode: string) => {
-    log(`Nova conexão WebSocket para a sala ${roomCode}.`, { ws });
-
-    userConnections.set(ws.clientId, ws);
-    ws.currentRoomCode = roomCode.toUpperCase();
-
-    const reconnected = attemptPlayerReconnection(ws);
-    
-    if (!reconnected) {
-      handlePlayerJoinRoom(ws, roomCode);
-    }
-
-    ws.on("message", async (message) => {
-      try {
-        const data: ClientMessage = JSON.parse(message.toString());
-        log("Mensagem recebida.", { ws, data });
-        
-        handleClientMessage(ws, data);
-      } catch (error: any) {
-        log("Erro ao parsear mensagem JSON.", { ws, data: { error: error.message, originalMessage: message.toString() } });
-      }
+function prepareNextGame(room: Room & { game: CardGame }): void {
+  room.game.phase = "waiting";
+  
+  // Resetar hands
+  const roomHands = playerHands.get(room.roomCode);
+  if (roomHands) {
+    roomHands.forEach(hand => {
+      hand.isReady = false;
+      hand.hasPlayedThisTurn = false;
+      hand.cards = []; // Limpa cartas para próximo jogo
     });
+  }
 
-    ws.on("close", () => {
-      log("Cliente desconectado.", { ws });
-      userConnections.delete(ws.clientId);
-      handlePlayerDisconnect(ws);
-    });
-
-    ws.on("error", (error) => {
-      log("Erro no WebSocket.", { ws, data: { error: error.message } });
-    });
+  broadcastToRoom(room, "NEXT_GAME_READY", {
+    message: "Pronto para o próximo jogo? Clique em 'Pronto' quando estiver preparado.",
+    scores: Array.from(room.players.keys()).map(playerId => ({
+      playerId,
+      playerName: room.players.get(playerId)?.username || '',
+      score: roomHands?.get(playerId)?.score || 0
+    }))
   });
 }
 
-function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
-  const room = roomGlobal.get(ws.currentRoomCode);
-  if (!room) {
-    return sendToClient(ws, "ERROR", { message: "Você não está em uma sala ativa." });
+function isUserInAnyRoom(userId: string): boolean {
+  for (const room of roomGlobal.values()) {
+    if (room.players.has(userId) || room.spectators.has(userId)) {
+      return true;
+    }
   }
+  return false;
+}
 
-  const isPlayer = room.players.has(ws.clientId);
-  if (!isPlayer && !room.spectators.has(ws.clientId)) {
-    return sendToClient(ws, "ERROR", { message: "Você não é um participante desta sala." });
-  }
-
-  switch (data.type) {
-    case "PLAY_CARD":
-      if (isPlayer) handlePlayCard(ws, data.payload);
-      else sendToClient(ws, "ERROR", { message: "Espectadores não podem jogar cartas." });
-      break;
-    case "CLOSE_ROOM":
-      if (isPlayer && room.ownerId === ws.clientId) handleCloseRoom(ws);
-      else sendToClient(ws, "ERROR", { message: "Apenas o dono da sala pode fechá-la." });
-      break;
-    case "READY_FOR_NEXT_GAME":
-      if (isPlayer) handleReadyForNextGame(ws);
-      else sendToClient(ws, "ERROR", { message: "Espectadores não podem ficar prontos." });
-      break;
-    case "CHALLENGE_PLAYER":
-      if (isPlayer) handleChallengePlayer(ws, data.payload);
-      else sendToClient(ws, "ERROR", { message: "Espectadores não podem desafiar outros jogadores." });
-      break;
-    default:
-      sendToClient(ws, "ERROR", { message: `Tipo de mensagem desconhecido: ${data.type}` });
-  }
+function getRoomStateForApi(room: Room & { game: CardGame }, currentUserId: string): RoomStateForApi {
+  const roomHands = playerHands.get(room.roomCode);
+  const currentPlayerHand = roomHands?.get(currentUserId);
+  
+  return {
+    roomCode: room.roomCode,
+    ownerId: room.ownerId,
+    players: Array.from(room.players.entries()).map(([id, p]) => ({
+      id,
+      username: p.username,
+      isOnline: p.ws !== null,
+      handSize: roomHands?.get(id)?.cards.length || 0,
+      isReady: roomHands?.get(id)?.isReady || false,
+      hasPlayedThisTurn: roomHands?.get(id)?.hasPlayedThisTurn || false,
+      score: roomHands?.get(id)?.score || 0,
+    })),
+    spectators: Array.from(room.spectators.entries()).map(([id, s]) => ({ 
+      id, 
+      username: s.username 
+    })),
+    status: room.status,
+    game: {
+      phase: room.game.phase,
+      currentPlayerIndex: room.game.currentPlayerIndex,
+      currentPlayerId: Array.from(room.players.keys())[room.game.currentPlayerIndex],
+      currentCardType: room.game.currentCardType,
+      roundNumber: room.game.roundNumber,
+      direction: room.game.direction,
+      playedCardsCount: room.game.playedCards.length,
+      deckSize: room.game.deck.length,
+    },
+    myCards: currentPlayerHand?.cards || [],
+    myHandSize: currentPlayerHand?.cards.length || 0,
+  };
 }
 
 function handlePlayCard(ws: CustomWebSocket, payload: { cardId: string; declaredType?: CardType }): void {
@@ -703,71 +674,6 @@ function handlePlayerWin(room: Room & { game: CardGame }, winnerId: string): voi
   }, 10000);
 }
 
-function prepareNextGame(room: Room & { game: CardGame }): void {
-  room.game.phase = "waiting";
-  
-  // Resetar hands
-  const roomHands = playerHands.get(room.roomCode);
-  if (roomHands) {
-    roomHands.forEach(hand => {
-      hand.isReady = false;
-      hand.hasPlayedThisTurn = false;
-      hand.cards = []; // Limpa cartas para próximo jogo
-    });
-  }
-
-  broadcastToRoom(room, "NEXT_GAME_READY", {
-    message: "Pronto para o próximo jogo? Clique em 'Pronto' quando estiver preparado.",
-    scores: Array.from(room.players.keys()).map(playerId => ({
-      playerId,
-      playerName: room.players.get(playerId)?.username || '',
-      score: roomHands?.get(playerId)?.score || 0
-    }))
-  });
-}
-
-function handleReadyForNextGame(ws: CustomWebSocket): void {
-  const room = roomGlobal.get(ws.currentRoomCode);
-  if (!room) return;
-
-  const roomHands = playerHands.get(room.roomCode);
-  const playerHand = roomHands?.get(ws.clientId);
-  
-  if (!playerHand) return;
-
-  playerHand.isReady = true;
-  
-  // Verifica se todos estão prontos
-  const allReady = Array.from(room.players.keys()).every(playerId => {
-    const hand = roomHands?.get(playerId);
-    return hand?.isReady === true;
-  });
-
-  if (allReady) {
-    startCardGame(room);
-  } else {
-    const readyCount = Array.from(room.players.keys()).filter(playerId => {
-      const hand = roomHands?.get(playerId);
-      return hand?.isReady === true;
-    }).length;
-
-    broadcastToRoom(room, "PLAYERS_READY_UPDATE", {
-      readyCount,
-      totalPlayers: room.players.size,
-      message: `${readyCount}/${room.players.size} jogadores prontos`
-    });
-  }
-}
-
-function isUserInAnyRoom(userId: string): boolean {
-  for (const room of roomGlobal.values()) {
-    if (room.players.has(userId) || room.spectators.has(userId)) {
-      return true;
-    }
-  }
-  return false;
-}
-
 function handlePlayerDisconnect(ws: CustomWebSocket): void {
   const room = roomGlobal.get(ws.currentRoomCode);
   if (!room) return;
@@ -833,40 +739,58 @@ function handleCloseRoom(ws: CustomWebSocket): void {
   roomGlobal.delete(room.roomCode);
 }
 
-function getRoomStateForApi(room: Room & { game: CardGame }, currentUserId: string): RoomStateForApi {
+function handleReadyForNextGame(ws: CustomWebSocket): void {
+  const room = roomGlobal.get(ws.currentRoomCode);
+  if (!room) return;
+
   const roomHands = playerHands.get(room.roomCode);
-  const currentPlayerHand = roomHands?.get(currentUserId);
+  const playerHand = roomHands?.get(ws.clientId);
   
-  return {
-    roomCode: room.roomCode,
-    ownerId: room.ownerId,
-    players: Array.from(room.players.entries()).map(([id, p]) => ({
-      id,
-      username: p.username,
-      isOnline: p.ws !== null,
-      handSize: roomHands?.get(id)?.cards.length || 0,
-      isReady: roomHands?.get(id)?.isReady || false,
-      hasPlayedThisTurn: roomHands?.get(id)?.hasPlayedThisTurn || false,
-      score: roomHands?.get(id)?.score || 0,
-    })),
-    spectators: Array.from(room.spectators.entries()).map(([id, s]) => ({ 
-      id, 
-      username: s.username 
-    })),
-    status: room.status,
-    game: {
-      phase: room.game.phase,
-      currentPlayerIndex: room.game.currentPlayerIndex,
-      currentPlayerId: Array.from(room.players.keys())[room.game.currentPlayerIndex],
-      currentCardType: room.game.currentCardType,
-      roundNumber: room.game.roundNumber,
-      direction: room.game.direction,
-      playedCardsCount: room.game.playedCards.length,
-      deckSize: room.game.deck.length,
-    },
-    myCards: currentPlayerHand?.cards || [],
-    myHandSize: currentPlayerHand?.cards.length || 0,
-  };
+  if (!playerHand) return;
+
+  playerHand.isReady = true;
+  
+  // Verifica se todos estão prontos
+  const allReady = Array.from(room.players.keys()).every(playerId => {
+    const hand = roomHands?.get(playerId);
+    return hand?.isReady === true;
+  });
+
+  if (allReady) {
+    startCardGame(room);
+  } else {
+    const readyCount = Array.from(room.players.keys()).filter(playerId => {
+      const hand = roomHands?.get(playerId);
+      return hand?.isReady === true;
+    }).length;
+
+    broadcastToRoom(room, "PLAYERS_READY_UPDATE", {
+      readyCount,
+      totalPlayers: room.players.size,
+      message: `${readyCount}/${room.players.size} jogadores prontos`
+    });
+  }
+}
+
+function handleCreateRoom(ws: CustomWebSocket, payload: {password?: string }): void {
+  
+}
+
+async function handlePlayerJoinRoom(ws: CustomWebSocket, roomCode: string): Promise<void> {
+  const room = await enterRoom({ roomCode, password: "" });
+  
+  if (!room) {
+    log(`Tentativa de conexão com sala inexistente: ${roomCode}`, { ws });
+    sendToClient(ws, "ERROR", {
+      message: "Sala não encontrada ou já foi fechada.",
+    });
+    ws.close();
+    return;
+  }
+
+  await addPlayerToRoom(ws, room);
+  sendToClient(ws, "JOINED_ROOM", { roomCode });
+  broadcastRoomState(room);
 }
 
 // Exports
