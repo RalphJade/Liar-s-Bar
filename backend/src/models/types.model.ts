@@ -54,6 +54,7 @@ export interface Participant {
 
 // The main Room object (extendido para suportar jogo de cartas)
 export interface Room {
+  roomName: string; // Novo: nome da sala
   roomCode: string;
   ownerId: string;
   players: Map<string, Participant>; // Map<userId, Participant>
@@ -137,6 +138,10 @@ export const GAME_CONSTANTS = {
 // Messages sent FROM the Client TO the Server (extendido)
 export type ClientMessage =
   | {
+      type: "LIST_ROOMS";
+      payload: {}; // No payload needed
+    }
+  | {
       type: "MAKE_CHOICE";
       payload: { choice: Choice };
     }
@@ -212,6 +217,16 @@ export type ClientMessage =
 
 // Messages sent FROM the Server TO the Client (extendido)
 export type ServerMessage =
+    | { type: "WAITING_ROOMS";
+      payload: {
+        rooms: {
+          code: string;
+          name: string;
+          currentPlayers: number;
+          maxPlayers: number;
+        }[];
+      };
+    }
   | {
       type: "ROOM_CREATED";
       payload: {

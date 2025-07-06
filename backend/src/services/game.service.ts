@@ -84,6 +84,9 @@ function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
 
   // O switch direciona a ação com base no tipo da mensagem
   switch (data.type) {
+    case "LIST_ROOMS":
+      handleWaitingRooms(ws);
+      break;
     case "CREATE_ROOM":
       handleCreateRoom(ws, data.payload);
       break;
@@ -408,7 +411,7 @@ function broadcastRoomState(room: Room & { game: CardGame }): void {
 function broadcastToRoom<T extends ServerMessage["type"]>(
   room: Room & { game: CardGame },
   type: T,
-  payload: Extract<ServerMessage, { type: T }>["payload"]
+  payload: Extract<ServerMessage, { type: T, payload: any }>["payload"]
 ): void {
   const allParticipants = [...room.players.values(), ...room.spectators.values()];
   allParticipants.forEach(participant => {
@@ -420,13 +423,13 @@ function broadcastToRoom<T extends ServerMessage["type"]>(
 
 function broadcastToOthers<T extends ServerMessage["type"]>(
   room: Room & { game: CardGame },
-  excludeWs: CustomWebSocket,
+  ws: CustomWebSocket,
   type: T,
-  payload: Extract<ServerMessage, { type: T }>["payload"]
+  payload: Extract<ServerMessage, { type: T, payload: any }>["payload"]
 ): void {
   const allParticipants = [...room.players.values(), ...room.spectators.values()];
   allParticipants.forEach(participant => {
-    if (participant.ws && participant.ws.readyState === WebSocket.OPEN && participant.ws.clientId !== excludeWs.clientId) {
+    if (participant.ws && participant.ws.readyState === WebSocket.OPEN) {
       sendToClient(participant.ws, type, payload);
     }
   });
@@ -497,6 +500,7 @@ function getRoomStateForApi(room: Room & { game: CardGame }, currentUserId: stri
     },
     myCards: currentPlayerHand?.cards || [],
     myHandSize: currentPlayerHand?.cards.length || 0,
+    myChoice: room.choices.get(currentUserId) || null,
   };
 }
 
@@ -758,7 +762,7 @@ function handleReadyForNextGame(ws: CustomWebSocket): void {
   }
 }
 
-function handleCreateRoom(ws: CustomWebSocket, payload: {roomCode: string;password?: string }): void {
+function handleCreateRoom(ws: CustomWebSocket, payload: {roomName: string; password?: string }): void {
   if (ws.currentRoomCode) {
     log(`Usuário ${ws.clientUsername} tentou criar uma sala, mas já está em outra sala.`, { ws }); 
     sendToClient(ws, "ERROR", { 
@@ -767,9 +771,10 @@ function handleCreateRoom(ws: CustomWebSocket, payload: {roomCode: string;passwo
     return;
   }
 
-  const { password } = payload;
+  const { roomName, password } = payload;
   const roomCode = generateCodeWithFaker();
   const newRoom: Room = {
+    roomName,
     roomCode,
     ownerId: ws.clientId,
     status: "waiting",
@@ -842,6 +847,18 @@ function handleCreateRoom(ws: CustomWebSocket, payload: {roomCode: string;passwo
       playersNeeded: MAX_PLAYERS - roomWithGame.players.size
     });
   }
+}
+
+function handleWaitingRooms(ws: CustomWebSocket): void {
+  const availableRooms = Array.from(roomGlobal.values()).filter(room => room.status === "waiting");
+  sendToClient(ws, "WAITING_ROOMS", {
+    rooms: availableRooms.map(room => ({
+      code: room.roomCode,
+      name: room.roomName,
+      currentPlayers: room.players.size,
+      maxPlayers: MAX_PLAYERS
+    }))
+  });
 }
 
 function handlePlayerJoinRoom(ws: CustomWebSocket, payload: { roomCode: string; password?: string }): void {
