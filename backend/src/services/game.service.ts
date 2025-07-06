@@ -111,8 +111,6 @@ function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
     case "CHAT_MESSAGE":
       //handleChatMessage(ws, data.payload);
       break;
-    default:
-      sendToClient(ws, "ERROR", { message: `Tipo de mensagem desconhecido: ${data.type}` });
   }
 }
 

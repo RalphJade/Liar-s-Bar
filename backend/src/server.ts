@@ -15,6 +15,7 @@ import { initializeDatabase } from "./database";
 import { verifyTokenForWebSocket } from "./middlewares/auth.middleware";
 import { CustomWebSocket } from "./services/game.service";
 import { initializeGameService } from "./services/game.service";
+import { initializeLobbyService } from "./services/lobby.service";
 import { log } from "./utils/logger";
 import jwt from 'jsonwebtoken';
 import path from 'path'; // Importe o módulo 'path' do Node.js
@@ -68,6 +69,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ noServer: true });
 
 initializeGameService(wss);
+initializeLobbyService(wss);
 
 server.on(
   "upgrade",
