@@ -14,7 +14,7 @@ const routes = {
   '/': { view: renderAuthPage, protected: false },
   '/home': { view: renderHomePage, protected: true },
   '/profile': { view: renderProfilePage, protected: true }, // Add the new profile route
-  '/home': { view: renderLobbyPage, protected: true },
+  '/lobby': { view: renderLobbyPage, protected: true },
 };
 
 // A utility type to ensure that only valid route paths are used throughout the router.
