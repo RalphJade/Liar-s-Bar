@@ -1,3 +1,4 @@
+
 import { getUser } from '../auth/auth.ts';
 import * as websocket from '../lobby/websocket.ts';
 import * as lobbyState from '../lobby/lobbyState.ts'
@@ -73,7 +74,6 @@ export const renderLobbyPage = (element: HTMLElement) => {
   if (headerContainer) {
     renderHeader(headerContainer);
   }
-
   const onlineUserListDiv = document.getElementById('onlineUserList');
   const chatMessagesDiv = document.getElementById('chatMessages');
   const chatForm = document.getElementById('chatForm');
@@ -104,6 +104,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
   const renderOnlineUserList = () => {
     if (!onlineUserListDiv) return;
     onlineUserListDiv.innerHTML = '';
+
     const users = lobbyState.getOnlineUsers();
     users.forEach(user => {
       const userElement = document.createElement('div');

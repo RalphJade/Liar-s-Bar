@@ -43,3 +43,20 @@ export const protect = (req: Request, res: Response, next: NextFunction) => {
     res.status(401).json({ status: 'fail', message: 'Not authorized, token is invalid' });
   }
 };
+
+/**
+ * Function to verify a JWT token extracted manually (e.g., in WebSocket handshake).
+ * Returns the decoded user data if valid, or null if invalid.
+ */
+export const verifyTokenForWebSocket = (
+  token: string | undefined
+): UserPayload | null => {
+  if (!token) return null;
+
+try{    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as UserPayload;
+
+    return decoded;
+}catch(error){
+    return null;
+}
+};
