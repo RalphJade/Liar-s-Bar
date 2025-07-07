@@ -1,49 +1,11 @@
-import { WebSocket, Server as WebSocketServer } from "ws";
-import {
-  Room,
-  RoomStateForApi,
-  ClientMessage,
-  ServerMessage,
-  CardType,
-  PlayerHand
-} from "../models/types.model";
+import { Server as WebSocketServer } from "ws";
+import { ClientMessage, CustomWebSocket } from "../models/types.model";
 import { log } from "../utils/logger";
-import { dealCards, CardGame , canPlayCard} from "./cards.service";
-import { generateCodeWithFaker } from "../utils/room.util";
+import { sendToClient } from "../utils/websocket.util";
 
-export interface CustomWebSocket extends WebSocket {
-  clientId: string;
-  clientUsername: string;
-  currentRoomCode: string;
-}
-
-const roomGlobal = new Map<string, Room & { game: CardGame }>();
-const userConnections = new Map<string, CustomWebSocket>();
-const playerHands = new Map<string, Map<string, PlayerHand>>(); // roomCode -> playerId -> hand
-
-// Configurações do jogo
-const MAX_PLAYERS = 4;
-const CARDS_PER_PLAYER = 5;
-const TURN_TIME_LIMIT = 30000; // 30 segundos por turno
-const CARDS_PER_TYPE = 6; // 6 cartas de cada tipo (rei, dama, ás)
-const JOKERS_COUNT = 2; // 2 coringas
-
-export function sendToClient<T extends ServerMessage["type"]>(
-  ws: CustomWebSocket,
-  type: T,
-  payload: Extract<ServerMessage, { type: T }>["payload"]
-): void {
-  if (ws.readyState !== WebSocket.OPEN) {
-    log("Tentativa de envio para um WebSocket fechado.", {
-      ws,
-      data: { type }
-    });
-    return;
-  }
-  const message = { type, payload };
-  ws.send(JSON.stringify(message));
-  log(`Mensagem enviada para ${ws.clientUsername}: ${type}`);
-}
+import * as LobbyManager from "./lobby.manager"
+import * as RoomManager from "./room.manager"
+import * as GameLogic from "./game-logic"
 
 export function initializeGameService(wss: WebSocketServer): void {
   wss.on("connection", (ws: CustomWebSocket, request: any) => {
@@ -58,17 +20,15 @@ export function initializeGameService(wss: WebSocketServer): void {
       try {
         const data: ClientMessage = JSON.parse(message.toString());
         log("Mensagem recebida.", { ws, data });
-        
         handleClientMessage(ws, data);
       } catch (error: any) {
         log("Erro ao parsear mensagem JSON.", { ws, data: { error: error.message, originalMessage: message.toString() } });
       }
     });
 
+    // 3. O listener de 'close' chama nosso handler de desconexão do lobby
     ws.on("close", () => {
-      log("Cliente desconectado.", { ws });
-      userConnections.delete(ws.clientId);
-      handlePlayerDisconnect(ws);
+      LobbyManager.handleDisconnect(ws);
     });
 
     ws.on("error", (error) => {
@@ -86,367 +46,160 @@ function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
 
   // O switch direciona a ação com base no tipo da mensagem
   switch (data.type) {
+    case "CHAT_MESSAGE":
+      LobbyManager.handleChatMessage(ws, data.payload);
+      break;
     case "LIST_ROOMS":
-      handleWaitingRooms(ws);
+      RoomManager.handleWaitingRooms(ws);
       break;
     case "CREATE_ROOM":
-      handleCreateRoom(ws, data.payload);
+      RoomManager.handleCreateRoom(ws, data.payload);
       break;
     case "JOIN_ROOM":
-      handlePlayerJoinRoom(ws, data.payload);
+      RoomManager.handlePlayerJoinRoom(ws, data.payload);
       break;
     case "PLAY_CARD":
-      handlePlayCard(ws, data.payload);
+      GameLogic.handlePlayCard(ws, data.payload);
       break;
     case "CLOSE_ROOM":
-      handleCloseRoom(ws);
+      RoomManager.handleCloseRoom(ws);
       break;
     case "READY_FOR_NEXT_GAME":
-      handleReadyForNextGame(ws);
+      RoomManager.handleReadyForNextGame(ws);
       break;
     case "CHALLENGE_PLAYER":
-      handleChallengePlayer(ws, data.payload);
+      GameLogic.handleChallengePlayer(ws, data.payload);
       break;
     case "LEAVE_ROOM":
-      handlePlayerDisconnect(ws);
-      break;
-    case "CHAT_MESSAGE":
-      //handleChatMessage(ws, data.payload);
+      RoomManager.handlePlayerDisconnect(ws);
       break;
   }
 }
 
-// Função para obter o próximo jogador
-function getNextPlayer(room: Room & { game: CardGame }): string | null {
-  const playerIds = Array.from(room.players.keys());
-  const currentIndex = room.game.currentPlayerIndex;
-  const nextIndex = (currentIndex + room.game.direction + playerIds.length) % playerIds.length;
+// async function addPlayerToRoom(ws: CustomWebSocket, room: Room): Promise<void> {
+//   const { clientId, clientUsername } = ws;
   
-  room.game.currentPlayerIndex = nextIndex;
-  return playerIds[nextIndex];
-}
+//   if (isUserInAnyRoom(clientId)) {
+//     log(`Usuário ${clientUsername} tentou entrar na sala ${room.roomCode} mas já está em outra.`, { ws });
+//     sendToClient(ws, "ERROR", { 
+//       message: "Você já está em outra sala. Saia da sala atual para poder entrar em uma nova." 
+//     });
+//     ws.close();
+//     return;
+//   }
 
-async function addPlayerToRoom(ws: CustomWebSocket, room: Room): Promise<void> {
-  const { clientId, clientUsername } = ws;
+//   if (!roomGlobal.has(room.roomCode)) {
+//     roomGlobal.set(room.roomCode, {
+//       ...room,
+//       players: new Map(),
+//       spectators: new Map(),
+//       game: {
+//         deck: [],
+//         currentPlayerIndex: 0,
+//         direction: 1,
+//         phase: 'waiting',
+//         roundNumber: 0,
+//         turnTimeLimit: TURN_TIME_LIMIT,
+//         turnTimer: null,
+//         currentCardType: null,
+//         playedCards: [],
+//       },
+//     });
+//   }
+
+//   const localRoom = roomGlobal.get(room.roomCode)!;
+//   let participant = localRoom.players.get(clientId) || localRoom.spectators.get(clientId);
   
-  if (isUserInAnyRoom(clientId)) {
-    log(`Usuário ${clientUsername} tentou entrar na sala ${room.roomCode} mas já está em outra.`, { ws });
-    sendToClient(ws, "ERROR", { 
-      message: "Você já está em outra sala. Saia da sala atual para poder entrar em uma nova." 
-    });
-    ws.close();
-    return;
-  }
-
-  if (!roomGlobal.has(room.roomCode)) {
-    roomGlobal.set(room.roomCode, {
-      ...room,
-      players: new Map(),
-      spectators: new Map(),
-      game: {
-        deck: [],
-        currentPlayerIndex: 0,
-        direction: 1,
-        phase: 'waiting',
-        roundNumber: 0,
-        turnTimeLimit: TURN_TIME_LIMIT,
-        turnTimer: null,
-        currentCardType: null,
-        playedCards: [],
-      },
-    });
-  }
-
-  const localRoom = roomGlobal.get(room.roomCode)!;
-  let participant = localRoom.players.get(clientId) || localRoom.spectators.get(clientId);
-  
-  if (participant) {
-    // Reconexão
-    participant.ws = ws;
-    log(`Participante ${clientUsername} reconectado à sala ${room.roomCode}.`, { ws });
+//   if (participant) {
+//     // Reconexão
+//     participant.ws = ws;
+//     log(`Participante ${clientUsername} reconectado à sala ${room.roomCode}.`, { ws });
     
-    if (localRoom.players.has(clientId)) {
-      broadcastToOthers(localRoom, ws, "PLAYER_RECONNECTED", {
-        playerId: clientId,
-        playerName: clientUsername,
-        message: `${clientUsername} reconectou-se!`
-      });
-    }
-  } else {
-    // Nova entrada
-    if (localRoom.players.size < MAX_PLAYERS) {
-      localRoom.players.set(clientId, { username: clientUsername, ws });
-      log(`Jogador ${clientUsername} entrou na sala ${room.roomCode} (${localRoom.players.size}/${MAX_PLAYERS}).`, { ws });
+//     if (localRoom.players.has(clientId)) {
+//       broadcastToOthers(localRoom, ws, "PLAYER_RECONNECTED", {
+//         playerId: clientId,
+//         playerName: clientUsername,
+//         message: `${clientUsername} reconectou-se!`
+//       });
+//     }
+//   } else {
+//     // Nova entrada
+//     if (localRoom.players.size < MAX_PLAYERS) {
+//       localRoom.players.set(clientId, { username: clientUsername, ws });
+//       log(`Jogador ${clientUsername} entrou na sala ${room.roomCode} (${localRoom.players.size}/${MAX_PLAYERS}).`, { ws });
       
-      // Verifica se pode iniciar o jogo
-      if (localRoom.players.size === MAX_PLAYERS) {
-        startCardGame(localRoom);
-      } else {
-        // Notifica que precisa de mais jogadores
-        broadcastToRoom(localRoom, "WAITING_FOR_PLAYERS", {
-          currentPlayers: localRoom.players.size,
-          maxPlayers: MAX_PLAYERS,
-          message: `Aguardando jogadores (${localRoom.players.size}/${MAX_PLAYERS})`,
-          playersNeeded: MAX_PLAYERS - localRoom.players.size
-        });
-      }
-    } else {
-      // Adiciona como espectador
-      localRoom.spectators.set(clientId, { username: clientUsername, ws });
-      log(`Espectador ${clientUsername} entrou na sala ${room.roomCode}.`, { ws });
-    }
-  }
-}
+//       // Verifica se pode iniciar o jogo
+//       if (localRoom.players.size === MAX_PLAYERS) {
+//         startCardGame(localRoom);
+//       } else {
+//         // Notifica que precisa de mais jogadores
+//         broadcastToRoom(localRoom, "WAITING_FOR_PLAYERS", {
+//           currentPlayers: localRoom.players.size,
+//           maxPlayers: MAX_PLAYERS,
+//           message: `Aguardando jogadores (${localRoom.players.size}/${MAX_PLAYERS})`,
+//           playersNeeded: MAX_PLAYERS - localRoom.players.size
+//         });
+//       }
+//     } else {
+//       // Adiciona como espectador
+//       localRoom.spectators.set(clientId, { username: clientUsername, ws });
+//       log(`Espectador ${clientUsername} entrou na sala ${room.roomCode}.`, { ws });
+//     }
+//   }
+// }
 
-function startCardGame(room: Room & { game: CardGame }): void {
-  log(`Iniciando jogo de cartas na sala ${room.roomCode} com ${room.players.size} jogadores.`);
-  
-  room.status = "playing";
-  room.game.phase = "playing";
-  room.game.roundNumber = 1;
-  room.game.currentPlayerIndex = 0;
-  room.game.currentCardType = null;
-  room.game.playedCards = [];
-  
-  // Distribui cartas
-  const cards = dealCards(room);
-  playerHands.set(room.roomCode, cards);
-  
-  // Inicia o turno do primeiro jogador
-  const firstPlayerId = Array.from(room.players.keys())[0];
-  startPlayerTurn(room, firstPlayerId);
-  
-  // Notifica todos os jogadores
-  broadcastToRoom(room, "GAME_STARTED", {
-    message: "O jogo começou! O primeiro jogador deve escolher que tipo de carta jogar.",
-    currentPlayer: firstPlayerId,
-    roundNumber: room.game.roundNumber,
-    gameRules: {
-      cardsPerPlayer: CARDS_PER_PLAYER,
-      cardTypes: ['king', 'queen', 'ace', 'joker'],
-      cardsPerType: CARDS_PER_TYPE,
-      jokersCount: JOKERS_COUNT,
-      maxPlayers: MAX_PLAYERS,
-      turnTimeLimit: TURN_TIME_LIMIT
-    }
-  });
-  
-  // Envia cartas para cada jogador
-  const roomHands = playerHands.get(room.roomCode);
-  if (roomHands) {
-    room.players.forEach((player, playerId) => {
-      const hand = roomHands.get(playerId);
-      if (hand && player.ws) {
-        sendToClient(player.ws, "HAND_DEALT", {
-          cards: hand.cards,
-          handSize: hand.cards.length,
-          totalCards: CARDS_PER_PLAYER
-        });
-      }
-    });
-  }
-}
-
-function startPlayerTurn(room: Room & { game: CardGame }, playerId: string): void {
-  const player = room.players.get(playerId);
-  if (!player?.ws) return;
-
-  log(`Turno do jogador ${player.username} na sala ${room.roomCode}.`);
-  
-  // Cancela timer anterior se existir
-  if (room.game.turnTimer) {
-    clearTimeout(room.game.turnTimer);
-  }
-  
-  // Verifica se todas as cartas foram jogadas nesta rodada
-  const allPlayersPlayed = Array.from(room.players.keys()).every(pId => {
-    const roomHands = playerHands.get(room.roomCode);
-    const hand = roomHands?.get(pId);
-    return hand?.hasPlayedThisTurn === true;
-  });
-
-  if (allPlayersPlayed) {
-    // Inicia nova rodada
-    startNewRound(room);
-    return;
-  }
-  
-  // Notifica o jogador atual
-  sendToClient(player.ws, "YOUR_TURN", {
-    message: room.game.currentCardType ? 
-      `Sua vez! Jogue uma carta do tipo: ${room.game.currentCardType}` : 
-      "Sua vez! Escolha que tipo de carta jogar para iniciar a rodada.",
-    timeLimit: room.game.turnTimeLimit,
-    currentCardType: room.game.currentCardType,
-    isFirstPlay: room.game.currentCardType === null
-  });
-  
-  // Notifica outros jogadores
-  broadcastToOthers(room, player.ws, "PLAYER_TURN", {
-    currentPlayer: playerId,
-    playerName: player.username,
-    message: `Vez de ${player.username}`,
-    timeLimit: room.game.turnTimeLimit,
-    currentCardType: room.game.currentCardType
-  });
-  
-  // Inicia timer do turno
-  room.game.turnTimer = setTimeout(() => {
-    handleTurnTimeout(room, playerId);
-  }, room.game.turnTimeLimit);
-}
-
-function startNewRound(room: Room & { game: CardGame }): void {
-  log(`Iniciando nova rodada na sala ${room.roomCode}.`);
-  
-  // Reset da rodada
-  room.game.currentCardType = null;
-  room.game.playedCards = [];
-  room.game.roundNumber++;
-  
-  // Reset dos flags de jogada
-  const roomHands = playerHands.get(room.roomCode);
-  if (roomHands) {
-    roomHands.forEach(hand => {
-      hand.hasPlayedThisTurn = false;
-    });
-  }
-  
-  // Próximo jogador inicia
-  const nextPlayerId = getNextPlayer(room);
-  if (nextPlayerId) {
-    startPlayerTurn(room, nextPlayerId);
-  }
-  
-  broadcastToRoom(room, "NEW_ROUND", {
-    message: "Nova rodada iniciada!",
-    roundNumber: room.game.roundNumber,
-    currentPlayer: nextPlayerId
-  });
-}
-
-function handleTurnTimeout(room: Room & { game: CardGame }, playerId: string): void {
-  log(`Timeout do turno para jogador ${playerId} na sala ${room.roomCode}.`);
-  
-  const player = room.players.get(playerId);
-  if (!player?.ws) return;
-
-  // Marca que o jogador jogou (perdeu a vez)
-  const roomHands = playerHands.get(room.roomCode);
-  const playerHand = roomHands?.get(playerId);
-  if (playerHand) {
-    playerHand.hasPlayedThisTurn = true;
-  }
-
-  // Notifica timeout
-  sendToClient(player.ws, "TURN_TIMEOUT", {
-    message: "Tempo esgotado! Você perdeu a vez."
-  });
-  
-  broadcastToOthers(room, player.ws, "PLAYER_TIMEOUT", {
-    playerId,
-    playerName: player.username,
-    message: `${player.username} perdeu a vez por timeout.`
-  });
-  
-  // Passa para o próximo jogador
-  const nextPlayerId = getNextPlayer(room);
-  if (nextPlayerId) {
-    startPlayerTurn(room, nextPlayerId);
-  }
-}
-
-function attemptPlayerReconnection(ws: CustomWebSocket): boolean {
-  for (const room of roomGlobal.values()) {
-    const participant = room.players.get(ws.clientId) || room.spectators.get(ws.clientId);
+// function attemptPlayerReconnection(ws: CustomWebSocket): boolean {
+//   for (const room of roomGlobal.values()) {
+//     const participant = room.players.get(ws.clientId) || room.spectators.get(ws.clientId);
     
-    if (participant && !participant.ws) {
-      log(`Reconectando ${ws.clientUsername} à sala ${room.roomCode}.`, { ws });
+//     if (participant && !participant.ws) {
+//       log(`Reconectando ${ws.clientUsername} à sala ${room.roomCode}.`, { ws });
       
-      participant.ws = ws;
-      ws.currentRoomCode = room.roomCode;
+//       participant.ws = ws;
+//       ws.currentRoomCode = room.roomCode;
       
-      // Envia estado da sala
-      const roomState = getRoomStateForApi(room, ws.clientId);
-      sendToClient(ws, "ROOM_STATE_UPDATE", roomState);
+//       // Envia estado da sala
+//       const roomState = getRoomStateForApi(room, ws.clientId);
+//       sendToClient(ws, "ROOM_STATE_UPDATE", roomState);
       
-      // Envia cartas se for jogador
-      if (room.players.has(ws.clientId)) {
-        const roomHands = playerHands.get(room.roomCode);
-        const playerHand = roomHands?.get(ws.clientId);
+//       // Envia cartas se for jogador
+//       if (room.players.has(ws.clientId)) {
+//         const roomHands = playerHands.get(room.roomCode);
+//         const playerHand = roomHands?.get(ws.clientId);
         
-        if (playerHand) {
-          sendToClient(ws, "HAND_UPDATE", {
-            cards: playerHand.cards,
-            handSize: playerHand.cards.length,
-            currentCardType: room.game.currentCardType
-          });
-        }
+//         if (playerHand) {
+//           sendToClient(ws, "HAND_UPDATE", {
+//             cards: playerHand.cards,
+//             handSize: playerHand.cards.length,
+//             currentCardType: room.game.currentCardType
+//           });
+//         }
         
-        broadcastToOthers(room, ws, "PLAYER_RECONNECTED", {
-          playerId: ws.clientId,
-          playerName: ws.clientUsername,
-          message: `${ws.clientUsername} reconectou-se!`
-        });
-      }
+//         broadcastToOthers(room, ws, "PLAYER_RECONNECTED", {
+//           playerId: ws.clientId,
+//           playerName: ws.clientUsername,
+//           message: `${ws.clientUsername} reconectou-se!`
+//         });
+//       }
       
-      return true;
-    }
-  }
-  return false;
-}
+//       return true;
+//     }
+//   }
+//   return false;
+// }
 
-function broadcastRoomState(room: Room & { game: CardGame }): void {
-  log(`Transmitindo estado da sala ${room.roomCode} para todos os participantes.`);
-  const allParticipants = [...room.players.values(), ...room.spectators.values()];
-
-  allParticipants.forEach((participant) => {
-    if (participant.ws && participant.ws.readyState === WebSocket.OPEN) {
-      const personalRoomState = getRoomStateForApi(room, participant.ws.clientId);
-      sendToClient(participant.ws, "ROOM_STATE_UPDATE", personalRoomState);
-    }
-  });
-}
-
-function broadcastToRoom<T extends ServerMessage["type"]>(
-  room: Room & { game: CardGame },
-  type: T,
-  payload: Extract<ServerMessage, { type: T, payload: any }>["payload"]
-): void {
-  const allParticipants = [...room.players.values(), ...room.spectators.values()];
-  allParticipants.forEach(participant => {
-    if (participant.ws && participant.ws.readyState === WebSocket.OPEN) {
-      sendToClient(participant.ws, type, payload);
-    }
-  });
-}
-
-function broadcastToOthers<T extends ServerMessage["type"]>(
-  room: Room & { game: CardGame },
-  ws: CustomWebSocket,
-  type: T,
-  payload: Extract<ServerMessage, { type: T, payload: any }>["payload"]
-): void {
-  const allParticipants = [...room.players.values(), ...room.spectators.values()];
-  allParticipants.forEach(participant => {
-    if (participant.ws && participant.ws.readyState === WebSocket.OPEN) {
-      sendToClient(participant.ws, type, payload);
-    }
-  });
-}
-
-function prepareNextGame(room: Room & { game: CardGame }): void {
-  room.game.phase = "waiting";
+// function prepareNextGame(room: Room & { game: CardGame }): void {
+//   room.game.phase = "waiting";
   
-  // Resetar hands
-  const roomHands = playerHands.get(room.roomCode);
-  if (roomHands) {
-    roomHands.forEach(hand => {
-      hand.isReady = false;
-      hand.hasPlayedThisTurn = false;
-      hand.cards = []; // Limpa cartas para próximo jogo
-    });
-  }
+//   // Resetar hands
+//   const roomHands = playerHands.get(room.roomCode);
+//   if (roomHands) {
+//     roomHands.forEach(hand => {
+//       hand.isReady = false;
+//       hand.hasPlayedThisTurn = false;
+//       hand.cards = []; // Limpa cartas para próximo jogo
+//     });
+//   }
 
   broadcastToRoom(room, "NEXT_GAME_READY", {
     message: "Pronto para o próximo jogo? Clique em 'Pronto' quando estiver preparado.",
