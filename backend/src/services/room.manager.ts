@@ -6,6 +6,7 @@ import { CardGame } from "./cards.service";
 import { generateCodeWithFaker } from "../utils/room.util";
 import { startCardGame, advanceTurnAfterInterruption } from "./game-logic";
 import { MAX_PLAYERS, TURN_TIME_LIMIT } from '../config/game.config';
+import * as LobbyManager from './lobby.manager';
 
 export function handleCreateRoom(ws: CustomWebSocket, payload: {roomName: string; password?: string }): void {
   if (ws.currentRoomCode) {
@@ -60,24 +61,18 @@ export function handleCreateRoom(ws: CustomWebSocket, payload: {roomName: string
   log(`Sala ${roomCode} criada por ${ws.clientUsername}.`, { ws });
 
   // Envia confirmação para o cliente que criou a sala
-  sendToClient(ws, "ROOM_CREATED", {
-    roomCode: roomWithGame.roomCode,
-    ownerId: roomWithGame.ownerId,
-    players: Array.from(roomWithGame.players.entries()).map(([id, p]) => ({
-      id,
-      username: p.username,
-      isOnline: p.ws !== null
-    })),
-    spectators: Array.from(roomWithGame.spectators.entries()).map(([id, s]) => ({ 
-      id, 
-      username: s.username 
-    })),
-    status: roomWithGame.status,
-    message: `Sala ${roomCode} criada com sucesso! Aguardando outros jogadores.`,
-    maxPlayers: MAX_PLAYERS,
-    currentPlayers: roomWithGame.players.size,
-    playersNeeded: MAX_PLAYERS - roomWithGame.players.size
-  });
+LobbyManager.broadcast({
+  type: "ROOM_CREATED",
+  payload: {
+      // Dados da sala no mesmo formato do WAITING_ROOMS
+      code: roomWithGame.roomCode,
+      name: roomWithGame.roomName,
+      currentPlayers: roomWithGame.players.size,
+      maxPlayers: MAX_PLAYERS,
+      hasPassword: !!roomWithGame.password,
+      ownerId: roomWithGame.ownerId, // Para identificar o criador
+    },
+});
 
   // Envia o estado inicial da sala
   const roomState = getRoomStateForApi(roomWithGame, ws.clientId);

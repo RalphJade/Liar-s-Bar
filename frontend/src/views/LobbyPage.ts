@@ -236,15 +236,19 @@ export const renderLobbyPage = (element: HTMLElement) => {
         renderOnlineUserList();
         break;
       case "ROOM_CREATED":
-        lobbyState.addRoom({
-          code: message.payload.roomCode,
-          name: message.payload.roomName || message.payload.roomCode,
-          currentPlayers: message.payload.currentPlayers || 1,
-          maxPlayers: message.payload.maxPlayers || 4,
-          hasPassword: !!message.payload.password,
-        });
-        renderRoomList(); // Renderiza novamente
-        navigate(`/gameboard/${message.payload.roomCode}`);
+          lobbyState.setRooms([{
+            code: message.payload.code,
+            name: message.payload.name,
+            currentPlayers: message.payload.currentPlayers,
+            maxPlayers: message.payload.maxPlayers,
+            hasPassword: message.payload.hasPassword,
+          }]);
+        const currentUser = getUser();
+        if (currentUser && currentUser.id === message.payload.ownerId) {
+          navigate(`/gameboard/${message.payload.code}`);
+        }
+        lobbyState.setRooms(lobbyState.getRooms());
+        renderRoomList();
         break;
       case "WAITING_ROOMS":
         lobbyState.setRooms(message.payload.rooms);
