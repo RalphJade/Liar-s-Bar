@@ -15,7 +15,8 @@ export const renderLobbyPage = (element: HTMLElement) => {
   element.innerHTML = `
     <div id="header-container"></div>
     <!-- Conteúdo Principal do Lobby -->
-    <main class="lobby-grid">
+    <main class="lobby-main">
+    <div class="lobby-grid">
       <!-- Coluna Principal (Salas e Chat) -->
       <div class="lobby-main-column">
         <div id="lobbyContainer" class="card lobby-card">
@@ -44,6 +45,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
         <h3 class="lobby-subtitle">Players in the Bar</h3>
         <div id="onlineUserList" class="scrollable-list"></div>
       </aside>
+      </div>
     </main>
 
     <!-- Modal de Criar Sala -->
@@ -88,7 +90,16 @@ export const renderLobbyPage = (element: HTMLElement) => {
 
   createRoomForm?.addEventListener('submit', (e) => {
     e.preventDefault();
-    // Lógica para criar sala...
+    const roomName = (document.getElementById('roomNameInput') as HTMLInputElement).value;
+    const password = (document.getElementById('roomPasswordInput') as HTMLInputElement).value;
+
+    const messageToSend = {
+        type: 'CREATE_ROOM',
+        payload: { roomName, password }
+    };
+
+    websocket.sendWebSocketMessage(messageToSend); 
+
     createRoomModal?.classList.add('hidden');
   });
 
