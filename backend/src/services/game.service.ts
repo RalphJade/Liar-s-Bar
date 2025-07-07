@@ -12,6 +12,8 @@ export function initializeGameService(wss: WebSocketServer): void {
   wss.on("connection", (ws: CustomWebSocket) => {
     // 1. A primeira coisa a fazer é chamar o handler de conexão do lobby
     LobbyManager.handleNewConnection(ws);
+    // Em seguida, enviamos a lista de salas disponíveis
+    RoomManager.handleWaitingRooms(ws);
 
     // 2. O listener de mensagem chama nosso roteador de mensagens unificado
     ws.on("message", (message) => {
@@ -69,7 +71,7 @@ function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
       GameLogic.handleChallengePlayer(ws, data.payload);
       break;
     case "LEAVE_ROOM":
-      RoomManager.handlePlayerDisconnect(ws);
+      RoomManager.handleLeaveRoom(ws);
       break;
   }
 }

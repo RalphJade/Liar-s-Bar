@@ -68,7 +68,7 @@ function broadcastOnlineUserList() {
 /**
  * Envia uma mensagem para TODOS os clientes conectados no lobby.
  */
-function broadcast(message: object) {
+export function broadcast(message: object) {
   const serializedMessage = JSON.stringify(message);
   for (const client of connectedClients.values()) {
     if (client.readyState === WebSocket.OPEN) {

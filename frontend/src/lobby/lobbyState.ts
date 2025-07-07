@@ -7,7 +7,6 @@ interface ChatMessage {
     username: string;
     text: string;
 }
-
 interface Room {
   code: string;
   name: string;
@@ -17,6 +16,14 @@ interface Room {
 }
 
 let rooms: Room[] = [];
+
+interface Room {
+  code: string;
+  name: string;
+  currentPlayers: number;
+  maxPlayers: number;
+  hasPassword: boolean;
+}
 
 const state = {
     onlineUsers: [] as User[],

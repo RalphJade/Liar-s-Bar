@@ -1,4 +1,4 @@
-import { CustomWebSocket } from "../services/game.service";
+import { CustomWebSocket } from "../models/types.model";
 
 interface LogContext {
   ws?: CustomWebSocket;

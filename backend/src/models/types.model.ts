@@ -223,6 +223,19 @@ export type ClientMessage =
 
 // Messages sent FROM the Server TO the Client (extendido)
 export type ServerMessage =
+    | {
+      type: "PLAYER_LEFT";
+      payload: {
+        playerId: string;
+        playerName: string;
+        message: string;
+        currentPlayers: number;
+      };
+    }
+    | {
+      type: "LEFT_ROOM";
+      payload: { message: string };
+    }
     | { type: "WAITING_ROOMS";
       payload: {
         rooms: {
@@ -236,17 +249,14 @@ export type ServerMessage =
   | {
       type: "ROOM_CREATED";
       payload: {
-        roomCode: string;
-        ownerId: string;
-        players: { id: string; username: string; isOnline: boolean }[];
-        spectators: { id: string; username: string }[];
-        status: "waiting" | "playing";
-        message: string;
-        maxPlayers: number;
-        currentPlayers: number;
-        playersNeeded: number;
-      };
-    }
+          code: string,
+          name: string,
+          currentPlayers: number,
+          maxPlayers: number,
+          hasPassword: boolean,
+          ownerId: string, // Para identificar o criador
+        },
+      }
   | {
       type: "JOINED_ROOM";
       payload: { roomCode: string; asSpectator: boolean; message: string };
