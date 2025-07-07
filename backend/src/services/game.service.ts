@@ -51,6 +51,8 @@ export function initializeGameService(wss: WebSocketServer): void {
 
     userConnections.set(ws.clientId, ws);
 
+      handleWaitingRooms(ws);
+
 
     ws.on("message", async (message) => {
       try {
@@ -832,6 +834,9 @@ function handleCreateRoom(ws: CustomWebSocket, payload: {roomName: string; passw
     playersNeeded: MAX_PLAYERS - roomWithGame.players.size
   });
 
+    broadcastWaitingRoomsToAll()
+
+
   // Envia o estado inicial da sala
   const roomState = getRoomStateForApi(roomWithGame, ws.clientId);
   sendToClient(ws, "ROOM_STATE_UPDATE", roomState);
@@ -845,18 +850,6 @@ function handleCreateRoom(ws: CustomWebSocket, payload: {roomName: string; passw
       playersNeeded: MAX_PLAYERS - roomWithGame.players.size
     });
   }
-}
-
-function handleWaitingRooms(ws: CustomWebSocket): void {
-  const availableRooms = Array.from(roomGlobal.values()).filter(room => room.status === "waiting");
-  sendToClient(ws, "WAITING_ROOMS", {
-    rooms: availableRooms.map(room => ({
-      code: room.roomCode,
-      name: room.roomName,
-      currentPlayers: room.players.size,
-      maxPlayers: MAX_PLAYERS
-    }))
-  });
 }
 
 function handlePlayerJoinRoom(ws: CustomWebSocket, payload: { roomCode: string; password?: string }): void {
@@ -945,6 +938,39 @@ function handlePlayerJoinRoom(ws: CustomWebSocket, payload: { roomCode: string; 
   
   // Envia o estado atual da sala
   broadcastRoomState(room);
+}
+
+function broadcastWaitingRoomsToAll(): void {
+  const availableRooms = Array.from(roomGlobal.values()).filter(room => room.status === "waiting");
+  const roomsData = {
+    rooms: availableRooms.map(room => ({
+      code: room.roomCode,
+      name: room.roomName,
+      currentPlayers: room.players.size,
+      maxPlayers: MAX_PLAYERS,
+      hasPassword: !!room.password
+    }))
+  };
+
+  // Envia para todos os clientes conectados
+  userConnections.forEach(ws => {
+    if (ws.readyState === WebSocket.OPEN) {
+      sendToClient(ws, "WAITING_ROOMS", roomsData);
+    }
+  });
+}
+
+function handleWaitingRooms(ws: CustomWebSocket): void {
+  const availableRooms = Array.from(roomGlobal.values()).filter(room => room.status === "waiting");
+  sendToClient(ws, "WAITING_ROOMS", {
+    rooms: availableRooms.map(room => ({
+      code: room.roomCode,
+      name: room.roomName,
+      currentPlayers: room.players.size,
+      maxPlayers: MAX_PLAYERS,
+      hasPassword: !!room.password
+    }))
+  });
 }
 
 // Exports
