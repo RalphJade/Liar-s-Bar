@@ -25,8 +25,6 @@ interface Room {
   hasPassword: boolean;
 }
 
-let rooms: Room[] = [];
-
 const state = {
     onlineUsers: [] as User[],
     chatMessages: [] as ChatMessage[],

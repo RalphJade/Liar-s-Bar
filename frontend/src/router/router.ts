@@ -32,7 +32,7 @@ const appDiv = document.getElementById('app') as HTMLDivElement;
  * This updates the browser's URL without a full page reload, enabling SPA behavior.
  * @param path The internal path to navigate to (e.g., '/home').
  */
-export const navigate = (path: RoutePath) => {
+export const navigate = (path: string) => {
   // Update the URL in the browser's address bar.
   window.history.pushState({}, '', path);
   // Manually call the location handler to render the new view.
@@ -44,9 +44,29 @@ export const navigate = (path: RoutePath) => {
  * This function is called on initial load and every time the URL changes.
  */
 const handleLocation = () => {
-  const path = window.location.pathname as RoutePath;
+  const path = window.location.pathname;
+
+  const gameboardMatch = path.match(/^\/gameboard\/([A-Z0-9]+)$/);
+  if (gameboardMatch) {
+    const roomCode = gameboardMatch[1];
+    
+    if (isAuthLoading()) {
+      appDiv.innerHTML = '<div class="page-container"><h1>Loading...</h1></div>';
+      return;
+    }
+    
+    if (!isLoggedIn()) {
+      navigate('/');
+      return;
+    }
+    
+    // Chama renderGameBoardPage com roomCode
+    renderGameBoardPage(appDiv, roomCode);
+    return;
+  }
+
   // Fallback to the root route if the current path is not found in the routing table.
-  const route = routes[path] || routes['/'];
+  const route = routes[path as RoutePath] || routes['/'];
 
   // Display a loading indicator while the initial authentication check is running.
   if (isAuthLoading()) {

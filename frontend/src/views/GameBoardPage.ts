@@ -8,10 +8,11 @@ const API_BASE_URL = 'http://localhost:3001';
 /**
  * Renders the main Game Board page.
  * @param {HTMLElement} element The root element to render the page content into.
+ * @param {string} [roomCode] The unique code for the game room.
  */
-export const renderGameBoardPage = (element: HTMLElement) => {
+export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => {
     const currentUser = getUser();
-    if (!currentUser) {
+    if (!currentUser || !roomCode) {
         navigate('/');
         return;
     }
@@ -90,7 +91,7 @@ export const renderGameBoardPage = (element: HTMLElement) => {
             <div class="chat-sidebar">
                 <div class="chat-panel">
                     <div class="chat-header">
-                        <span class="chat-title">Live Chat</span>
+                        <span class="chat-title">Live Chat, ROOM CODE (${roomCode})</span>
                         <div class="online-indicator">
                             <span class="dot"></span>
                             <span class="count">4 online</span>

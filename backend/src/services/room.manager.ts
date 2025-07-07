@@ -190,7 +190,8 @@ export function handleWaitingRooms(ws: CustomWebSocket): void {
       code: room.roomCode,
       name: room.roomName,
       currentPlayers: room.players.size,
-      maxPlayers: MAX_PLAYERS
+      maxPlayers: MAX_PLAYERS,
+      hasPassword: !!room.password,
     }))
   });
 }

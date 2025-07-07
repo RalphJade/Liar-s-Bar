@@ -115,8 +115,8 @@ export const renderLobbyPage = (element: HTMLElement) => {
     websocket.sendWebSocketMessage({
       type: "CREATE_ROOM",
       payload: {
-        rooName: roomNameInput.value,
-        password: roomPasswordInput.value,
+        roomName: roomNameInput.value,
+        password: roomPasswordInput.value || undefined,
       },
     });
     roomNameInput.value = "";
@@ -215,7 +215,6 @@ export const renderLobbyPage = (element: HTMLElement) => {
         payload: { roomCode },
       });
     }
-    navigate(`/gameboard`);
   };
 
   const handleWebSocketMessage = (message: any) => {
@@ -245,7 +244,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
           hasPassword: !!message.payload.password,
         });
         renderRoomList(); // Renderiza novamente
-        navigate(`/gameboard`);
+        navigate(`/gameboard/${message.payload.roomCode}`);
         break;
       case "WAITING_ROOMS":
         lobbyState.setRooms(message.payload.rooms);
@@ -253,8 +252,10 @@ export const renderLobbyPage = (element: HTMLElement) => {
         break;
       case "JOINED_ROOM":
         console.log("Joined room:", message.payload);
-        // Redirect to game page or show game interface
+        navigate(`/gameboard/${message.payload.roomCode}`);
         break;
+      case "ERROR":
+        alert(`Error: ${message.payload.message}`);
     }
   };
 
