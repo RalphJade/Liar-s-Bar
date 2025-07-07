@@ -32,3 +32,12 @@ export function getRoomHands(roomCode: string): Map<string, PlayerHand> | undefi
 export function setRoomHands(roomCode: string, hands: Map<string, PlayerHand>): void {
     playerHands.set(roomCode, hands);
 }
+
+export function isUserInAnyRoom(userId: string): boolean {
+  for (const room of gameRooms.values()) {
+    if (room.players.has(userId) || room.spectators.has(userId)) {
+      return true;
+    }
+  }
+  return false;
+}

@@ -164,8 +164,8 @@ export function handlePlayCard(ws: CustomWebSocket, payload: { cardId: string; d
 
   // Se é a primeira carta da rodada, define o tipo
   if (room.game.currentCardType === null) {
-    if (card.type === 'joker') {
-      if (!declaredType || !['king', 'queen', 'ace'].includes(declaredType)) {
+    if (card.type === 'ace') {
+      if (!declaredType || !['king', 'queen', 'jack'].includes(declaredType)) {
         return sendToClient(ws, "ERROR", { 
           message: "Você deve declarar que tipo de carta o coringa representa (king, queen ou ace)." 
         });
@@ -196,7 +196,7 @@ export function handlePlayCard(ws: CustomWebSocket, payload: { cardId: string; d
     room.game.turnTimer = null;
   }
 
-  const isJoker = card.type === 'joker';
+  const isJoker = card.type === 'ace';
   const displayType = isJoker ? declaredType : card.type;
 
   log(`Jogador ${ws.clientUsername} jogou carta ${card.type}${isJoker ? ` (declarado como ${declaredType})` : ''}.`, { ws });

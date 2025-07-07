@@ -20,7 +20,7 @@ export type Choice = "rock" | "paper" | "scissors";
 // === NOVOS TIPOS PARA JOGO DE CARTAS ===
 
 // Tipos específicos para o jogo de cartas
-export type CardType = "king" | "queen" | "ace" | "joker";
+export type CardType = "king" | "queen" | "ace" | "jack";
 export type CardSuit = "hearts" | "diamonds" | "clubs" | "spades";
 export type GamePhase = "waiting" | "playing" | "finished" | "paused";
 

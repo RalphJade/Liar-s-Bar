@@ -1,4 +1,4 @@
-import { getRoom, addRoom, getAllRooms, removeRoom, getRoomHands } from './gameState';
+import { getRoom, addRoom, getAllRooms, removeRoom, getRoomHands, isUserInAnyRoom } from './gameState';
 import { log } from "../utils/logger";
 import { sendToClient, broadcastToRoom, broadcastToOthers } from "../utils/websocket.util";
 import { Room, RoomStateForApi,CustomWebSocket } from "../models/types.model";
@@ -353,4 +353,44 @@ export function getRoomStateForApi(room: Room & { game: CardGame }, currentUserI
     myHandSize: currentPlayerHand?.cards.length || 0,
     myChoice: room.choices.get(currentUserId) || null,
   };
+}
+
+function attemptPlayerReconnection(ws: CustomWebSocket): boolean {
+  for (const room of getAllRooms()) {
+    const participant = room.players.get(ws.clientId) || room.spectators.get(ws.clientId);
+    
+    if (participant && !participant.ws) {
+      log(`Reconectando ${ws.clientUsername} à sala ${room.roomCode}.`, { ws });
+      
+      participant.ws = ws;
+      ws.currentRoomCode = room.roomCode;
+      
+      // Envia estado da sala
+      const roomState = getRoomStateForApi(room, ws.clientId);
+      sendToClient(ws, "ROOM_STATE_UPDATE", roomState);
+      
+      // Envia cartas se for jogador
+      if (room.players.has(ws.clientId)) {
+        const roomHands = getRoomHands(room.roomCode);
+        const playerHand = roomHands?.get(ws.clientId);
+        
+        if (playerHand) {
+          sendToClient(ws, "HAND_UPDATE", {
+            cards: playerHand.cards,
+            handSize: playerHand.cards.length,
+            currentCardType: room.game.currentCardType
+          });
+        }
+        
+        broadcastToOthers(room, ws, "PLAYER_RECONNECTED", {
+          playerId: ws.clientId,
+          playerName: ws.clientUsername,
+          message: `${ws.clientUsername} reconectou-se!`
+        });
+      }
+      
+      return true;
+    }
+  }
+  return false;
 }
