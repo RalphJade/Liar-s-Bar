@@ -1,4 +1,5 @@
 import { getUser } from '../auth/auth.ts';
+import { sendWebSocketMessage } from '../lobby/websocket.ts';
 import { navigate } from '../router/router.ts';
 import { renderHeader } from './components/Header.ts';
 
@@ -953,9 +954,8 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
         // In a real app, you would send a message to the server here (e.g., via WebSocket)
         // to notify that the player has forfeited.
         console.log(`Player ${currentUser.username} has forfeited the game.`);
-
+        sendWebSocketMessage({type: "LEAVE_ROOM", payload:{}});
         closeModal();
-        navigate('/home'); // Redirect to the home page
     });
 
     // Action buttons functionality

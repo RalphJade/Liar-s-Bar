@@ -223,6 +223,19 @@ export type ClientMessage =
 
 // Messages sent FROM the Server TO the Client (extendido)
 export type ServerMessage =
+    | {
+      type: "PLAYER_LEFT";
+      payload: {
+        playerId: string;
+        playerName: string;
+        message: string;
+        currentPlayers: number;
+      };
+    }
+    | {
+      type: "LEFT_ROOM";
+      payload: { message: string };
+    }
     | { type: "WAITING_ROOMS";
       payload: {
         rooms: {

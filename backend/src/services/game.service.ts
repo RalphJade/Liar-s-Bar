@@ -71,7 +71,7 @@ function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
       GameLogic.handleChallengePlayer(ws, data.payload);
       break;
     case "LEAVE_ROOM":
-      RoomManager.handlePlayerDisconnect(ws);
+      RoomManager.handleLeaveRoom(ws);
       break;
   }
 }

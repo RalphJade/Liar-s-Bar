@@ -236,13 +236,15 @@ export const renderLobbyPage = (element: HTMLElement) => {
         renderOnlineUserList();
         break;
       case "ROOM_CREATED":
-          lobbyState.setRooms([{
+        lobbyState.setRooms([
+          {
             code: message.payload.code,
             name: message.payload.name,
             currentPlayers: message.payload.currentPlayers,
             maxPlayers: message.payload.maxPlayers,
             hasPassword: message.payload.hasPassword,
-          }]);
+          },
+        ]);
         const currentUser = getUser();
         if (currentUser && currentUser.id === message.payload.ownerId) {
           navigate(`/gameboard/${message.payload.code}`);
@@ -258,6 +260,16 @@ export const renderLobbyPage = (element: HTMLElement) => {
         console.log("Joined room:", message.payload);
         navigate(`/gameboard/${message.payload.roomCode}`);
         break;
+      case "ROOM_CLOSED":
+        console.log("Room closed:", message.payload);
+        const closedRoomCode = message.payload.code;
+        lobbyState.setRooms(
+          lobbyState.getRooms().filter((room) => room.code !== closedRoomCode)
+        );
+        renderRoomList();
+        break;
+      case "LEFT_ROOM":
+        navigate("/home");
       case "ERROR":
         alert(`Error: ${message.payload.message}`);
     }
