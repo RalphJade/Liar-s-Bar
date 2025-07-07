@@ -1,4 +1,4 @@
-import { CustomWebSocket } from "../services/game.service"; // Forward declaration
+import WebSocket from "ws";
 
 // The payload decoded from the JWT
 export interface JwtPayload {
@@ -6,6 +6,12 @@ export interface JwtPayload {
   username: string;
   iat: number;
   exp: number;
+}
+
+export interface CustomWebSocket extends WebSocket {
+  clientId: string;
+  clientUsername: string;
+  currentRoomCode?: string;
 }
 
 // Player choices (mantido para compatibilidade)

@@ -17,6 +17,16 @@ interface Room {
 
 let rooms: Room[] = [];
 
+interface Room {
+  code: string;
+  name: string;
+  currentPlayers: number;
+  maxPlayers: number;
+  hasPassword: boolean;
+}
+
+let rooms: Room[] = [];
+
 const state = {
     onlineUsers: [] as User[],
     chatMessages: [] as ChatMessage[],
