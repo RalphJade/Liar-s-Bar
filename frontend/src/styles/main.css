@@ -68,6 +68,7 @@
 
 html {
   box-sizing: border-box;
+  font-size: 70%;
 }
 *, *:before, *:after {
   box-sizing: inherit;
@@ -872,7 +873,8 @@ body.lobby-theme {
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  overflow: hidden; 
+  overflow: hidden;
+  min-height: 0;
 }
 .lobby-side-column {
   flex: 1;
@@ -969,6 +971,7 @@ body.lobby-theme {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-height: 0;
 }
 
 #onlineUserList {
@@ -977,6 +980,7 @@ body.lobby-theme {
 
 #chatMessages {
   flex-grow: 1; /* Faz a área de mensagens ocupar o espaço restante no seu card */
+  overflow-y: auto;
   margin-bottom: 0.5rem;
 }
 
@@ -1007,9 +1011,6 @@ body.lobby-theme {
   justify-content: flex-end;
   gap: 1rem;
   margin-top: 1.5rem;
-}
-  gap: 1.5rem;
-  min-width: 0;
 }
 
 .lobby-side-column {

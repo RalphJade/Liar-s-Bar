@@ -3,24 +3,19 @@ import cors from "cors";
 import dotenv from "dotenv";
 import cookieParser from "cookie-parser"; // Imports middleware to parse cookies from incoming requests
 import { parse } from "url";
-import {WebSocket, WebSocketServer} from "ws";
+import { WebSocket } from "ws";
 import http from "http";
 import stream from "stream";
 import * as cookie from "cookie";
 
 import authRouter from "./routes/auth.routes";
 import userRouter from "./routes/user.routes";
-import lobbyRouter from "./routes/lobby.routes";
 import { initializeDatabase } from "./database";
 import { verifyTokenForWebSocket } from "./middlewares/auth.middleware";
-import { CustomWebSocket } from "./services/game.service";
+import { CustomWebSocket } from "./models/types.model";
 import { initializeGameService } from "./services/game.service";
-import { initializeLobbyService } from "./services/lobby.service";
 import { log } from "./utils/logger";
-import jwt from 'jsonwebtoken';
 import path from 'path'; // Importe o módulo 'path' do Node.js
-import * as lobbyService from './services/lobby.service'; 
-
 
 dotenv.config();
 
@@ -56,8 +51,6 @@ app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
 app.use("/api/auth", authRouter);
 // Mount the user-related routes under the /api/users path.
 app.use("/api/users", userRouter);
-// Mount the lobby-related routes unde the /api/lobby path
-app.use("/api/lobby", lobbyRouter);
 
 // A simple health check endpoint to verify that the server is running.
 app.get("/api/health", (req, res) => {
@@ -69,7 +62,7 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ noServer: true });
 
 initializeGameService(wss);
-initializeLobbyService(wss);
+// initializeLobbyService(wss);
 
 server.on(
   "upgrade",
