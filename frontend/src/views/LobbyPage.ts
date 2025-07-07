@@ -1,9 +1,9 @@
+import { getUser } from "../auth/auth.ts";
+import * as websocket from "../lobby/websocket.ts";
+import * as lobbyState from "../lobby/lobbyState.ts";
+import { navigate } from "../router/router.ts";
 
-import { getUser } from '../auth/auth.ts';
-import * as websocket from '../lobby/websocket.ts';
-import * as lobbyState from '../lobby/lobbyState.ts'
-
-import { renderHeader } from './components/Header.ts';
+import { renderHeader } from "./components/Header.ts";
 
 export const renderLobbyPage = (element: HTMLElement) => {
   const user = getUser();
@@ -70,45 +70,75 @@ export const renderLobbyPage = (element: HTMLElement) => {
     </div>
   `;
 
-  const headerContainer = document.getElementById('header-container') as HTMLElement;
+  const headerContainer = document.getElementById(
+    "header-container"
+  ) as HTMLElement;
   if (headerContainer) {
     renderHeader(headerContainer);
   }
-  const onlineUserListDiv = document.getElementById('onlineUserList');
-  const chatMessagesDiv = document.getElementById('chatMessages');
-  const chatForm = document.getElementById('chatForm');
-  const chatInput = document.getElementById('chatInput') as HTMLInputElement;
-  const createRoomBtn = document.getElementById('createRoomBtn');
-  const createRoomModal = document.getElementById('createRoomModal');
-  const closeModalBtn = document.getElementById('closeModalBtn'); 
-  const createRoomForm = document.getElementById('createRoomForm');
+  const onlineUserListDiv = document.getElementById("onlineUserList");
+  const chatMessagesDiv = document.getElementById("chatMessages");
+  const chatForm = document.getElementById("chatForm");
+  const chatInput = document.getElementById("chatInput") as HTMLInputElement;
+  const createRoomBtn = document.getElementById("createRoomBtn");
+  const createRoomModal = document.getElementById("createRoomModal");
+  const closeModalBtn = document.getElementById("closeModalBtn");
+  const createRoomForm = document.getElementById("createRoomForm");
 
-  createRoomBtn?.addEventListener('click', () => createRoomModal?.classList.remove('hidden'));
-  closeModalBtn?.addEventListener('click', () => createRoomModal?.classList.add('hidden'));
+  createRoomBtn?.addEventListener("click", () =>
+    createRoomModal?.classList.remove("hidden")
+  );
+  closeModalBtn?.addEventListener("click", () =>
+    createRoomModal?.classList.add("hidden")
+  );
 
-  createRoomForm?.addEventListener('submit', (e) => {
+  createRoomForm?.addEventListener("submit", (e) => {
     e.preventDefault();
-    // Lógica para criar sala...
-    createRoomModal?.classList.add('hidden');
+    const roomNameInput = document.getElementById(
+      "roomNameInput"
+    ) as HTMLInputElement;
+    const roomPasswordInput = document.getElementById(
+      "roomPasswordInput"
+    ) as HTMLInputElement;
+
+    if (!roomNameInput.value.trim()) {
+      alert("Please enter a room name.");
+      return;
+    }
+    if (roomPasswordInput.value && roomPasswordInput.value.length < 4) {
+      alert("Password must be at least 4 characters long.");
+      return;
+    }
+
+    websocket.sendWebSocketMessage({
+      type: "CREATE_ROOM",
+      payload: {
+        rooName: roomNameInput.value,
+        password: roomPasswordInput.value,
+      },
+    });
+    roomNameInput.value = "";
+    roomPasswordInput.value = "";
+    createRoomModal?.classList.add("hidden");
   });
 
-  chatForm?.addEventListener('submit', (e) => {
+  chatForm?.addEventListener("submit", (e) => {
     e.preventDefault();
     const message = chatInput.value;
     if (message.trim()) {
       websocket.sendChatMessage(message);
-      chatInput.value = '';
+      chatInput.value = "";
     }
   });
 
   const renderOnlineUserList = () => {
     if (!onlineUserListDiv) return;
-    onlineUserListDiv.innerHTML = '';
+    onlineUserListDiv.innerHTML = "";
 
     const users = lobbyState.getOnlineUsers();
-    users.forEach(user => {
-      const userElement = document.createElement('div');
-      userElement.className = 'online-user-item';
+    users.forEach((user) => {
+      const userElement = document.createElement("div");
+      userElement.className = "online-user-item";
       userElement.textContent = user.username;
       onlineUserListDiv.appendChild(userElement);
     });
@@ -116,36 +146,113 @@ export const renderLobbyPage = (element: HTMLElement) => {
 
   const renderChatMessages = () => {
     if (!chatMessagesDiv) return;
-    chatMessagesDiv.innerHTML = '';
+    chatMessagesDiv.innerHTML = "";
     const messages = lobbyState.getChatMessages();
-    messages.forEach(msg => {
-      const msgElement = document.createElement('p');
-      msgElement.className = 'chat-message';
+    messages.forEach((msg) => {
+      const msgElement = document.createElement("p");
+      msgElement.className = "chat-message";
       msgElement.innerHTML = `<strong>${msg.username}:</strong> ${msg.text}`;
       chatMessagesDiv.appendChild(msgElement);
     });
     chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
   };
 
+  const renderRoomList = () => {
+    const roomListDiv = document.getElementById("roomList");
+    if (!roomListDiv) return;
+
+    const rooms = lobbyState.getRooms(); // Usa o estado igual ao chat e usuários
+
+    if (rooms.length === 0) {
+      roomListDiv.innerHTML =
+        '<p class="empty-list-message">No available rooms. Create the first one!</p>';
+      return;
+    }
+
+    roomListDiv.innerHTML = "";
+    rooms.forEach((room) => {
+      const roomElement = document.createElement("div");
+      roomElement.className = "room-item";
+      roomElement.innerHTML = `
+        <div class="room-info">
+          <h4 class="room-name">${room.name}</h4>
+          <p class="room-details">
+            ${room.currentPlayers}/${room.maxPlayers} players
+            ${room.hasPassword ? "🔒" : ""}
+          </p>
+        </div>
+        <button class="button button-lobby-join" data-room-code="${room.code}">
+          Join
+        </button>
+      `;
+
+      const joinBtn = roomElement.querySelector(".button-lobby-join");
+      joinBtn?.addEventListener("click", () => {
+        const roomCode = joinBtn.getAttribute("data-room-code");
+        if (roomCode) {
+          handleJoinRoom(roomCode, room.hasPassword);
+        }
+      });
+
+      roomListDiv.appendChild(roomElement);
+    });
+  };
+
+  const handleJoinRoom = (roomCode: string, hasPassword: boolean) => {
+    if (hasPassword) {
+      const password = prompt("Enter room password:");
+      if (password === null) return; // User cancelled
+
+      websocket.sendWebSocketMessage({
+        type: "JOIN_ROOM",
+        payload: { roomCode, password },
+      });
+    } else {
+      websocket.sendWebSocketMessage({
+        type: "JOIN_ROOM",
+        payload: { roomCode },
+      });
+    }
+    navigate(`/gameboard`);
+  };
+
   const handleWebSocketMessage = (message: any) => {
     switch (message.type) {
-      case 'NEW_CHAT_MESSAGE':
+      case "NEW_CHAT_MESSAGE":
         lobbyState.addMessage(message.payload);
         renderChatMessages();
         break;
-      case 'ONLINE_USER_LIST':
+      case "ONLINE_USER_LIST":
         lobbyState.setUsers(message.payload.users);
         renderOnlineUserList();
         break;
-      case 'USER_JOINED_LOBBY':
+      case "USER_JOINED_LOBBY":
         lobbyState.addUser(message.payload.user);
         renderOnlineUserList();
         break;
-      case 'USER_LEFT_LOBBY':
+      case "USER_LEFT_LOBBY":
         lobbyState.removeUser(message.payload.user.userId);
         renderOnlineUserList();
         break;
-
+      case "ROOM_CREATED":
+        lobbyState.addRoom({
+          code: message.payload.roomCode,
+          name: message.payload.roomName || message.payload.roomCode,
+          currentPlayers: message.payload.currentPlayers || 1,
+          maxPlayers: message.payload.maxPlayers || 4,
+          hasPassword: !!message.payload.password,
+        });
+        renderRoomList(); // Renderiza novamente
+        navigate(`/gameboard`);
+        break;
+      case "WAITING_ROOMS":
+        lobbyState.setRooms(message.payload.rooms);
+        renderRoomList();
+        break;
+      case "JOINED_ROOM":
+        console.log("Joined room:", message.payload);
+        // Redirect to game page or show game interface
+        break;
     }
   };
 
@@ -153,4 +260,5 @@ export const renderLobbyPage = (element: HTMLElement) => {
 
   renderOnlineUserList();
   renderChatMessages();
+  renderRoomList();
 };
