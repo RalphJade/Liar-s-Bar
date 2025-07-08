@@ -31,13 +31,21 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
                         <p id="game-status-text" class="game-status-text">Waiting for game to start...</p>
                     </div>
                 </div>
-                <div class="player-hand-area">
-                    <div id="my-hand-cards" class="hand-cards"></div>
+
+                <div class="player-hand-container">
+                    <div id="my-info-area" class="my-info-area">
+                        <!-- My info (avatar, name, risk) will be rendered here -->
+                    </div>
+                    <div class="player-hand-area">
+                        <div id="my-hand-cards" class="hand-cards"></div>
+                    </div>
                 </div>
+
                 <div id="action-buttons" class="action-buttons"></div>
             </div>
+            
             <div class="chat-sidebar">
-                <div class="chat-panel">
+                 <div class="chat-panel">
                     <div class="chat-header"><span id="chat-title" class="chat-title">Live Chat (${roomCode})</span></div>
                     <div id="chat-messages" class="chat-messages scrollable-list"></div>
                     <form id="chat-form" class="chat-input-area">
@@ -87,16 +95,18 @@ const handleGameMessage = (message: any) => {
             alert(message.payload.message);
             break;
         case 'GAME_FINISHED':
-            // This alert will show after the roulette animation (if any) finishes
             setTimeout(() => {
                 if (message.payload.winnerId === currentUser?.id) {
-                    alert(`Congratulations! You are the winner!`);
-                } else {
-                    alert(`Game Over! ${message.payload.message}`);
+                    alert(`Congratulations, ${currentUser.username}! You are the last one standing!`);
+                } else if (message.payload.winnerId === 'draw') {
+                    alert('The game is a draw!');
+                }
+                else {
+                    alert(`Game Over! ${message.payload.winnerName} is the last one standing!`);
                 }
                 disconnect();
                 navigate('/home');
-            }, 1000); // Small buffer to ensure it shows after any other animation
+            }, 5500);
             break;
         case 'CHALLENGE_RESULT':
             showRoulette(message.payload);
@@ -122,8 +132,8 @@ const showRoulette = (payload: any) => {
     result.textContent = '';
     overlay.classList.remove('hidden');
 
-    const spinDuration = 4000; // 4 seconds for more suspense
-    const resultDisplayDuration = 2500; // 2.5 seconds to read the result
+    const spinDuration = 4000;
+    const resultDisplayDuration = 2500;
 
     wheel.style.animation = 'none';
     void wheel.offsetWidth; 
@@ -135,7 +145,6 @@ const showRoulette = (payload: any) => {
         
         setTimeout(() => {
             overlay.classList.add('hidden');
-            // The server will send a ROOM_STATE_UPDATE to finalize UI changes after this animation
         }, resultDisplayDuration);
     }, spinDuration);
 };
@@ -159,6 +168,7 @@ const updateUI = () => {
     const canChallenge = gameState.game?.lastPlayerId !== null && gameState.game.lastPlayerId !== currentUser.id;
 
     renderPlayerPods(currentUser.id);
+    renderMyInfo(currentUser.id);
     renderMyHand(isMyTurn);
     renderGameStatus();
     renderActionButtons(isMyTurn, canChallenge);
@@ -180,6 +190,16 @@ const renderPlayerPods = (currentUserId: string) => {
         const isCurrentTurn = player.id === gameState?.game?.currentPlayerId;
         return createPlayerPod(player, index + 1, isCurrentTurn);
     }).join('');
+};
+
+const renderMyInfo = (currentUserId: string) => {
+    const container = document.getElementById('my-info-area');
+    if (!container || !gameState) return;
+
+    const me = gameState.players.find(p => p.id === currentUserId);
+    if (me) {
+        container.innerHTML = createMyInfoPod(me);
+    }
 };
 
 const renderMyHand = (isMyTurn: boolean) => {
@@ -323,6 +343,19 @@ const createPlayerPod = (player: any, position: number, isCurrentTurn: boolean) 
         </div>`;
 };
 
+// CORRECTED
+const createMyInfoPod = (player: any) => {
+    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
+    const isMyTurn = gameState?.game?.currentPlayerId === player.id;
+    return `
+        <img src="${avatarSrc}" alt="${player.username}'s avatar" class="my-avatar ${isMyTurn ? 'active-turn' : ''}" />
+        <div class="my-details">
+            <span class="my-name">${player.username}</span>
+            <span class="my-risk-level">Risk: ${player.riskLevel || 0}/6</span>
+        </div>
+    `;
+};
+
 const createEliminatedPod = (player: any, position: number) => {
     const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
     return `
@@ -361,13 +394,13 @@ const renderQuitModal = () => `
 
 const renderDynamicStyles = () => {
     const style = document.createElement('style');
+    // CORRECTED CSS
     style.textContent = `
         .game-layout { display: flex; height: calc(100vh - 80px); background: #0f172a; }
         .game-area { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; position: relative; }
-        .chat-sidebar { width: 350px; flex-shrink: 0; display: flex; flex-direction: column; background: #1e293b; border-left: 2px solid var(--color-wood-light); }
         .game-table { position: relative; width: 100%; flex-grow: 1; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #166534 0%, #14532d 100%); border: 15px solid var(--color-wood-dark); border-radius: 50%; box-shadow: inset 0 0 50px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); }
         .player-pod { position: absolute; display: flex; flex-direction: column-reverse; align-items: center; gap: 0.5rem; transition: all 0.3s ease; }
-        .player-pod.active-turn .player-avatar { box-shadow: 0 0 20px 5px #facc15; transform: scale(1.1); }
+        .player-pod.active-turn .player-avatar, .my-avatar.active-turn { box-shadow: 0 0 20px 5px #facc15; transform: scale(1.1); }
         .player-info { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
         .player-avatar { width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--color-accent-gold); object-fit: cover; background: var(--color-wood-dark); }
         .player-details { display:flex; flex-direction:column; align-items: center; background: rgba(0,0,0,0.7); padding: 0.25rem 0.75rem; border-radius: 12px; }
@@ -380,7 +413,15 @@ const renderDynamicStyles = () => {
         .center-pile { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; display: flex; flex-direction: column; gap: 1rem; align-items: center; }
         .reference-card { width: 70px; height: 98px; }
         .game-status-text { background: rgba(0,0,0,0.7); padding: 0.5rem 1rem; border-radius: 20px; color: #f1f5f9; }
-        .player-hand-area { min-height: 120px; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 1rem; }
+        
+        .player-hand-container { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        .my-info-area { display: flex; align-items: center; gap: 1rem; background: rgba(0,0,0,0.4); padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid var(--color-border); }
+        .my-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-accent-gold); transition: all 0.3s ease;}
+        .my-details { text-align: center; display: flex; flex-direction: column; }
+        .my-name { font-weight: bold; color: var(--color-accent-gold); }
+        .my-risk-level { font-size: 0.8rem; color: #fca5a5; }
+        
+        .player-hand-area { min-height: 100px; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 1rem; }
         .hand-cards { display: flex; gap: 0.5rem; }
         .card-face { width: 70px; height: 98px; background: white; border: 2px solid #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #333; cursor: pointer; transition: all 0.2s ease; }
         .hand-card:hover { transform: translateY(-10px); }
@@ -398,13 +439,7 @@ const renderDynamicStyles = () => {
         #roulette-wheel { width: 150px; height: 150px; background-image: url('https://i.imgur.com/8z6oA0V.png'); background-size: contain; margin: 2rem auto; }
         #roulette-result { font-size: 2rem; font-weight: bold; text-shadow: 2px 2px 4px #000; }
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(1080deg); } }
-        .modal-overlay.show { display: flex; }
-        .modal-content { background: var(--color-parchment); border: 2px solid var(--color-wood-light); color: var(--color-text-light); max-width: 500px; width: 90%; border-radius: 1rem; overflow: hidden; }
-        .modal-header { background: var(--color-wood-dark); padding: 1rem; }
-        .modal-title { margin: 0; font-size: 1.5rem; text-align: center; color: var(--color-accent-gold) }
-        .modal-body { padding: 1.5rem; }
-        .modal-actions { display: flex; gap: 1rem; padding: 1rem; justify-content: flex-end; background: var(--color-wood-dark); }
-        .button-secondary { background: var(--color-primary); }
+        /* Chat e outros estilos sem alteração */
         .chat-sidebar { width: 350px; flex-shrink: 0; display: flex; flex-direction: column; background: #1e293b; border-left: 2px solid var(--color-wood-light); }
         .chat-panel { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .chat-header { padding: 1rem; background: var(--color-wood-dark); color: var(--color-accent-gold); }
@@ -418,6 +453,13 @@ const renderDynamicStyles = () => {
         .send-btn { background: var(--color-accent-gold); border: none; color: var(--color-wood-dark); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; flex-shrink: 0; }
         .game-controls { padding: 1rem; background: var(--color-wood-dark); }
         .button-quit-game { width: 100%; }
+        .modal-overlay.show { display: flex; }
+        .modal-content { background: var(--color-parchment); border: 2px solid var(--color-wood-light); color: var(--color-text-light); max-width: 500px; width: 90%; border-radius: 1rem; overflow: hidden; }
+        .modal-header { background: var(--color-wood-dark); padding: 1rem; }
+        .modal-title { margin: 0; font-size: 1.5rem; text-align: center; color: var(--color-accent-gold) }
+        .modal-body { padding: 1.5rem; }
+        .modal-actions { display: flex; gap: 1rem; padding: 1rem; justify-content: flex-end; background: var(--color-wood-dark); }
+        .button-secondary { background: var(--color-primary); }
     `;
     return style.outerHTML;
 };
