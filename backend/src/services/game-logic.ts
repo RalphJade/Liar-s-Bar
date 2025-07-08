@@ -5,6 +5,20 @@ import { broadcastToRoom, broadcastToOthers, getNextPlayer, sendToClient } from 
 import { dealCards } from "./cards.service";
 import { MAX_PLAYERS, TURN_TIME_LIMIT, CARDS_PER_PLAYER, CARDS_PER_TYPE, JOKERS_COUNT } from "../config/game.config";
 import { getRoomStateForApi, broadcastRoomState } from "./room.manager";
+import { updatePlayerStatsAfterGame } from "./user.service";
+
+/**
+ * Simulates spinning the roulette for a punished player.
+ * @param riskLevel The current risk level (0-5) of the player.
+ * @returns {boolean} True if the player is eliminated, false otherwise.
+ */
+function spinRoulette(riskLevel: number): boolean {
+    const chamberCount = 6;
+    const loadedChambers = riskLevel;
+    const randomSpin = Math.floor(Math.random() * chamberCount);
+    
+    return randomSpin < loadedChambers;
+}
 
 export async function startCardGame(room: Room & { game: CardGame }): Promise<void> {
   log(`Starting card game in room ${room.roomCode} with ${room.players.size} players.`);
@@ -12,57 +26,30 @@ export async function startCardGame(room: Room & { game: CardGame }): Promise<vo
   const hands = dealCards(room);
   setRoomHands(room.roomCode, hands);
 
-  let referenceCard: Card | undefined;
-  do {
-    referenceCard = room.game.deck.pop();
-  } while (referenceCard && referenceCard.type === 'joker');
+  const roomHands = getRoomHands(room.roomCode)!;
+  roomHands.forEach(hand => {
+    hand.isEliminated = false;
+    hand.riskLevel = 0;
+  });
 
-  if (!referenceCard) {
-    log(`Could not draw a valid reference card for room ${room.roomCode}.`, { data: room.game.deck });
-    broadcastToRoom(room, "ERROR", { message: "Error starting game: could not set a reference card." });
-    return;
-  }
-  
-  room.game.playedCards.push(referenceCard);
-  
   room.status = "playing";
   room.game.phase = "playing";
-  room.game.roundNumber = 1;
-  room.game.currentPlayerIndex = 0;
-  room.game.currentCardType = referenceCard.type as Exclude<CardType, 'joker'>;
-  room.game.lastPlayedCard = null;
-  room.game.lastPlayerId = null; 
-  room.game.direction = 1;
-
+  room.game.roundNumber = 0;
+  
   const firstPlayerId = Array.from(room.players.keys())[0];
   
   await broadcastRoomState(room);
 
-  broadcastToRoom(room, "GAME_STARTED", {
-    message: `The game has begun! The required card is ${room.game.currentCardType}.`,
-    currentPlayerId: firstPlayerId,
-    players: (await getRoomStateForApi(room, '')).players,
-    gameRules: {
-      cardsPerPlayer: CARDS_PER_PLAYER,
-      cardTypes: ['king', 'queen', 'ace', 'joker'],
-      cardsPerType: CARDS_PER_TYPE,
-      jokersCount: JOKERS_COUNT,
-      maxPlayers: MAX_PLAYERS,
-      turnTimeLimit: TURN_TIME_LIMIT
-    }
-  });
-
-  startPlayerTurn(room, firstPlayerId);
+  startNewRound(room, firstPlayerId, true);
 }
-
+  
 export function advanceTurn(room: Room & { game: CardGame }): void {
   const nextPlayerId = getNextPlayer(room);
   if (nextPlayerId) {
-    room.game.currentPlayerIndex = Array.from(room.players.keys()).indexOf(nextPlayerId);
     startPlayerTurn(room, nextPlayerId);
   } else {
-    log(`No valid next player found in room ${room.roomCode}. Game might be over.`);
-    // TODO: Implement game over logic
+    log(`No valid next player found in room ${room.roomCode}. Checking for winner.`);
+    checkForWinner(room);
   }
 }
 
@@ -76,6 +63,7 @@ export function advanceTurnAfterInterruption(room: Room & { game: CardGame }): v
 }
 
 export function startPlayerTurn(room: Room & { game: CardGame }, playerId: string): void {
+  const playerIds = Array.from(room.players.keys());
   const player = room.players.get(playerId);
   if (!player || !player.ws) {
     log(`Cannot start turn for player ${playerId}: not found or not connected.`, { data: { roomCode: room.roomCode } });
@@ -83,6 +71,7 @@ export function startPlayerTurn(room: Room & { game: CardGame }, playerId: strin
     return;
   }
   
+  room.game.currentPlayerIndex = playerIds.indexOf(playerId);
   log(`Turn of player ${player.username} in room ${room.roomCode}.`);
   
   if (room.game.turnTimer) clearTimeout(room.game.turnTimer);
@@ -115,8 +104,7 @@ export function handlePlayCard(ws: CustomWebSocket, payload: { cardId: string })
   
   const playerIds = Array.from(room.players.keys());
   if (playerIds[room.game.currentPlayerIndex] !== ws.clientId) {
-    sendToClient(ws, "ERROR", { message: "It's not your turn." });
-    return;
+    return sendToClient(ws, "ERROR", { message: "It's not your turn." });
   }
 
   const roomHands = getRoomHands(room.roomCode);
@@ -124,34 +112,162 @@ export function handlePlayCard(ws: CustomWebSocket, payload: { cardId: string })
   const cardToPlay = playerHand?.cards.find(c => c.id === cardId);
 
   if (!playerHand || !cardToPlay) {
-    sendToClient(ws, "ERROR", { message: "You don't have that card." });
-    return;
+    return sendToClient(ws, "ERROR", { message: "You don't have that card." });
   }
 
   log(`Player ${ws.clientUsername} is playing card ${cardId}.`);
 
-  // State mutation
   playerHand.cards = playerHand.cards.filter(c => c.id !== cardId);
-  room.game.playedCards.push(cardToPlay);
   room.game.lastPlayedCard = cardToPlay;
   room.game.lastPlayerId = ws.clientId;
   
-  // Confirmation to sender
-  sendToClient(ws, "CARD_PLAYED_CONFIRMATION", {
-    cardId,
-    handSize: playerHand.cards.length,
-    message: `You played your card.`
-  });
-
-  // Broadcast the new state to everyone
   broadcastRoomState(room);
-
-  // Advance the turn
   advanceTurn(room);
 }
 
 export function handleCallBluff(ws: CustomWebSocket): void {
-  log("handleCallBluff to be implemented", { ws });
+    const roomCode = ws.currentRoomCode;
+    const room = roomCode ? getRoom(roomCode) : undefined;
+  
+    if (!room || room.status !== 'playing') return;
+  
+    const playerIds = Array.from(room.players.keys());
+    if (playerIds[room.game.currentPlayerIndex] !== ws.clientId) {
+        return sendToClient(ws, "ERROR", { message: "It's not your turn to call a bluff." });
+    }
+  
+    const targetId = room.game.lastPlayerId;
+    if (!targetId || !room.game.lastPlayedCard) {
+        return sendToClient(ws, "ERROR", { message: "There is no play to challenge." });
+    }
+  
+    const challengerId = ws.clientId;
+    const challenger = room.players.get(challengerId);
+    const target = room.players.get(targetId);
+  
+    if (!challenger || !target) return;
+  
+    log(`Challenge in room ${room.roomCode}: ${challenger.username} challenges ${target.username}.`);
+  
+    const revealedCard = room.game.lastPlayedCard;
+    const requiredType = room.game.currentCardType!;
+    const wasLie = revealedCard.type !== requiredType && revealedCard.type !== 'joker';
+  
+    const punishedPlayerId = wasLie ? targetId : challengerId;
+    let message: string;
+  
+    const roomHands = getRoomHands(room.roomCode);
+    const punishedHand = roomHands?.get(punishedPlayerId);
+    if (!punishedHand) return;
+
+    punishedHand.riskLevel += 1;
+    const eliminatedOnThisTurn = spinRoulette(punishedHand.riskLevel);
+
+    if (wasLie) {
+        message = `${target.username} was caught bluffing with a ${revealedCard.type}!`;
+    } else {
+        message = `${challenger.username} falsely accused ${target.username}! The card was a ${revealedCard.type}.`;
+    }
+
+    message += ` ${room.players.get(punishedPlayerId)!.username} spins the roulette...`;
+    
+    if (eliminatedOnThisTurn) {
+        punishedHand.isEliminated = true;
+        message += ` *BANG!*... and has been ELIMINATED!`;
+    } else {
+        message += ` *CLICK*... and survives. Their risk is now ${punishedHand.riskLevel}/6.`;
+    }
+
+    broadcastToRoom(room, "CHALLENGE_RESULT", {
+        wasLie,
+        punishedPlayerId,
+        punishedPlayerName: room.players.get(punishedPlayerId)!.username,
+        revealedCard,
+        message,
+        isEliminated: eliminatedOnThisTurn,
+        newRiskLevel: punishedHand.riskLevel,
+    });
+    
+    setTimeout(() => {
+        if (checkForWinner(room)) {
+            return;
+        }
+
+        const punishedPlayerIsChallenger = punishedPlayerId === challengerId;
+        const challengerWasEliminated = punishedPlayerIsChallenger && eliminatedOnThisTurn;
+
+        let nextTurnPlayerId = challengerId;
+        if (challengerWasEliminated) {
+            room.game.currentPlayerIndex = playerIds.indexOf(challengerId);
+            const nextId = getNextPlayer(room);
+            if (nextId) {
+                nextTurnPlayerId = nextId;
+            } else {
+                checkForWinner(room);
+                return;
+            }
+        }
+        
+        startNewRound(room, nextTurnPlayerId, false, revealedCard.type);
+    }, 5500);
+}
+
+function startNewRound(room: Room & { game: CardGame }, startingPlayerId: string, isFirstRound: boolean = false, newCardType?: CardType) {
+    if (!isFirstRound) {
+        log(`Starting new round in room ${room.roomCode}.`);
+        room.game.roundNumber += 1;
+    }
+    
+    let referenceType = newCardType;
+    if (referenceType === 'joker' || !referenceType) {
+        let newReferenceCard: Card | undefined;
+        do {
+            newReferenceCard = room.game.deck.pop();
+        } while (newReferenceCard && newReferenceCard.type === 'joker');
+
+        if (!newReferenceCard) {
+            checkForWinner(room);
+            return;
+        }
+        referenceType = newReferenceCard.type;
+    }
+
+    room.game.currentCardType = referenceType as Exclude<CardType, 'joker'>;
+    room.game.lastPlayedCard = null;
+    room.game.lastPlayerId = null;
+    room.game.playedCards = [];
+
+    broadcastRoomState(room);
+    startPlayerTurn(room, startingPlayerId);
+}
+
+function checkForWinner(room: Room & { game: CardGame }): boolean {
+    const roomHands = getRoomHands(room.roomCode);
+    if (!roomHands) return false;
+
+    const allPlayerIds = Array.from(room.players.keys());
+    const activePlayers = allPlayerIds.filter(id => !roomHands.get(id)?.isEliminated);
+
+    if (activePlayers.length <= 1) {
+        const winnerId = activePlayers.length === 1 ? activePlayers[0] : null;
+        const winner = winnerId ? room.players.get(winnerId) : null;
+        
+        log(`Game over in room ${room.roomCode}. Winner: ${winner?.username || "Draw"}`);
+        
+        // Update stats for all original players
+        updatePlayerStatsAfterGame(allPlayerIds, winnerId);
+
+        room.status = "waiting"; 
+        room.game.phase = "finished";
+
+        broadcastToRoom(room, "GAME_FINISHED", {
+            winnerId,
+            winnerName: winner?.username || "Draw",
+            message: `${winner?.username || "No one"} is the last one standing!`,
+        });
+        return true;
+    }
+    return false;
 }
 
 function handleTurnTimeout(room: Room & { game: CardGame }, playerId: string): void {
@@ -159,15 +275,24 @@ function handleTurnTimeout(room: Room & { game: CardGame }, playerId: string): v
   const player = room.players.get(playerId);
   if (!player) return;
 
-  if(player.ws) {
-    sendToClient(player.ws, "TURN_TIMEOUT", { message: "Time's up! You missed your turn." });
+  const roomHands = getRoomHands(room.roomCode);
+  const timedOutHand = roomHands?.get(playerId);
+  if (timedOutHand) {
+      const eliminatedOnThisTurn = spinRoulette(timedOutHand.riskLevel);
+      timedOutHand.riskLevel += 1;
+
+      if (eliminatedOnThisTurn) {
+          timedOutHand.isEliminated = true;
+          broadcastToRoom(room, "PLAYER_ELIMINATED", {
+              playerId: playerId,
+              playerName: player.username,
+              message: `${player.username} was eliminated by the roulette for taking too long!`
+          });
+      }
   }
+
+  if (checkForWinner(room)) return;
   
-  broadcastToOthers(room, player.ws!, "PLAYER_TIMEOUT", {
-    playerId,
-    playerName: player.username,
-    message: `${player.username} ran out of time and missed their turn.`
-  });
-  
+  broadcastRoomState(room);
   advanceTurnAfterInterruption(room);
 }

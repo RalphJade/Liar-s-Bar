@@ -25,45 +25,42 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
         <div class="game-layout">
             <div class="game-area">
                 <div class="game-table">
-                    <!-- Player pods and opponent hands will be injected here -->
                     <div id="player-pods-container"></div>
-                    
-                    <!-- CORRECTED: This container is now properly centered by CSS -->
                     <div class="center-pile">
                         <div id="reference-card-container"></div>
                         <p id="game-status-text" class="game-status-text">Waiting for game to start...</p>
                     </div>
                 </div>
-                
                 <div class="player-hand-area">
                     <div id="my-hand-cards" class="hand-cards"></div>
                 </div>
-                
                 <div id="action-buttons" class="action-buttons"></div>
             </div>
-            
             <div class="chat-sidebar">
                 <div class="chat-panel">
-                    <div class="chat-header">
-                        <span id="chat-title" class="chat-title">Live Chat (${roomCode})</span>
-                    </div>
+                    <div class="chat-header"><span id="chat-title" class="chat-title">Live Chat (${roomCode})</span></div>
                     <div id="chat-messages" class="chat-messages scrollable-list"></div>
                     <form id="chat-form" class="chat-input-area">
                         <input type="text" id="chat-input" placeholder="Type your message..." class="chat-input" maxlength="100" autocomplete="off" />
                         <button type="submit" class="send-btn" aria-label="Send message">➤</button>
                     </form>
                 </div>
-                
                 <div class="game-controls">
                     <button id="quit-game-btn" class="button-quit-game">
-                        <span class="quit-icon">🚪</span>
-                        <span class="quit-text">Leave Table</span>
+                        <span class="quit-icon">🚪</span><span class="quit-text">Leave Table</span>
                     </button>
                 </div>
             </div>
         </div>
         ${renderQuitModal()}
         ${renderDynamicStyles()}
+        <div id="roulette-overlay" class="roulette-overlay hidden">
+            <div id="roulette-modal" class="roulette-modal">
+                <h2 id="roulette-title"></h2>
+                <div id="roulette-wheel"></div>
+                <p id="roulette-result"></p>
+            </div>
+        </div>
     `;
 
     renderHeader(document.getElementById('header-container')!);
@@ -73,14 +70,12 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
 
 const handleGameMessage = (message: any) => {
     console.log('[Game WS] Received:', message);
+    const currentUser = getUser();
+
     switch(message.type) {
         case 'ROOM_STATE_UPDATE':
             gameState = message.payload;
             myCards = message.payload.myCards || myCards;
-            updateUI();
-            break;
-        case 'HAND_DEALT':
-            myCards = message.payload.cards;
             updateUI();
             break;
         case 'CHAT_BROADCAST':
@@ -90,6 +85,21 @@ const handleGameMessage = (message: any) => {
             break;
         case 'GAME_STARTED':
             alert(message.payload.message);
+            break;
+        case 'GAME_FINISHED':
+            // This alert will show after the roulette animation (if any) finishes
+            setTimeout(() => {
+                if (message.payload.winnerId === currentUser?.id) {
+                    alert(`Congratulations! You are the winner!`);
+                } else {
+                    alert(`Game Over! ${message.payload.message}`);
+                }
+                disconnect();
+                navigate('/home');
+            }, 1000); // Small buffer to ensure it shows after any other animation
+            break;
+        case 'CHALLENGE_RESULT':
+            showRoulette(message.payload);
             break;
         case 'ERROR':
             alert(`Server error: ${message.payload.message}`);
@@ -102,10 +112,48 @@ const handleGameMessage = (message: any) => {
     }
 };
 
+const showRoulette = (payload: any) => {
+    const overlay = document.getElementById('roulette-overlay')!;
+    const title = document.getElementById('roulette-title')!;
+    const wheel = document.getElementById('roulette-wheel')!;
+    const result = document.getElementById('roulette-result')!;
+
+    title.textContent = `${payload.punishedPlayerName} spins the roulette...`;
+    result.textContent = '';
+    overlay.classList.remove('hidden');
+
+    const spinDuration = 4000; // 4 seconds for more suspense
+    const resultDisplayDuration = 2500; // 2.5 seconds to read the result
+
+    wheel.style.animation = 'none';
+    void wheel.offsetWidth; 
+    wheel.style.animation = `spin ${spinDuration / 1000}s cubic-bezier(0.25, 1, 0.5, 1)`;
+
+    setTimeout(() => {
+        result.textContent = payload.isEliminated ? '💥 BANG! Eliminated! 💥' : '😮‍💨 *click*... Survived!';
+        result.style.color = payload.isEliminated ? 'var(--color-danger)' : 'var(--color-success)';
+        
+        setTimeout(() => {
+            overlay.classList.add('hidden');
+            // The server will send a ROOM_STATE_UPDATE to finalize UI changes after this animation
+        }, resultDisplayDuration);
+    }, spinDuration);
+};
+
 const updateUI = () => {
     if (!gameState) return;
     const currentUser = getUser();
     if (!currentUser) return;
+
+    const me = gameState.players.find(p => p.id === currentUser.id);
+    if (me?.isEliminated) {
+        document.body.innerHTML = `<div class="eliminated-screen"><h1>You have been eliminated.</h1><button id="back-to-lobby" class="button button-primary">Back to Lobby</button></div>`;
+        document.getElementById('back-to-lobby')?.addEventListener('click', () => {
+            disconnect();
+            navigate('/home');
+        });
+        return;
+    }
 
     const isMyTurn = gameState.game?.currentPlayerId === currentUser.id;
     const canChallenge = gameState.game?.lastPlayerId !== null && gameState.game.lastPlayerId !== currentUser.id;
@@ -125,9 +173,10 @@ const renderPlayerPods = (currentUserId: string) => {
     const playerPositions = assignPlayerPositions(players, currentUserId);
     
     container.innerHTML = playerPositions.map((player, index) => {
-        // We only render pods for opponents, not the current user.
         if (player.id === currentUserId) return '';
-
+        if (player.isEliminated) {
+            return createEliminatedPod(player, index + 1);
+        }
         const isCurrentTurn = player.id === gameState?.game?.currentPlayerId;
         return createPlayerPod(player, index + 1, isCurrentTurn);
     }).join('');
@@ -136,7 +185,6 @@ const renderPlayerPods = (currentUserId: string) => {
 const renderMyHand = (isMyTurn: boolean) => {
     const container = document.getElementById('my-hand-cards');
     if (!container) return;
-
     container.innerHTML = myCards.map(card => createHandCard(card)).join('');
     
     container.querySelectorAll('.hand-card').forEach(cardEl => {
@@ -155,7 +203,7 @@ const renderGameStatus = () => {
 
     if (gameState.status === 'playing') {
         const currentPlayer = gameState.players.find(p => p.id === gameState!.game!.currentPlayerId);
-        statusText.textContent = `Required: ${gameState.game.currentCardType?.toUpperCase()} | Turn: ${currentPlayer?.username}`;
+        statusText.textContent = `Required: ${gameState.game.currentCardType?.toUpperCase() || 'ANY'} | Turn: ${currentPlayer?.username}`;
     } else {
         statusText.textContent = `Waiting for players... (${gameState.players.length}/${MAX_PLAYERS})`;
     }
@@ -164,7 +212,6 @@ const renderGameStatus = () => {
 const renderActionButtons = (isMyTurn: boolean, canChallenge: boolean) => {
     const container = document.getElementById('action-buttons');
     if (!container) return;
-
     container.innerHTML = createActionButtons(isMyTurn, canChallenge);
     document.getElementById('play-card-btn')?.addEventListener('click', handlePlayCardAction);
     document.getElementById('call-bluff-btn')?.addEventListener('click', handleCallBluffAction);
@@ -178,14 +225,13 @@ const renderReferenceCard = () => {
     if (referenceType) {
         container.innerHTML = `<div class="card-face reference-card">${referenceType.charAt(0).toUpperCase()}</div>`;
     } else {
-        container.innerHTML = '';
+        container.innerHTML = 'New Round...';
     }
 };
 
 const renderChat = () => {
     const container = document.getElementById('chat-messages');
     if (!container) return;
-
     container.innerHTML = chatMessages.map(msg => `
         <div class="message">
             <span class="timestamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
@@ -212,9 +258,8 @@ const handlePlayCardAction = () => {
         alert("Please select a card to play.");
         return;
     }
-    
     sendWebSocketMessage({ type: 'PLAY_CARD', payload: { cardId: selectedCardId } });
-    selectedCardId = null; // Reset selection after playing
+    selectedCardId = null;
 };
 
 const handleCallBluffAction = () => {
@@ -258,13 +303,11 @@ function assignPlayerPositions(players: any[], currentUserId: string) {
     const currentUserIndex = players.findIndex(p => p.id === currentUserId);
     if (currentUserIndex === -1) return players;
     const reordered = [...players];
-    // This rotates the array so the current user is always first (position 1, bottom of the screen)
     return reordered.slice(currentUserIndex).concat(reordered.slice(0, currentUserIndex));
 }
 
 const createPlayerPod = (player: any, position: number, isCurrentTurn: boolean) => {
     const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
-    // CORRECTED: The handSize from the game state is now used to render the cards.
     return `
         <div class="player-pod player-${position} ${isCurrentTurn ? 'active-turn' : ''}" data-player-id="${player.id}">
             <div class="opponent-hand">
@@ -275,6 +318,20 @@ const createPlayerPod = (player: any, position: number, isCurrentTurn: boolean) 
                 <div class="player-details">
                     <span class="player-name">${player.username}</span>
                     <span class="player-risk-level">Risk: ${player.riskLevel || 0}/6</span>
+                </div>
+            </div>
+        </div>`;
+};
+
+const createEliminatedPod = (player: any, position: number) => {
+    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
+    return `
+        <div class="player-pod player-${position} eliminated" data-player-id="${player.id}">
+            <div class="player-info">
+                <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar eliminated-avatar" />
+                <div class="player-details">
+                    <span class="player-name">${player.username}</span>
+                    <span class="player-risk-level">ELIMINATED</span>
                 </div>
             </div>
         </div>`;
@@ -294,9 +351,7 @@ const renderQuitModal = () => `
     <div id="quit-game-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header"><h2 class="modal-title">🍺 Show Weakness?</h2></div>
-            <div class="modal-body">
-                <p>Leaving the table now is an admission of defeat. Are you sure you want to forfeit?</p>
-            </div>
+            <div class="modal-body"><p>Leaving the table now is an admission of defeat. Are you sure you want to forfeit?</p></div>
             <div class="modal-actions">
                 <button id="cancel-quit-btn" class="button button-secondary"><span>🎯 Stay & Fight</span></button>
                 <button id="confirm-quit-btn" class="button button-danger"><span>🚪 Yes, I'm Out</span></button>
@@ -306,46 +361,43 @@ const renderQuitModal = () => `
 
 const renderDynamicStyles = () => {
     const style = document.createElement('style');
-    // CORRECTED CSS:
     style.textContent = `
         .game-layout { display: flex; height: calc(100vh - 80px); background: #0f172a; }
         .game-area { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; position: relative; }
         .chat-sidebar { width: 350px; flex-shrink: 0; display: flex; flex-direction: column; background: #1e293b; border-left: 2px solid var(--color-wood-light); }
         .game-table { position: relative; width: 100%; flex-grow: 1; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #166534 0%, #14532d 100%); border: 15px solid var(--color-wood-dark); border-radius: 50%; box-shadow: inset 0 0 50px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); }
-        
-        /* Player Pods & Opponent Hands */
         .player-pod { position: absolute; display: flex; flex-direction: column-reverse; align-items: center; gap: 0.5rem; transition: all 0.3s ease; }
         .player-pod.active-turn .player-avatar { box-shadow: 0 0 20px 5px #facc15; transform: scale(1.1); }
         .player-info { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
         .player-avatar { width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--color-accent-gold); object-fit: cover; background: var(--color-wood-dark); }
         .player-details { display:flex; flex-direction:column; align-items: center; background: rgba(0,0,0,0.7); padding: 0.25rem 0.75rem; border-radius: 12px; }
         .player-name { font-weight: 700; color: #f1f5f9; font-size: 0.9rem; }
-        .player-risk-level { font-size: 0.75rem; color: #ef4444; font-weight: bold;}
-        
+        .player-risk-level { font-size: 0.75rem; color: #fca5a5; }
         .opponent-hand { display: flex; justify-content: center; gap: -20px; margin-bottom: 5px; }
         .card-back { background: linear-gradient(45deg, #b91c1c, #7f1d1d); border: 1px solid var(--color-accent-gold); border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .small-card { width: 30px; height: 42px; }
-
-        /* Positioning for 2 players */
-        .player-2 { top: 2rem; left: 50%; transform: translateX(-50%); } /* Opponent at the top */
-
-        /* Center Pile */
+        .player-2 { top: 2rem; left: 50%; transform: translateX(-50%); }
         .center-pile { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; display: flex; flex-direction: column; gap: 1rem; align-items: center; }
         .reference-card { width: 70px; height: 98px; }
         .game-status-text { background: rgba(0,0,0,0.7); padding: 0.5rem 1rem; border-radius: 20px; color: #f1f5f9; }
-        
-        /* Current Player's Hand */
         .player-hand-area { min-height: 120px; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 1rem; }
         .hand-cards { display: flex; gap: 0.5rem; }
         .card-face { width: 70px; height: 98px; background: white; border: 2px solid #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #333; cursor: pointer; transition: all 0.2s ease; }
         .hand-card:hover { transform: translateY(-10px); }
         .hand-card.selected { transform: translateY(-20px); border-color: var(--color-accent-gold); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.5); }
-        
-        /* Action Buttons & Modal */
         .action-buttons { display: flex; justify-content: center; gap: 1rem; min-height: 50px; }
         .action-btn { padding: 0.75rem 1.5rem; font-size: 1rem; }
         .action-btn:disabled { background: var(--color-primary-disabled); cursor: not-allowed; opacity: 0.6; }
-        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(5px); display: none; justify-content: center; align-items: center; z-index: 1000; }
+        .player-pod.eliminated .player-avatar { filter: grayscale(100%) brightness(0.5); }
+        .eliminated-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; background: #0f172a; color: white; }
+        .eliminated-screen h1 { font-family: var(--font-display); font-size: 3rem; color: var(--color-blood-red); }
+        .eliminated-screen button { margin-top: 2rem; width: auto; padding: 1rem 2rem; }
+        .roulette-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        .roulette-modal { text-align: center; color: white; }
+        #roulette-title { font-family: var(--font-display); font-size: 2.5rem; color: var(--color-accent-gold); text-shadow: 2px 2px 4px #000; }
+        #roulette-wheel { width: 150px; height: 150px; background-image: url('https://i.imgur.com/8z6oA0V.png'); background-size: contain; margin: 2rem auto; }
+        #roulette-result { font-size: 2rem; font-weight: bold; text-shadow: 2px 2px 4px #000; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(1080deg); } }
         .modal-overlay.show { display: flex; }
         .modal-content { background: var(--color-parchment); border: 2px solid var(--color-wood-light); color: var(--color-text-light); max-width: 500px; width: 90%; border-radius: 1rem; overflow: hidden; }
         .modal-header { background: var(--color-wood-dark); padding: 1rem; }
@@ -353,8 +405,6 @@ const renderDynamicStyles = () => {
         .modal-body { padding: 1.5rem; }
         .modal-actions { display: flex; gap: 1rem; padding: 1rem; justify-content: flex-end; background: var(--color-wood-dark); }
         .button-secondary { background: var(--color-primary); }
-
-        /* Chat Sidebar */
         .chat-sidebar { width: 350px; flex-shrink: 0; display: flex; flex-direction: column; background: #1e293b; border-left: 2px solid var(--color-wood-light); }
         .chat-panel { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .chat-header { padding: 1rem; background: var(--color-wood-dark); color: var(--color-accent-gold); }
