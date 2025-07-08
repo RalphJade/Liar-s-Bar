@@ -2,7 +2,7 @@ import { getUser } from '../auth/auth.ts';
 import { sendWebSocketMessage, initLobbyConnection, disconnect } from '../lobby/websocket.ts';
 import { navigate } from '../router/router.ts';
 import { renderHeader } from './components/Header.ts';
-import { RoomStateForApi, Card, ChatMessage, CardType } from '../types/game.types.ts';
+import { RoomStateForApi, Card, ChatMessage } from '../types/game.types.ts';
 import { MAX_PLAYERS } from '../../../backend/src/config/game.config.ts';
 
 const API_BASE_URL = 'http://localhost:3001';
@@ -188,7 +188,7 @@ const updateUI = () => {
     }
 
     const isMyTurn = gameState.game?.currentPlayerId === currentUser.id;
-    const canChallenge = gameState.game?.lastPlayerId !== null && gameState.game.lastPlayerId !== currentUser.id;
+    const canChallenge = gameState.game?.lastPlayerId !== null && gameState.game?.lastPlayerId !== currentUser.id;
 
     renderPlayerPods(currentUser.id);
     renderMyInfo(currentUser.id);
@@ -325,7 +325,7 @@ const setupEventListeners = () => {
 
     const quitModal = document.getElementById('quit-game-modal') as HTMLDivElement;
     const quitBtn = document.getElementById('quit-game-btn');
-    const confirmQuitBtn = document.getElementById('confirm-quit-btn');
+    const confirmQuitBtn = document.getElementById('quit-game-btn') as HTMLButtonElement;
     const cancelQuitBtn = document.getElementById('cancel-quit-btn');
 
     const openModal = () => quitModal.classList.add('show');
@@ -334,9 +334,10 @@ const setupEventListeners = () => {
     quitBtn?.addEventListener('click', openModal);
     cancelQuitBtn?.addEventListener('click', closeModal);
     confirmQuitBtn?.addEventListener('click', () => {
-        sendWebSocketMessage({ type: "LEAVE_ROOM", payload: {} });
-        disconnect();
-        navigate('/home');
+        // In a real app, you would send a message to the server here (e.g., via WebSocket)
+        // to notify that the player has forfeited.
+        sendWebSocketMessage({type: "LEAVE_ROOM", payload:{}});
+        closeModal();
     });
     quitModal.addEventListener('click', (e) => { if (e.target === quitModal) closeModal(); });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && quitModal.classList.contains('show')) closeModal(); });

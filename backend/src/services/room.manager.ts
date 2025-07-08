@@ -96,6 +96,22 @@ export async function handleCreateRoom(
   
   const roomState = await getRoomStateForApi(roomWithGame, ws.clientId);
   sendToClient(ws, "ROOM_STATE_UPDATE", roomState);
+
+  // Notifica que precisa de mais jogadores
+  if (roomWithGame.players.size < MAX_PLAYERS) {
+  LobbyManager.broadcast({
+    type: "WAITING_ROOMS",
+    payload: {
+      rooms: getAllRooms().map((room) => ({
+        code: room.roomCode,
+        name: room.roomName,
+        currentPlayers: room.players.size,
+        maxPlayers: MAX_PLAYERS,
+        hasPassword: !!room.password,
+      })),
+    },
+  });
+  }
 }
 
 /**
@@ -155,17 +171,28 @@ export async function handlePlayerJoinRoom(
   if (room.players.size === MAX_PLAYERS) {
     log(`Room ${room.roomCode} is full. Starting game.`);
     startCardGame(room);
+  } else {
+    log(
+      `Sala ${room.roomCode} tem ${room.players.size} jogadores. Aguardando mais jogadores.`,
+      { ws }
+    );
   }
-
+  
+  // Envia o estado atual da sala
+  broadcastRoomState(room);
+  // Notifica que precisa de mais jogadores
+  
   LobbyManager.broadcast({
-    type: "ROOM_LIST_UPDATE",
+    type: "WAITING_ROOMS",
     payload: {
-      code: room.roomCode,
-      name: room.roomName,
-      currentPlayers: room.players.size,
-      maxPlayers: MAX_PLAYERS,
-      hasPassword: !!room.password,
-    }
+      rooms: getAllRooms().map((room) => ({
+        code: room.roomCode,
+        name: room.roomName,
+        currentPlayers: room.players.size,
+        maxPlayers: MAX_PLAYERS,
+        hasPassword: !!room.password,
+      })),
+    },
   });
 }
 
@@ -240,11 +267,6 @@ export function handleReadyForNextGame(ws: CustomWebSocket): void {
     startCardGame(room);
   } else {
     const readyCount = Array.from(roomHands.values()).filter(h => h.isReady).length;
-    broadcastToRoom(room, "PLAYERS_READY_UPDATE", {
-      readyCount,
-      totalPlayers: room.players.size,
-      message: `${readyCount}/${room.players.size} players ready`,
-    });
   }
 }
 
@@ -303,6 +325,26 @@ export async function handleLeaveRoom(ws: CustomWebSocket): Promise<void> {
       removeRoom(roomCode);
       LobbyManager.broadcast({ type: "ROOM_REMOVED", payload: { code: roomCode } });
     } else {
+      // Senão, atualiza o estado da sala para os outros jogadores
+      broadcastRoomState(room);
+
+      // Notifica outros jogadores sobre a saída
+      sendToClient(ws, "LEFT_ROOM", {
+        message: `${ws.clientUsername} saiu da sala.`
+      });
+
+        LobbyManager.broadcast({
+    type: "WAITING_ROOMS",
+    payload: {
+      rooms: getAllRooms().map((room) => ({
+        code: room.roomCode,
+        name: room.roomName,
+        currentPlayers: room.players.size,
+        maxPlayers: MAX_PLAYERS,
+        hasPassword: !!room.password,
+      })),
+    },
+  });
       if (room.status === 'playing') {
         advanceTurnAfterInterruption(room);
       }
