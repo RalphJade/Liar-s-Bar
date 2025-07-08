@@ -1,4 +1,5 @@
 import { getRoom, addRoom, getAllRooms, removeRoom, getRoomHands } from './gameState';
+import * as LobbyManager from "./lobby.manager"
 import { log } from "../utils/logger";
 import { sendToClient, broadcastToRoom, broadcastToOthers } from "../utils/websocket.util";
 import { Room, RoomStateForApi,CustomWebSocket } from "../models/types.model";
@@ -92,6 +93,8 @@ export function handleCreateRoom(ws: CustomWebSocket, payload: {roomName: string
       playersNeeded: MAX_PLAYERS - roomWithGame.players.size
     });
   }
+
+  LobbyManager.broadcastOnlineUserList();
 }
 
 export function handlePlayerJoinRoom(ws: CustomWebSocket, payload: { roomCode: string; password?: string }): void {
@@ -180,6 +183,7 @@ export function handlePlayerJoinRoom(ws: CustomWebSocket, payload: { roomCode: s
   
   // Envia o estado atual da sala
   broadcastRoomState(room);
+  LobbyManager.broadcastOnlineUserList();
 }
 
 export function handleWaitingRooms(ws: CustomWebSocket): void {
@@ -264,6 +268,7 @@ export function handleCloseRoom(ws: CustomWebSocket): void {
 
   // Remove mãos dos jogadores
   removeRoom(roomCode)
+  LobbyManager.broadcastOnlineUserList();
 }
 
 export function handlePlayerDisconnect(ws: CustomWebSocket): void {
@@ -304,6 +309,7 @@ export function handlePlayerDisconnect(ws: CustomWebSocket): void {
 
     broadcastRoomState(room);
   }
+  LobbyManager.broadcastOnlineUserList();
 }
 
 export function broadcastRoomState(room: Room & { game: CardGame }): void {

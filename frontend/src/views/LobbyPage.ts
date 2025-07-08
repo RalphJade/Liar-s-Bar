@@ -141,7 +141,14 @@ export const renderLobbyPage = (element: HTMLElement) => {
     users.forEach((user) => {
       const userElement = document.createElement("div");
       userElement.className = "online-user-item";
-      userElement.textContent = user.username;
+      const statusIcon = user.status === 'In Game' 
+        ? '<span class="status-icon in-game">⚔️</span>' // Ícone de espadas para "Em Jogo"
+        : '<span class="status-icon in-lobby">🟢</span>'; // Ícone verde para "No Lobby"
+
+      userElement.innerHTML = `
+        ${statusIcon}
+        <span class="username">${user.username}</span>
+      `;
       onlineUserListDiv.appendChild(userElement);
     });
   };
@@ -180,7 +187,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
           <h4 class="room-name">${room.name}</h4>
           <p class="room-details">
             ${room.currentPlayers}/${room.maxPlayers} players
-            ${room.hasPassword ? "🔒" : ""}
+            ${room.hasPassword ? '<span class="password-icon">🔒</span>' : ''}
           </p>
         </div>
         <button class="button button-lobby-join" data-room-code="${room.code}">
@@ -188,7 +195,11 @@ export const renderLobbyPage = (element: HTMLElement) => {
         </button>
       `;
 
-      const joinBtn = roomElement.querySelector(".button-lobby-join");
+      const joinBtn = roomElement.querySelector(".button-lobby-join") as HTMLButtonElement;
+      if (room.currentPlayers >= room.maxPlayers) {
+          joinBtn.textContent = "Full";
+          joinBtn.disabled = true;
+      }
       joinBtn?.addEventListener("click", () => {
         const roomCode = joinBtn.getAttribute("data-room-code");
         if (roomCode) {

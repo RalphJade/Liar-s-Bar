@@ -1160,3 +1160,80 @@ body.lobby-theme {
   scrollbar-width: thin; /* Deixa a barra mais fina */
   scrollbar-color: var(--color-wood-light) rgba(0, 0, 0, 0.3); /* Cor do polegar e da trilha */
 }
+
+/**
+ * ================================================================
+ * ROOM LIST ITEM STYLES
+ * ================================================================
+ */
+
+.room-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  background: rgba(0, 0, 0, 0.2); /* Fundo sutil para cada item */
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  margin-bottom: 1rem;
+  transition: all 0.2s ease-in-out;
+}
+
+.room-item:hover {
+  border-color: var(--color-accent-gold);
+  background: rgba(212, 175, 55, 0.05); /* Um brilho dourado sutil ao passar o mouse */
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+}
+
+.room-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.room-name {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--color-text-light);
+  margin: 0;
+}
+
+.room-details {
+  font-size: 0.9rem;
+  color: var(--color-text-medium);
+  margin: 0;
+}
+
+.room-details span { /* Para estilizar o ícone do cadeado se você o colocar em um span */
+  color: var(--color-accent-gold);
+  margin-left: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.button-lobby-join {
+  width: auto; /* O botão não deve ocupar toda a largura */
+  padding: 0.75rem 1.5rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, var(--color-primary) 0%, #6b5637 100%);
+  border: 1px solid var(--color-wood-light);
+  color: var(--color-text-light);
+}
+
+.button-lobby-join:hover {
+  background: linear-gradient(135deg, var(--color-primary-hover) 0%, #4a3728 100%);
+  color: white;
+  transform: scale(1.05);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Opcional: Estilo para um botão desabilitado (sala cheia) */
+.button-lobby-join:disabled {
+  background: var(--color-primary-disabled);
+  border-color: var(--color-border);
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}

@@ -51,10 +51,11 @@ export function handleChatMessage(sender: CustomWebSocket, message: any) {
 /**
  * Monta a lista de usuários online e a envia para todos os clientes.
  */
-function broadcastOnlineUserList() {
+export function broadcastOnlineUserList() {
     const users = Array.from(connectedClients.values()).map(client => ({
         userId: client.clientId,
-        username: client.clientUsername
+        username: client.clientUsername,
+        status: client.currentRoomCode ? 'In Game' : 'In Lobby' 
     }));
 
     const message = {

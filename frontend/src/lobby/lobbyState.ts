@@ -1,6 +1,7 @@
 interface User {
   userId: string;
   username: string;
+  status?: 'In Game' | 'In Lobby';
 }
 
 interface ChatMessage {
