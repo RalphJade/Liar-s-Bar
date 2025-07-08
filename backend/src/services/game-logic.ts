@@ -119,11 +119,6 @@ export function handlePlayCard(ws: CustomWebSocket, payload: { cardId: string })
     room.game.lastPlayerId = ws.clientId;
     
     broadcastRoomState(room);
-
-    if (checkForWinner(room)) {
-        return;
-    }
-    
     advanceTurn(room);
 }
 
@@ -156,6 +151,7 @@ export function handleCallBluff(ws: CustomWebSocket): void {
     const wasLie = revealedCard.type !== requiredType && revealedCard.type !== 'joker';
   
     const punishedPlayerId = wasLie ? targetId : challengerId;
+    const punishedPlayer = room.players.get(punishedPlayerId)!; // Safe to use ! because we know the ID is valid
     let message: string;
   
     const roomHands = getRoomHands(room.roomCode);
@@ -166,12 +162,12 @@ export function handleCallBluff(ws: CustomWebSocket): void {
     const eliminatedOnThisTurn = spinRoulette(punishedHand.riskLevel);
 
     if (wasLie) {
-        message = `${target.username} was caught bluffing with a ${revealedCard.type}!`;
+        message = `${target.username} was caught bluffing! The card was a ${revealedCard.type.toUpperCase()}.`;
     } else {
-        message = `${challenger.username} falsely accused ${target.username}! The card was a ${revealedCard.type}.`;
+        message = `${challenger.username} falsely accused ${target.username}! The card was a ${revealedCard.type.toUpperCase()}.`;
     }
 
-    message += ` ${room.players.get(punishedPlayerId)!.username} spins the roulette...`;
+    message += ` ${punishedPlayer.username} spins the roulette...`;
     
     if (eliminatedOnThisTurn) {
         punishedHand.isEliminated = true;
@@ -183,7 +179,7 @@ export function handleCallBluff(ws: CustomWebSocket): void {
     broadcastToRoom(room, "CHALLENGE_RESULT", {
         wasLie,
         punishedPlayerId,
-        punishedPlayerName: room.players.get(punishedPlayerId)!.username,
+        punishedPlayerName: punishedPlayer.username,
         revealedCard,
         message,
         isEliminated: eliminatedOnThisTurn,
@@ -211,7 +207,7 @@ export function handleCallBluff(ws: CustomWebSocket): void {
         }
         
         startNewRound(room, nextTurnPlayerId, false, revealedCard.type);
-    }, 7000);
+    }, 7000); // Increased delay to match frontend animation
 }
 
 function startNewRound(room: Room & { game: CardGame }, startingPlayerId: string, isFirstRound: boolean = false, newCardType?: CardType) {
