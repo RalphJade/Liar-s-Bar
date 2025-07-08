@@ -60,7 +60,7 @@ function createSpecialDeck(): Card[] {
  * @param {Room & { game: CardGame }} room - The game room object.
  * @returns {Map<string, PlayerHand>} A map of player IDs to their new hands.
  */
-function dealCards(room: Room & { game: CardGame }): Map<string, PlayerHand> {
+export function dealCards(room: Room & { game: CardGame }): Map<string, PlayerHand> {
   const deck = createSpecialDeck();
   const roomHands = new Map<string, PlayerHand>();
 
@@ -91,7 +91,7 @@ function dealCards(room: Room & { game: CardGame }): Map<string, PlayerHand> {
  * @param {CardType | null} currentCardType - The required card type for the round.
  * @returns {boolean} True if the play is valid, false otherwise.
  */
-function canPlayCard(card: Card, currentCardType: CardType | null): boolean {
+export function canPlayCard(card: Card, currentCardType: CardType | null): boolean {
   // If it's the first card of the round, any card is valid.
   if (currentCardType === null) return true;
   
@@ -103,5 +103,5 @@ function canPlayCard(card: Card, currentCardType: CardType | null): boolean {
 }
 
 export {
-  createSpecialDeck, dealCards, canPlayCard
+  createSpecialDeck, dealCards
 };

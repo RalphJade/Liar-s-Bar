@@ -13,26 +13,20 @@ import * as GameLogic from "./game-logic"
  */
 export function initializeGameService(wss: WebSocketServer): void {
   wss.on("connection", (ws: CustomWebSocket) => {
-    // When a new client connects, they first join the main lobby.
     LobbyManager.handleNewConnection(ws);
-    
-    // Send the list of available rooms to the newly connected client.
     RoomManager.handleWaitingRooms(ws);
 
-    // Set up a listener for messages from this specific client.
     ws.on("message", (message) => {
       try {
         const data: ClientMessage = JSON.parse(message.toString());
         log("Message received.", { ws, data });
         handleClientMessage(ws, data);
       } catch (error: any) {
-        log("Error parsing JSON message.", { ws, data: { error: error.message, originalMessage: message.toString() } });
+        log("Error handling client message.", { ws, data: { error: error.message, originalMessage: message.toString() } });
       }
     });
 
-    // Set up a listener for when the client's connection closes.
     ws.on("close", () => {
-      // The disconnect handler needs to know if the user was in a room or just the lobby.
       RoomManager.handlePlayerDisconnect(ws);
     });
 
@@ -54,7 +48,6 @@ function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
     return;
   }
 
-  // If the user is not in a room, they can only perform lobby actions.
   if (!ws.currentRoomCode) {
     switch (data.type) {
       case "LIST_ROOMS":
@@ -67,20 +60,18 @@ function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
         RoomManager.handlePlayerJoinRoom(ws, data.payload);
         break;
       case "CHAT_MESSAGE":
-         // This assumes a global lobby chat. If chat is room-specific, this needs adjustment.
         LobbyManager.handleChatMessage(ws, data.payload);
         break;
       default:
         sendToClient(ws, "ERROR", { message: "Action not allowed outside of a room." });
     }
   } else {
-    // If the user is in a room, they can perform game actions.
     switch (data.type) {
       case "PLAY_CARD":
         GameLogic.handlePlayCard(ws, data.payload);
         break;
       case "CALL_BLUFF":
-        // GameLogic.handleCallBluff(ws); // To be implemented
+        GameLogic.handleCallBluff(ws);
         break;
       case "READY_FOR_NEXT_GAME":
         RoomManager.handleReadyForNextGame(ws);
@@ -91,7 +82,6 @@ function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
       case "CHAT_MESSAGE":
         RoomManager.handleRoomChatMessage(ws, data.payload);
         break;
-      // Actions like CREATE/JOIN are blocked if already in a room, handled by the room manager functions.
       case "CREATE_ROOM":
       case "JOIN_ROOM":
         sendToClient(ws, "ERROR", { message: "You are already in a room." });

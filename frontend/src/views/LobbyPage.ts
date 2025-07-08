@@ -8,7 +8,7 @@ import { renderHeader } from "./components/Header.ts";
 export const renderLobbyPage = (element: HTMLElement) => {
   const user = getUser();
   if (!user) {
-    element.innerHTML = `<p>Erro: Usuário não autenticado.</p>`;
+    element.innerHTML = `<p>Error: User is not authenticated.</p>`;
     return;
   }
 
@@ -235,14 +235,14 @@ export const renderLobbyPage = (element: HTMLElement) => {
         lobbyState.removeUser(message.payload.user.userId);
         renderOnlineUserList();
         break;
-      // *** CORRECTION START ***
+      // --- FIX ---
+      // This message now only updates the lobby list for OTHER players.
+      // The creator is navigated by the 'JOINED_ROOM' message.
       case "ROOM_CREATED":
-        // This message is now just for updating the lobby list for OTHER players.
-        // The creator will be navigated by the 'JOINED_ROOM' message.
         lobbyState.addRoom(message.payload);
         renderRoomList();
         break;
-      // *** CORRECTION END ***
+      // --- END FIX ---
       case "WAITING_ROOMS":
         lobbyState.setRooms(message.payload.rooms);
         renderRoomList();

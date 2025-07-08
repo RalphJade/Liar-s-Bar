@@ -4,14 +4,14 @@ import { log } from "../utils/logger";
 import { broadcastToRoom, broadcastToOthers, getNextPlayer, sendToClient } from "../utils/websocket.util";
 import { dealCards, canPlayCard } from "./cards.service";
 import { MAX_PLAYERS, TURN_TIME_LIMIT, CARDS_PER_PLAYER, CARDS_PER_TYPE, JOKERS_COUNT } from "../config/game.config";
-import { getRoomStateForApi } from "./room.manager";
+import { getRoomStateForApi, broadcastRoomState } from "./room.manager";
 
 /**
  * Starts the card game in the given room.
  * This function initializes the game state, deals cards, and starts the first turn.
  * @param room The room where the game will start.
  */
-export function startCardGame(room: Room & { game: CardGame }): void {
+export async function startCardGame(room: Room & { game: CardGame }): Promise<void> {
   log(`Starting card game in room ${room.roomCode} with ${room.players.size} players.`);
   
   // Initialize game state for a new game
@@ -35,11 +35,15 @@ export function startCardGame(room: Room & { game: CardGame }): void {
   // Determine the first player
   const firstPlayerId = Array.from(room.players.keys())[0];
   
-  // Notify all players that the game has started
+  // Notify all players that the game has started by broadcasting the new state
+  await broadcastRoomState(room);
+
+  // Announce the start and the first turn
+  const initialPlayerStates = (await getRoomStateForApi(room, '')).players;
   broadcastToRoom(room, "GAME_STARTED", {
     message: "The game has begun! The first player must choose a card type to play.",
     currentPlayerId: firstPlayerId,
-    players: getRoomStateForApi(room, '').players, // Send initial state of all players
+    players: initialPlayerStates,
     gameRules: {
       cardsPerPlayer: CARDS_PER_PLAYER,
       cardTypes: ['king', 'queen', 'ace', 'joker'],
@@ -49,23 +53,24 @@ export function startCardGame(room: Room & { game: CardGame }): void {
       turnTimeLimit: TURN_TIME_LIMIT
     }
   });
-  
-  // Send each player their specific hand
-  const roomHands = getRoomHands(room.roomCode);
-  if (roomHands) {
-    room.players.forEach((player, playerId) => {
-      const hand = roomHands.get(playerId);
-      if (hand && player.ws) {
-        sendToClient(player.ws, "HAND_DEALT", {
-          cards: hand.cards,
-          handSize: hand.cards.length,
-        });
-      }
-    });
-  }
 
   // Start the first player's turn
   startPlayerTurn(room, firstPlayerId);
+}
+
+/**
+ * Advances the turn to the next non-eliminated player.
+ * @param room The game room object.
+ */
+export function advanceTurn(room: Room & { game: CardGame }): void {
+  const nextPlayerId = getNextPlayer(room);
+  if (nextPlayerId) {
+    room.game.currentPlayerIndex = Array.from(room.players.keys()).indexOf(nextPlayerId);
+    startPlayerTurn(room, nextPlayerId);
+  } else {
+    log(`No valid next player found in room ${room.roomCode}. Game might be over.`);
+    // TODO: Implement game over logic
+  }
 }
 
 /**
@@ -80,14 +85,7 @@ export function advanceTurnAfterInterruption(room: Room & { game: CardGame }): v
     room.game.turnTimer = null;
   }
   
-  // Pass to the next player
-  const nextPlayerId = getNextPlayer(room);
-  if (nextPlayerId) {
-    startPlayerTurn(room, nextPlayerId);
-  } else {
-    log(`No valid next player found in room ${room.roomCode}. Game might be over.`);
-    // Here you could add logic to end the game if only one player is left
-  }
+  advanceTurn(room);
 }
 
 /**
@@ -103,7 +101,7 @@ export function startPlayerTurn(room: Room & { game: CardGame }, playerId: strin
     advanceTurnAfterInterruption(room);
     return;
   }
-
+  
   log(`Turn of player ${player.username} in room ${room.roomCode}.`);
   
   // Clear any previous turn timer
@@ -140,12 +138,12 @@ export function startPlayerTurn(room: Room & { game: CardGame }, playerId: strin
 
 // Placeholder for future implementation
 export function handlePlayCard(ws: CustomWebSocket, payload: { cardId: string; declaredType?: CardType }): void {
-  // Logic to be implemented in the next step
+  log("handlePlayCard to be implemented", { ws, data: payload });
 }
 
 // Placeholder for future implementation
-export function handleChallengePlayer(ws: CustomWebSocket, payload: { targetPlayerId: string }): void {
-  // Logic to be implemented in a future step
+export function handleCallBluff(ws: CustomWebSocket): void {
+  log("handleCallBluff to be implemented", { ws });
 }
 
 function handleTurnTimeout(room: Room & { game: CardGame }, playerId: string): void {

@@ -8,14 +8,13 @@ export function sendToClient<T extends ServerMessage["type"]>(
   payload: Extract<ServerMessage, { type: T }>["payload"]
 ): void {
   if (ws.readyState !== WebSocket.OPEN) {
-    log("Tentativa de envio para um WebSocket fechado.", { ws, data: { type } });
+    log("Attempted to send to a closed WebSocket.", { ws, data: { type } });
     return;
   }
   const message = { type, payload };
   ws.send(JSON.stringify(message));
 }
 
-// Envia uma mensagem para todos em uma sala
 export function broadcastToRoom(
   room: Room,
   type: ServerMessage['type'],
@@ -34,13 +33,14 @@ export function broadcastToRoom(
 
 export function broadcastToOthers<T extends ServerMessage["type"]>(
   room: Room & { game: CardGame },
-  ws: CustomWebSocket,
+  senderWs: CustomWebSocket,
   type: T,
   payload: Extract<ServerMessage, { type: T, payload: any }>["payload"]
 ): void {
   const allParticipants = [...room.players.values(), ...room.spectators.values()];
   allParticipants.forEach(participant => {
-    if (participant.ws && participant.ws.readyState === WebSocket.OPEN) {
+    // Corrected logic: only send if the participant is not the original sender
+    if (participant.ws && participant.ws.clientId !== senderWs.clientId && participant.ws.readyState === WebSocket.OPEN) {
       sendToClient(participant.ws, type, payload);
     }
   });
@@ -48,9 +48,26 @@ export function broadcastToOthers<T extends ServerMessage["type"]>(
 
 export function getNextPlayer(room: Room & { game: CardGame }): string | null {
   const playerIds = Array.from(room.players.keys());
-  const currentIndex = room.game.currentPlayerIndex;
-  const nextIndex = (currentIndex + room.game.direction + playerIds.length) % playerIds.length;
+  if (playerIds.length === 0) return null;
+
+  const roomHands = getRoomHands(room.roomCode);
+
+  let attempts = 0;
+  let nextIndex = room.game.currentPlayerIndex;
+
+  do {
+      nextIndex = (nextIndex + room.game.direction + playerIds.length) % playerIds.length;
+      const nextPlayerId = playerIds[nextIndex];
+      const nextPlayerHand = roomHands?.get(nextPlayerId);
+      
+      // If the next player is not eliminated, they are the one.
+      if (nextPlayerHand && !nextPlayerHand.isEliminated) {
+          room.game.currentPlayerIndex = nextIndex;
+          return nextPlayerId;
+      }
+      attempts++;
+  } while (attempts < playerIds.length);
   
-  room.game.currentPlayerIndex = nextIndex;
-  return playerIds[nextIndex];
+  // If we loop through everyone and can't find a non-eliminated player.
+  return null; 
 }
