@@ -1,4 +1,4 @@
-import { Server as WebSocketServer, WebSocket } from "ws";
+import { Server as WebSocketServer } from "ws";
 import { ClientMessage, CustomWebSocket } from "../models/types.model";
 import { log } from "../utils/logger";
 import { sendToClient } from "../utils/websocket.util";
@@ -66,6 +66,7 @@ function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
         sendToClient(ws, "ERROR", { message: "Action not allowed outside of a room." });
     }
   } else {
+    // If the user is in a room, they can perform game actions.
     switch (data.type) {
       case "PLAY_CARD":
         GameLogic.handlePlayCard(ws, data.payload);
@@ -82,6 +83,7 @@ function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
       case "CHAT_MESSAGE":
         RoomManager.handleRoomChatMessage(ws, data.payload);
         break;
+      // Actions like CREATE/JOIN are blocked if already in a room.
       case "CREATE_ROOM":
       case "JOIN_ROOM":
         sendToClient(ws, "ERROR", { message: "You are already in a room." });
