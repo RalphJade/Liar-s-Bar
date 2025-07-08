@@ -97,12 +97,18 @@ export function handleCreateRoom(
 
   // Notifica que precisa de mais jogadores
   if (roomWithGame.players.size < MAX_PLAYERS) {
-    sendToClient(ws, "WAITING_FOR_PLAYERS", {
-      currentPlayers: roomWithGame.players.size,
-      maxPlayers: MAX_PLAYERS,
-      message: `Aguardando jogadores (${roomWithGame.players.size}/${MAX_PLAYERS})`,
-      playersNeeded: MAX_PLAYERS - roomWithGame.players.size,
-    });
+  LobbyManager.broadcast({
+    type: "WAITING_ROOMS",
+    payload: {
+      rooms: getAllRooms().map((room) => ({
+        code: room.roomCode,
+        name: room.roomName,
+        currentPlayers: room.players.size,
+        maxPlayers: MAX_PLAYERS,
+        hasPassword: !!room.password,
+      })),
+    },
+  });
   }
 }
 
@@ -191,17 +197,29 @@ export function handlePlayerJoinRoom(
     log(`Sala ${room.roomCode} está cheia. Iniciando jogo.`);
     startCardGame(room);
   } else {
-    // Notifica que precisa de mais jogadores
-    broadcastToRoom(room, "WAITING_FOR_PLAYERS", {
-      currentPlayers: room.players.size,
-      maxPlayers: MAX_PLAYERS,
-      message: `Aguardando jogadores (${room.players.size}/${MAX_PLAYERS})`,
-      playersNeeded: MAX_PLAYERS - room.players.size,
-    });
+    log(
+      `Sala ${room.roomCode} tem ${room.players.size} jogadores. Aguardando mais jogadores.`,
+      { ws }
+    );
   }
-
+  
   // Envia o estado atual da sala
   broadcastRoomState(room);
+  // Notifica que precisa de mais jogadores
+  
+  LobbyManager.broadcast({
+    type: "WAITING_ROOMS",
+    payload: {
+      rooms: getAllRooms().map((room) => ({
+        code: room.roomCode,
+        name: room.roomName,
+        currentPlayers: room.players.size,
+        maxPlayers: MAX_PLAYERS,
+        hasPassword: !!room.password,
+      })),
+    },
+  });
+
 }
 
 export function handleWaitingRooms(ws: CustomWebSocket): void {
@@ -327,12 +345,22 @@ export function handleLeaveRoom(ws: CustomWebSocket): void {
       broadcastRoomState(room);
 
       // Notifica outros jogadores sobre a saída
-      broadcastToRoom(room, "PLAYER_LEFT", {
-        playerId: ws.clientId,
-        playerName: ws.clientUsername,
-        message: `${ws.clientUsername} saiu da sala.`,
-        currentPlayers: room.players.size,
+      sendToClient(ws, "LEFT_ROOM", {
+        message: `${ws.clientUsername} saiu da sala.`
       });
+
+        LobbyManager.broadcast({
+    type: "WAITING_ROOMS",
+    payload: {
+      rooms: getAllRooms().map((room) => ({
+        code: room.roomCode,
+        name: room.roomName,
+        currentPlayers: room.players.size,
+        maxPlayers: MAX_PLAYERS,
+        hasPassword: !!room.password,
+      })),
+    },
+  });
     }
   }
 }

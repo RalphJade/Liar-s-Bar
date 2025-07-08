@@ -953,7 +953,6 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
     confirmQuitBtn?.addEventListener('click', () => {
         // In a real app, you would send a message to the server here (e.g., via WebSocket)
         // to notify that the player has forfeited.
-        console.log(`Player ${currentUser.username} has forfeited the game.`);
         sendWebSocketMessage({type: "LEAVE_ROOM", payload:{}});
         closeModal();
     });
