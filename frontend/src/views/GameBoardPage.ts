@@ -7,7 +7,6 @@ import { MAX_PLAYERS } from '../../../backend/src/config/game.config.ts';
 
 const API_BASE_URL = 'http://localhost:3001';
 
-// Module-level state for the game
 let gameState: RoomStateForApi | null = null;
 let myCards: Card[] = [];
 let chatMessages: ChatMessage[] = [];
@@ -23,7 +22,7 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
     element.innerHTML = `
         <div id="header-container"></div>
         <div class="game-layout">
-            <div class="game-area">
+            <div id="game-area" class="game-area">
                 <div class="game-table">
                     <div id="player-pods-container"></div>
                     <div class="center-pile">
@@ -31,19 +30,14 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
                         <p id="game-status-text" class="game-status-text">Waiting for game to start...</p>
                     </div>
                 </div>
-
                 <div class="player-hand-container">
-                    <div id="my-info-area" class="my-info-area">
-                        <!-- My info (avatar, name, risk) will be rendered here -->
-                    </div>
+                    <div id="my-info-area" class="my-info-area"></div>
                     <div class="player-hand-area">
                         <div id="my-hand-cards" class="hand-cards"></div>
                     </div>
                 </div>
-
                 <div id="action-buttons" class="action-buttons"></div>
             </div>
-            
             <div class="chat-sidebar">
                  <div class="chat-panel">
                     <div class="chat-header"><span id="chat-title" class="chat-title">Live Chat (${roomCode})</span></div>
@@ -95,18 +89,7 @@ const handleGameMessage = (message: any) => {
             alert(message.payload.message);
             break;
         case 'GAME_FINISHED':
-            setTimeout(() => {
-                if (message.payload.winnerId === currentUser?.id) {
-                    alert(`Congratulations, ${currentUser.username}! You are the last one standing!`);
-                } else if (message.payload.winnerId === 'draw') {
-                    alert('The game is a draw!');
-                }
-                else {
-                    alert(`Game Over! ${message.payload.winnerName} is the last one standing!`);
-                }
-                disconnect();
-                navigate('/home');
-            }, 5500);
+            showEndGameScreen(message.payload.winnerId === currentUser?.id, message.payload.message);
             break;
         case 'CHALLENGE_RESULT':
             showRoulette(message.payload);
@@ -149,6 +132,21 @@ const showRoulette = (payload: any) => {
     }, spinDuration);
 };
 
+const showEndGameScreen = (didIWin: boolean, message: string) => {
+    const gameArea = document.getElementById('game-area')!;
+    gameArea.innerHTML = `
+        <div class="end-game-screen ${didIWin ? 'win' : 'lose'}">
+            <h1>${didIWin ? 'Victory!' : 'Defeat!'}</h1>
+            <p>${message}</p>
+            <button id="back-to-lobby" class="button button-primary">Back to Lobby</button>
+        </div>
+    `;
+    document.getElementById('back-to-lobby')?.addEventListener('click', () => {
+        disconnect();
+        navigate('/home');
+    });
+};
+
 const updateUI = () => {
     if (!gameState) return;
     const currentUser = getUser();
@@ -156,11 +154,7 @@ const updateUI = () => {
 
     const me = gameState.players.find(p => p.id === currentUser.id);
     if (me?.isEliminated) {
-        document.body.innerHTML = `<div class="eliminated-screen"><h1>You have been eliminated.</h1><button id="back-to-lobby" class="button button-primary">Back to Lobby</button></div>`;
-        document.getElementById('back-to-lobby')?.addEventListener('click', () => {
-            disconnect();
-            navigate('/home');
-        });
+        showEndGameScreen(false, 'You have been eliminated.');
         return;
     }
 
@@ -343,7 +337,6 @@ const createPlayerPod = (player: any, position: number, isCurrentTurn: boolean) 
         </div>`;
 };
 
-// CORRECTED
 const createMyInfoPod = (player: any) => {
     const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
     const isMyTurn = gameState?.game?.currentPlayerId === player.id;
@@ -394,7 +387,6 @@ const renderQuitModal = () => `
 
 const renderDynamicStyles = () => {
     const style = document.createElement('style');
-    // CORRECTED CSS
     style.textContent = `
         .game-layout { display: flex; height: calc(100vh - 80px); background: #0f172a; }
         .game-area { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; position: relative; }
@@ -430,9 +422,12 @@ const renderDynamicStyles = () => {
         .action-btn { padding: 0.75rem 1.5rem; font-size: 1rem; }
         .action-btn:disabled { background: var(--color-primary-disabled); cursor: not-allowed; opacity: 0.6; }
         .player-pod.eliminated .player-avatar { filter: grayscale(100%) brightness(0.5); }
-        .eliminated-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; background: #0f172a; color: white; }
-        .eliminated-screen h1 { font-family: var(--font-display); font-size: 3rem; color: var(--color-blood-red); }
-        .eliminated-screen button { margin-top: 2rem; width: auto; padding: 1rem 2rem; }
+        .eliminated-screen, .end-game-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; color: white; }
+        .end-game-screen.win h1 { color: var(--color-success); }
+        .end-game-screen.lose h1 { color: var(--color-danger); }
+        .end-game-screen h1, .eliminated-screen h1 { font-family: var(--font-display); font-size: 3rem; }
+        .end-game-screen p { font-size: 1.2rem; }
+        .end-game-screen button, .eliminated-screen button { margin-top: 2rem; width: auto; padding: 1rem 2rem; }
         .roulette-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 2000; }
         .roulette-modal { text-align: center; color: white; }
         #roulette-title { font-family: var(--font-display); font-size: 2.5rem; color: var(--color-accent-gold); text-shadow: 2px 2px 4px #000; }

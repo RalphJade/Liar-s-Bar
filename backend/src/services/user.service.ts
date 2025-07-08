@@ -70,7 +70,6 @@ export const updatePlayerStatsAfterGame = async (playerIds: string[], winnerId: 
 
         for (const playerId of playerIds) {
             const isWinner = playerId === winnerId;
-            // Increment matches_played for everyone, and wins only for the winner.
             const query = `
                 UPDATE users
                 SET
