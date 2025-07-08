@@ -1,5 +1,6 @@
 import { log } from "./logger";
 import { CardGame, CustomWebSocket, ServerMessage, Room } from "../models/types.model";
+import { WebSocket } from "ws";
 
 export function sendToClient<T extends ServerMessage["type"]>(
   ws: CustomWebSocket,
