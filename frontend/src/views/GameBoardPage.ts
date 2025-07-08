@@ -2,8 +2,7 @@ import { getUser } from '../auth/auth.ts';
 import { sendWebSocketMessage, initLobbyConnection, disconnect } from '../lobby/websocket.ts';
 import { navigate } from '../router/router.ts';
 import { renderHeader } from './components/Header.ts';
-// Corrected import path
-import { RoomStateForApi, Card, ChatMessage } from '../types/game.types.ts';
+import { RoomStateForApi, Card, ChatMessage, CardType } from '../types/game.types.ts';
 import { MAX_PLAYERS } from '../../../backend/src/config/game.config.ts';
 
 const API_BASE_URL = 'http://localhost:3001';
@@ -14,11 +13,6 @@ let myCards: Card[] = [];
 let chatMessages: ChatMessage[] = [];
 let selectedCardId: string | null = null;
 
-/**
- * Renders the main Game Board page.
- * @param {HTMLElement} element The root element to render the page content into.
- * @param {string} [roomCode] The unique code for the game room.
- */
 export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => {
     const currentUser = getUser();
     if (!currentUser || !roomCode) {
@@ -26,23 +20,17 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
         return;
     }
 
-    // Initial HTML structure. It's a skeleton that will be filled by the updateUI function.
     element.innerHTML = `
         <div id="header-container"></div>
         <div class="game-layout">
             <div class="game-area">
                 <div class="game-table">
+                    <!-- Player pods and opponent hands will be injected here -->
                     <div id="player-pods-container"></div>
+                    
+                    <!-- CORRECTED: This container is now properly centered by CSS -->
                     <div class="center-pile">
-                        <div class="deck-area">
-                            <div class="card-stack">
-                                <div class="card-back deck-card"></div>
-                                <span id="deck-count" class="deck-count-text"></span>
-                            </div>
-                            <div id="played-cards-pile" class="played-cards">
-                                <!-- The pile of played cards, shown as a single back -->
-                            </div>
-                        </div>
+                        <div id="reference-card-container"></div>
                         <p id="game-status-text" class="game-status-text">Waiting for game to start...</p>
                     </div>
                 </div>
@@ -79,7 +67,7 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
     `;
 
     renderHeader(document.getElementById('header-container')!);
-    initLobbyConnection((message) => handleGameMessage(message));
+    initLobbyConnection(handleGameMessage);
     setupEventListeners();
 };
 
@@ -88,10 +76,10 @@ const handleGameMessage = (message: any) => {
     switch(message.type) {
         case 'ROOM_STATE_UPDATE':
             gameState = message.payload;
-            myCards = message.payload.myCards || myCards; // Update my cards only if provided
+            myCards = message.payload.myCards || myCards;
             updateUI();
             break;
-        case 'HAND_DEALT': // Can be a fallback, but ROOM_STATE_UPDATE is preferred
+        case 'HAND_DEALT':
             myCards = message.payload.cards;
             updateUI();
             break;
@@ -102,7 +90,6 @@ const handleGameMessage = (message: any) => {
             break;
         case 'GAME_STARTED':
             alert(message.payload.message);
-            // The subsequent ROOM_STATE_UPDATE will handle the UI
             break;
         case 'ERROR':
             alert(`Server error: ${message.payload.message}`);
@@ -127,7 +114,7 @@ const updateUI = () => {
     renderMyHand(isMyTurn);
     renderGameStatus();
     renderActionButtons(isMyTurn, canChallenge);
-    renderPlayedPile();
+    renderReferenceCard();
 };
 
 const renderPlayerPods = (currentUserId: string) => {
@@ -138,6 +125,9 @@ const renderPlayerPods = (currentUserId: string) => {
     const playerPositions = assignPlayerPositions(players, currentUserId);
     
     container.innerHTML = playerPositions.map((player, index) => {
+        // We only render pods for opponents, not the current user.
+        if (player.id === currentUserId) return '';
+
         const isCurrentTurn = player.id === gameState?.game?.currentPlayerId;
         return createPlayerPod(player, index + 1, isCurrentTurn);
     }).join('');
@@ -165,7 +155,7 @@ const renderGameStatus = () => {
 
     if (gameState.status === 'playing') {
         const currentPlayer = gameState.players.find(p => p.id === gameState!.game!.currentPlayerId);
-        statusText.textContent = `Current: ${gameState.game.currentCardType || 'Any'}'s - ${currentPlayer?.username}'s Turn`;
+        statusText.textContent = `Required: ${gameState.game.currentCardType?.toUpperCase()} | Turn: ${currentPlayer?.username}`;
     } else {
         statusText.textContent = `Waiting for players... (${gameState.players.length}/${MAX_PLAYERS})`;
     }
@@ -180,14 +170,16 @@ const renderActionButtons = (isMyTurn: boolean, canChallenge: boolean) => {
     document.getElementById('call-bluff-btn')?.addEventListener('click', handleCallBluffAction);
 };
 
-const renderPlayedPile = () => {
-    const pileContainer = document.getElementById('played-cards-pile');
-    const deckCountEl = document.getElementById('deck-count');
-    if (!pileContainer || !deckCountEl || !gameState || !gameState.game) return;
-
-    const count = gameState.game.playedCardsCount;
-    pileContainer.innerHTML = count > 0 ? `<div class="card-back played-card-top">${count}</div>` : '';
-    deckCountEl.textContent = `${gameState.game.deckSize}`;
+const renderReferenceCard = () => {
+    const container = document.getElementById('reference-card-container');
+    if (!container || !gameState || !gameState.game) return;
+    
+    const referenceType = gameState.game.currentCardType;
+    if (referenceType) {
+        container.innerHTML = `<div class="card-face reference-card">${referenceType.charAt(0).toUpperCase()}</div>`;
+    } else {
+        container.innerHTML = '';
+    }
 };
 
 const renderChat = () => {
@@ -220,30 +212,9 @@ const handlePlayCardAction = () => {
         alert("Please select a card to play.");
         return;
     }
-
-    const card = myCards.find(c => c.id === selectedCardId);
-    if (!card) return;
-
-    let declaredType: Card['type'];
-
-    if (gameState?.game?.currentCardType === null) {
-        const choice = prompt("You are starting the round. Declare your card as ('king', 'queen', or 'ace'):")?.toLowerCase().trim();
-        if (choice && ['king', 'queen', 'ace'].includes(choice)) {
-            declaredType = choice as Card['type'];
-        } else {
-            alert("Invalid declaration. Please try again.");
-            return;
-        }
-    } else {
-        declaredType = gameState.game.currentCardType;
-        if (card.type === 'joker') {
-            const jokerConfirm = confirm(`You are playing a Joker. It will be declared as a "${declaredType}". Is this correct?`);
-            if (!jokerConfirm) return;
-        }
-    }
     
-    sendWebSocketMessage({ type: 'PLAY_CARD', payload: { cardId: selectedCardId, declaredType } });
-    selectedCardId = null;
+    sendWebSocketMessage({ type: 'PLAY_CARD', payload: { cardId: selectedCardId } });
+    selectedCardId = null; // Reset selection after playing
 };
 
 const handleCallBluffAction = () => {
@@ -279,9 +250,8 @@ const setupEventListeners = () => {
         disconnect();
         navigate('/home');
     });
-    quitModal.addEventListener('click', (e) => {
-        if (e.target === quitModal) closeModal();
-    });
+    quitModal.addEventListener('click', (e) => { if (e.target === quitModal) closeModal(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && quitModal.classList.contains('show')) closeModal(); });
 };
 
 function assignPlayerPositions(players: any[], currentUserId: string) {
@@ -294,9 +264,12 @@ function assignPlayerPositions(players: any[], currentUserId: string) {
 
 const createPlayerPod = (player: any, position: number, isCurrentTurn: boolean) => {
     const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
+    // CORRECTED: The handSize from the game state is now used to render the cards.
     return `
         <div class="player-pod player-${position} ${isCurrentTurn ? 'active-turn' : ''}" data-player-id="${player.id}">
-            <div class="player-cards">${Array(player.handSize || 0).fill('<div class="card-back"></div>').join('')}</div>
+            <div class="opponent-hand">
+                ${Array(player.handSize || 0).fill('<div class="card-back small-card"></div>').join('')}
+            </div>
             <div class="player-info">
                 <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar" />
                 <div class="player-details">
@@ -318,7 +291,7 @@ const createActionButtons = (isMyTurn: boolean, canChallenge: boolean) => `
 `;
 
 const renderQuitModal = () => `
-    <div id="quit-game-modal" class="modal-overlay">
+    <div id="quit-game-modal" class="modal-overlay hidden">
         <div class="modal-content">
             <div class="modal-header"><h2 class="modal-title">🍺 Show Weakness?</h2></div>
             <div class="modal-body">
@@ -333,36 +306,42 @@ const renderQuitModal = () => `
 
 const renderDynamicStyles = () => {
     const style = document.createElement('style');
+    // CORRECTED CSS:
     style.textContent = `
         .game-layout { display: flex; height: calc(100vh - 80px); background: #0f172a; }
         .game-area { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; position: relative; }
         .chat-sidebar { width: 350px; flex-shrink: 0; display: flex; flex-direction: column; background: #1e293b; border-left: 2px solid var(--color-wood-light); }
         .game-table { position: relative; width: 100%; flex-grow: 1; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #166534 0%, #14532d 100%); border: 15px solid var(--color-wood-dark); border-radius: 50%; box-shadow: inset 0 0 50px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); }
-        .player-pod { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 0.5rem; transition: all 0.3s ease; }
+        
+        /* Player Pods & Opponent Hands */
+        .player-pod { position: absolute; display: flex; flex-direction: column-reverse; align-items: center; gap: 0.5rem; transition: all 0.3s ease; }
         .player-pod.active-turn .player-avatar { box-shadow: 0 0 20px 5px #facc15; transform: scale(1.1); }
         .player-info { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
         .player-avatar { width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--color-accent-gold); object-fit: cover; background: var(--color-wood-dark); }
         .player-details { display:flex; flex-direction:column; align-items: center; background: rgba(0,0,0,0.7); padding: 0.25rem 0.75rem; border-radius: 12px; }
         .player-name { font-weight: 700; color: #f1f5f9; font-size: 0.9rem; }
         .player-risk-level { font-size: 0.75rem; color: #ef4444; font-weight: bold;}
-        .player-cards { display: flex; gap: -15px; margin-bottom: 5px; }
-        .card-back { width: 30px; height: 42px; background: linear-gradient(45deg, #b91c1c, #7f1d1d); border: 1px solid var(--color-accent-gold); border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
-        .player-1 { bottom: -70px; left: 50%; transform: translateX(-50%); }
-        .player-2 { top: -70px; left: 50%; transform: translateX(-50%); }
-        .player-3 { top: 50%; left: -70px; transform: translateY(-50%); }
-        .player-4 { top: 50%; right: -70px; transform: translateY(-50%); }
-        .center-pile { text-align: center; }
-        .deck-area { display: flex; gap: 2rem; align-items: center; margin-bottom: 1rem; }
-        .deck-card { width: 60px; height: 84px; }
-        .deck-count-text { position: absolute; bottom: 5px; right: 5px; color: white; font-weight: bold; text-shadow: 1px 1px 2px black; }
-        .played-cards { min-width: 60px; min-height: 84px; display: flex; align-items: center; justify-content: center; }
-        .played-card-top { width: 60px; height: 84px; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: var(--color-accent-gold); }
+        
+        .opponent-hand { display: flex; justify-content: center; gap: -20px; margin-bottom: 5px; }
+        .card-back { background: linear-gradient(45deg, #b91c1c, #7f1d1d); border: 1px solid var(--color-accent-gold); border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
+        .small-card { width: 30px; height: 42px; }
+
+        /* Positioning for 2 players */
+        .player-2 { top: 2rem; left: 50%; transform: translateX(-50%); } /* Opponent at the top */
+
+        /* Center Pile */
+        .center-pile { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; display: flex; flex-direction: column; gap: 1rem; align-items: center; }
+        .reference-card { width: 70px; height: 98px; }
         .game-status-text { background: rgba(0,0,0,0.7); padding: 0.5rem 1rem; border-radius: 20px; color: #f1f5f9; }
+        
+        /* Current Player's Hand */
         .player-hand-area { min-height: 120px; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 1rem; }
         .hand-cards { display: flex; gap: 0.5rem; }
-        .hand-card { width: 70px; height: 98px; background: white; border: 2px solid #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #333; cursor: pointer; transition: all 0.2s ease; }
+        .card-face { width: 70px; height: 98px; background: white; border: 2px solid #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #333; cursor: pointer; transition: all 0.2s ease; }
         .hand-card:hover { transform: translateY(-10px); }
         .hand-card.selected { transform: translateY(-20px); border-color: var(--color-accent-gold); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.5); }
+        
+        /* Action Buttons & Modal */
         .action-buttons { display: flex; justify-content: center; gap: 1rem; min-height: 50px; }
         .action-btn { padding: 0.75rem 1.5rem; font-size: 1rem; }
         .action-btn:disabled { background: var(--color-primary-disabled); cursor: not-allowed; opacity: 0.6; }
@@ -374,6 +353,9 @@ const renderDynamicStyles = () => {
         .modal-body { padding: 1.5rem; }
         .modal-actions { display: flex; gap: 1rem; padding: 1rem; justify-content: flex-end; background: var(--color-wood-dark); }
         .button-secondary { background: var(--color-primary); }
+
+        /* Chat Sidebar */
+        .chat-sidebar { width: 350px; flex-shrink: 0; display: flex; flex-direction: column; background: #1e293b; border-left: 2px solid var(--color-wood-light); }
         .chat-panel { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .chat-header { padding: 1rem; background: var(--color-wood-dark); color: var(--color-accent-gold); }
         .chat-title { font-weight: bold; font-family: var(--font-display) }
