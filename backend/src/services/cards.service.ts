@@ -1,5 +1,6 @@
 import { Card, CardType, PlayerHand, Room, GamePhase } from '../models/types.model';
 import { log } from '../utils/logger';
+import { CARDS_PER_PLAYER, CARDS_PER_TYPE, JOKERS_COUNT } from '../config/game.config';
 
 export interface CardGame {
   deck: Card[];
@@ -10,27 +11,25 @@ export interface CardGame {
   turnTimeLimit: number;
   turnTimer: NodeJS.Timeout | null;
   currentCardType: CardType | null;
-  playedCards: Card[];  // ← Mudado de GameCard[] para Card[]
+  playedCards: Card[];
+  lastPlayedCard: Card | null;
+  lastPlayerId: string | null;
 }
 
-// Configurações do jogo
-const MAX_PLAYERS = 4;
-const CARDS_PER_PLAYER = 5;
-const TURN_TIME_LIMIT = 30000; // 30 segundos por turno
-const CARDS_PER_TYPE = 6; // 6 cartas de cada tipo (rei, dama, ás)
-const JOKERS_COUNT = 2; // 2 coringas
-
-// Função para criar deck específico do jogo
+/**
+ * Creates a specialized deck for the Liar's Bar game.
+ * @returns {Card[]} A shuffled array of cards.
+ */
 function createSpecialDeck(): Card[] {
   const deck: Card[] = [];
   const suits = ['hearts', 'diamonds', 'clubs', 'spades'] as const;
   const cardTypes: CardType[] = ['king', 'queen', 'ace'];
 
-  // Adiciona 6 cartas de cada tipo (rei, dama, ás) - distribui pelos naipes
+  // Add 6 cards of each specified type, distributing among suits
   cardTypes.forEach(type => {
     for (let i = 0; i < CARDS_PER_TYPE; i++) {
       const suitIndex = i % suits.length;
-      const cardNumber = Math.floor(i / suits.length) + 1;
+      const cardNumber = Math.floor(i / suits.length) + 1; // Used to make the ID unique
       deck.push({
         id: `${type}_${suits[suitIndex]}_${cardNumber}`,
         type,
@@ -39,7 +38,7 @@ function createSpecialDeck(): Card[] {
     }
   });
 
-  // Adiciona 2 coringas
+  // Add 2 Jokers
   for (let i = 0; i < JOKERS_COUNT; i++) {
     deck.push({
       id: `joker_${i + 1}`,
@@ -47,7 +46,7 @@ function createSpecialDeck(): Card[] {
     });
   }
 
-  // Embaralhar deck
+  // Shuffle the deck (Fisher-Yates algorithm)
   for (let i = deck.length - 1; i > 0; i--) {
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
@@ -56,38 +55,50 @@ function createSpecialDeck(): Card[] {
   return deck;
 }
 
-// Função para distribuir cartas
+/**
+ * Deals cards to all players in a room from a new deck.
+ * @param {Room & { game: CardGame }} room - The game room object.
+ * @returns {Map<string, PlayerHand>} A map of player IDs to their new hands.
+ */
 function dealCards(room: Room & { game: CardGame }): Map<string, PlayerHand> {
   const deck = createSpecialDeck();
   const roomHands = new Map<string, PlayerHand>();
 
-  // Distribui 5 cartas para cada jogador
-  Array.from(room.players.keys()).forEach((playerId, index) => {
-    const playerCards = deck.splice(0, CARDS_PER_PLAYER);
+  const playerIds = Array.from(room.players.keys());
+
+  playerIds.forEach(playerId => {
+    const hand = deck.splice(0, CARDS_PER_PLAYER);
     roomHands.set(playerId, {
-      cards: playerCards,
+      cards: hand,
       hasPlayedThisTurn: false,
       isReady: false,
-      score: 0,
+      score: 0, // Score can be kept from previous games or reset
+      riskLevel: 0, // Reset risk at the start of a new game
+      isEliminated: false,
     });
   });
 
-  // Cartas restantes ficam no deck
+  // The remaining cards form the draw pile for this game
   room.game.deck = deck;
   
-  log(`Cartas distribuídas na sala ${room.roomCode}. Deck restante: ${deck.length} cartas.`);
-  return roomHands
+  log(`Cards dealt in room ${room.roomCode}. Deck has ${deck.length} cards remaining.`);
+  return roomHands;
 }
 
-// Função para verificar se uma carta pode ser jogada
+/**
+ * Checks if a played card is valid according to the current round's card type.
+ * @param {Card} card - The card being played.
+ * @param {CardType | null} currentCardType - The required card type for the round.
+ * @returns {boolean} True if the play is valid, false otherwise.
+ */
 function canPlayCard(card: Card, currentCardType: CardType | null): boolean {
-  // Primeira carta da rodada pode ser qualquer uma
-  if (!currentCardType) return true;
+  // If it's the first card of the round, any card is valid.
+  if (currentCardType === null) return true;
   
-  // Coringa pode ser jogado como qualquer tipo
+  // A joker can always be played.
   if (card.type === 'joker') return true;
   
-  // Carta deve ser do mesmo tipo que está sendo jogado
+  // The played card's type must match the round's required type.
   return card.type === currentCardType;
 }
 

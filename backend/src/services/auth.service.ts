@@ -61,7 +61,7 @@ export const loginUser = async (input: LoginUserInput) => {
 
   // Generate a JWT token for the authenticated user.
   const token = jwt.sign(
-    { id: foundUser.id, username: foundUser.username, email: foundUser.email, avatar_url: foundUser.avatar_url }, // Include avatar_url in the token payload
+    { id: foundUser.id, username: foundUser.username }, // We can keep the token payload lean
     process.env.JWT_SECRET as string,
     { expiresIn: process.env.JWT_EXPIRES_IN || '1d' }
   );

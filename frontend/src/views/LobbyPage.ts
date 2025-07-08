@@ -14,10 +14,10 @@ export const renderLobbyPage = (element: HTMLElement) => {
 
   element.innerHTML = `
     <div id="header-container"></div>
-    <!-- Conteúdo Principal do Lobby -->
+    <!-- Main Lobby Content -->
     <main class="lobby-main">
     <div class="lobby-grid">
-      <!-- Coluna Principal (Salas e Chat) -->
+      <!-- Main Column (Rooms and Chat) -->
       <div class="lobby-main-column">
         <div id="lobbyContainer" class="card lobby-card">
           <div class="card-header">
@@ -40,7 +40,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
           </form>
         </div>
       </div>
-      <!-- Coluna Lateral (Jogadores Online) -->
+      <!-- Side Column (Online Players) -->
       <aside class="lobby-side-column card lobby-card">
         <h3 class="lobby-subtitle">Players in the Bar</h3>
         <div id="onlineUserList" class="scrollable-list"></div>
@@ -48,7 +48,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
       </div>
     </main>
 
-    <!-- Modal de Criar Sala -->
+    <!-- Create Room Modal -->
     <div id="createRoomModal" class="modal-overlay hidden">
       <div class="modal-content">
         <button id="closeModalBtn" class="modal-close-btn">×</button>
@@ -163,7 +163,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
     const roomListDiv = document.getElementById("roomList");
     if (!roomListDiv) return;
 
-    const rooms = lobbyState.getRooms(); // Usa o estado igual ao chat e usuários
+    const rooms = lobbyState.getRooms();
 
     if (rooms.length === 0) {
       roomListDiv.innerHTML =
@@ -203,7 +203,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
   const handleJoinRoom = (roomCode: string, hasPassword: boolean) => {
     if (hasPassword) {
       const password = prompt("Enter room password:");
-      if (password === null) return; // User cancelled
+      if (password === null) return; 
 
       websocket.sendWebSocketMessage({
         type: "JOIN_ROOM",
@@ -235,41 +235,32 @@ export const renderLobbyPage = (element: HTMLElement) => {
         lobbyState.removeUser(message.payload.user.userId);
         renderOnlineUserList();
         break;
+      // *** CORRECTION START ***
       case "ROOM_CREATED":
-        lobbyState.setRooms([
-          {
-            code: message.payload.code,
-            name: message.payload.name,
-            currentPlayers: message.payload.currentPlayers,
-            maxPlayers: message.payload.maxPlayers,
-            hasPassword: message.payload.hasPassword,
-          },
-        ]);
-        const currentUser = getUser();
-        if (currentUser && currentUser.id === message.payload.ownerId) {
-          navigate(`/gameboard/${message.payload.code}`);
-        }
-        lobbyState.setRooms(lobbyState.getRooms());
+        // This message is now just for updating the lobby list for OTHER players.
+        // The creator will be navigated by the 'JOINED_ROOM' message.
+        lobbyState.addRoom(message.payload);
         renderRoomList();
         break;
+      // *** CORRECTION END ***
       case "WAITING_ROOMS":
         lobbyState.setRooms(message.payload.rooms);
         renderRoomList();
         break;
       case "JOINED_ROOM":
+        // This now handles BOTH joining and creating a room for the user who performed the action.
         console.log("Joined room:", message.payload);
         navigate(`/gameboard/${message.payload.roomCode}`);
         break;
       case "ROOM_CLOSED":
         console.log("Room closed:", message.payload);
         const closedRoomCode = message.payload.code;
-        lobbyState.setRooms(
-          lobbyState.getRooms().filter((room) => room.code !== closedRoomCode)
-        );
+        lobbyState.removeRoom(closedRoomCode);
         renderRoomList();
         break;
       case "LEFT_ROOM":
         navigate("/home");
+        break;
       case "ERROR":
         alert(`Error: ${message.payload.message}`);
     }
