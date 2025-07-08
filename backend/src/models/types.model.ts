@@ -2,7 +2,7 @@ import WebSocket from "ws";
 
 // The payload decoded from the JWT
 export interface JwtPayload {
-  userId: number;
+  userId: number; 
   username: string;
   iat: number;
   exp: number;
@@ -14,32 +14,30 @@ export interface CustomWebSocket extends WebSocket {
   currentRoomCode?: string;
 }
 
-// Player choices (mantido para compatibilidade)
+// Player choices (maintained for compatibility)
 export type Choice = "rock" | "paper" | "scissors";
 
-// === NOVOS TIPOS PARA JOGO DE CARTAS ===
+// === NEW TYPES FOR CARD GAME ===
 
-// Tipos específicos para o jogo de cartas
 export type CardType = "king" | "queen" | "ace" | "joker";
 export type CardSuit = "hearts" | "diamonds" | "clubs" | "spades";
-export type GamePhase = "waiting" | "playing" | "finished" | "paused";
+export type GamePhase = "waiting" | "playing" | "challenge" | "finished" | "paused";
 
-// Interface para cartas do jogo
 export interface Card {
   id: string;
   type: CardType;
-  suit?: CardSuit; // Opcional porque coringas não têm naipe
+  suit?: CardSuit; 
 }
 
-// Interface para a mão de cada jogador
 export interface PlayerHand {
   cards: Card[];
   hasPlayedThisTurn: boolean;
   isReady: boolean;
   score: number;
+  riskLevel: number; 
+  isEliminated: boolean;
 }
 
-// Interface para o estado do jogo de cartas
 export interface CardGame {
   deck: Card[];
   currentPlayerIndex: number;
@@ -48,29 +46,28 @@ export interface CardGame {
   roundNumber: number;
   turnTimeLimit: number;
   turnTimer: NodeJS.Timeout | null;
-  currentCardType: CardType | null;
-  playedCards: Card[];
+  currentCardType: CardType | null; 
+  playedCards: Card[]; 
+  lastPlayedCard: Card | null; 
+  lastPlayerId: string | null;
 }
 
-// Represents a participant (player or spectator)
 export interface Participant {
   username: string;
-  ws: CustomWebSocket | null; // The active WebSocket connection
+  ws: CustomWebSocket | null;
 }
 
-// The main Room object (extendido para suportar jogo de cartas)
 export interface Room {
-  roomName: string; // Novo: nome da sala
+  roomName: string; 
   roomCode: string;
   ownerId: string;
-  players: Map<string, Participant>; // Map<userId, Participant>
-  spectators: Map<string, Participant>; // Map<userId, Participant>
+  players: Map<string, Participant>; 
+  spectators: Map<string, Participant>; 
   status: "waiting" | "playing";
-  choices: Map<string, Choice>; // Map<userId, Choice> - mantido para compatibilidade
-  password?: string; // Optional password for the room
+  choices: Map<string, Choice>; 
+  password?: string; 
 }
 
-// Data structure for the API response about a room's state (extendido)
 export interface RoomStateForApi {
   roomCode: string;
   ownerId: string;
@@ -78,16 +75,18 @@ export interface RoomStateForApi {
     id: string;
     username: string;
     isOnline: boolean;
-    handSize?: number; // Novo: para jogo de cartas
-    hasPlayedThisTurn?: boolean; // Novo: para jogo de cartas
-    score?: number; // Novo: para jogo de cartas
-    isReady?: boolean; // Novo: para jogo de cartas
+    avatar_url: string | null;
+    handSize?: number; 
+    hasPlayedThisTurn?: boolean; 
+    score?: number; 
+    isReady?: boolean; 
+    riskLevel?: number; 
+    isEliminated?: boolean;
   }[];
   spectators: { id: string; username: string }[];
   status: Room["status"];
-  myChoice: Choice | null; // Mantido para compatibilidade
+  myChoice: Choice | null; 
 
-  // Novos campos para jogo de cartas
   game?: {
     phase: GamePhase;
     currentPlayerIndex: number;
@@ -97,12 +96,11 @@ export interface RoomStateForApi {
     direction: 1 | -1;
     playedCardsCount: number;
     deckSize: number;
+    lastPlayerId: string | null;
   };
   myCards?: Card[];
   myHandSize?: number;
 }
-
-// === TIPOS AUXILIARES PARA JOGO DE CARTAS ===
 
 export interface GameRules {
   cardsPerPlayer: number;
@@ -113,361 +111,35 @@ export interface GameRules {
   turnTimeLimit: number;
 }
 
-export interface FinalHandInfo {
-  playerId: string;
-  playerName: string;
-  cardsLeft: number;
-  score: number;
-  finalCards?: Card[];
-}
-
-export interface PlayerScore {
-  playerId: string;
-  playerName: string;
-  score: number;
-  gamesWon?: number;
-  gamesPlayed?: number;
-}
-
-// === CONSTANTES DO JOGO ===
-
-export const GAME_CONSTANTS = {
-  MAX_PLAYERS: 4,
-  CARDS_PER_PLAYER: 5,
-  CARDS_PER_TYPE: 6,
-  JOKERS_COUNT: 2,
-  TURN_TIME_LIMIT: 30000,
-} as const;
-
-// --- WebSocket Message Types ---
-
-// Messages sent FROM the Client TO the Server (extendido)
 export type ClientMessage =
-  | {
-      type: "LIST_ROOMS";
-      payload: {}; // No payload needed
-    }
-  | {
-      type: "MAKE_CHOICE";
-      payload: { choice: Choice };
-    }
-  | {
-      type: "CLOSE_ROOM";
-      payload: { message: string };
-    }
-  | {
-      type: "ENTER_ROOM";
-      payload: {}; // No payload needed
-    }
-  | {
-      type: "ENTER_ROOM";
-      payload: { roomCode: string; password?: string };
-    }
-  | {
-      type: "CREATE_ROOM";
-      payload: { roomName: string; password?: string };
-    }
-  | {
-      type: "LEAVE_ROOM";
-      payload: {}; // No payload needed
-    }
-  | {
-      type: "RECONNECT";
-      payload: {}; // No payload needed
-    }
-  | {
-      type: "JOIN_ROOM";
-      payload: { roomCode: string; password?: string };
-    }
-  | {
-      type: "DISCONNECT";
-      payload: {}; // No payload needed
-    }
-  | {
-      type: "REQUEST_ROOM_STATE";
-      payload: {}; // No payload needed
-    }
-  | {
-      type: "REQUEST_ROOM_CODE";
-      payload: {}; // No payload needed
-    }
-  | {
-      type: "REQUEST_ROOM_PLAYERS";
-      payload: {}; // No payload needed
-    }
-  | {
-      type: "REQUEST_ROOM_SPECTATORS";
-      payload: {}; // No payload needed
-    }
-  // === NOVAS MENSAGENS PARA JOGO DE CARTAS ===
-  | {
-      type: "PLAY_CARD";
-      payload: { cardId: string; declaredType?: CardType };
-    }
-  | {
-      type: "DRAW_CARD";
-      payload: {};
-    }
-  | {
-      type: "CHALLENGE_PLAYER";
-      payload: { targetPlayerId: string };
-    }
-  | {
-      type: "READY_FOR_NEXT_GAME";
-      payload: {};
-    }
-  | {
-      type: "CHAT_MESSAGE";
-      payload: { message: string };
-    };
+  | { type: "LIST_ROOMS"; payload: {} }
+  | { type: "CREATE_ROOM"; payload: { roomName: string; password?: string } }
+  | { type: "JOIN_ROOM"; payload: { roomCode: string; password?: string } }
+  | { type: "LEAVE_ROOM"; payload: {} }
+  | { type: "PLAY_CARD"; payload: { cardId: string } }
+  | { type: "CALL_BLUFF"; payload: {} }
+  | { type: "READY_FOR_NEXT_GAME"; payload: {} }
+  | { type: "CHAT_MESSAGE"; payload: { message: string } };
 
-// Messages sent FROM the Server TO the Client (extendido)
 export type ServerMessage =
-    | {
-      type: "PLAYER_LEFT";
-      payload: {
-        playerId: string;
-        playerName: string;
-        message: string;
-        currentPlayers: number;
-      };
-    }
-    | {
-      type: "LEFT_ROOM";
-      payload: { message: string };
-    }
-    | { type: "WAITING_ROOMS";
-      payload: {
-        rooms: {
-          code: string;
-          name: string;
-          currentPlayers: number;
-          maxPlayers: number;
-        }[];
-      };
-    }
-  | {
-      type: "ROOM_CREATED";
-      payload: {
-          code: string,
-          name: string,
-          currentPlayers: number,
-          maxPlayers: number,
-          hasPassword: boolean,
-          ownerId: string, // Para identificar o criador
-        },
-      }
-  | {
-      type: "JOINED_ROOM";
-      payload: { roomCode: string; asSpectator: boolean; message: string };
-    }
-  | {
-      type: "ERROR";
-      payload: { message: string };
-    }
-  | {
-      type: "ROOM_STATE_UPDATE";
-      payload: RoomStateForApi;
-    }
-  | {
-      type: "CHOICE_MADE";
-      payload: { choice: Choice };
-    }
-  | {
-      type: "OPPONENT_CHOICE_MADE";
-      payload: { message: string };
-    }
-  | {
-      type: "GAME_RESULT";
-      payload: {
-        choices: { [key: number]: Choice };
-        winnerId: string | null;
-        players: { [key: number]: string };
-      };
-    }
-  | {
-      type: "NEW_ROUND";
-      payload: {
-        message: string;
-        roundNumber: number;
-        currentPlayer: string | null;
-      };
-    }
-  | {
-      type: "ROOM_CLOSED";
-      payload: { message: string };
-    }
-  | {
-      type: "OPPONENT_DISCONNECTED";
-      payload: { username: string; message: string };
-    }
-  | {
-      type: "OPPONENT_RECONNECTED";
-      payload: RoomStateForApi & { message: string };
-    }
-  | {
-      type: "JOINED_ROOM";
-      payload: { roomCode: string };
-    }
-  // === NOVAS MENSAGENS PARA JOGO DE CARTAS ===
-  | {
-      type: "WAITING_FOR_PLAYERS";
-      payload: {
-        currentPlayers: number;
-        maxPlayers: number;
-        message: string;
-        playersNeeded: number;
-      };
-    }
-  | {
-      type: "GAME_STARTED";
-      payload: {
-        message: string;
-        currentPlayer: string;
-        roundNumber: number;
-        gameRules: GameRules;
-      };
-    }
-  | {
-      type: "GAME_FINISHED";
-      payload: {
-        winnerId: string;
-        winnerName: string;
-        message: string;
-        roundNumber: number;
-        finalHands: FinalHandInfo[];
-      };
-    }
-  | {
-      type: "NEXT_GAME_READY";
-      payload: {
-        message: string;
-        scores: PlayerScore[];
-      };
-    }
-  | {
-      type: "YOUR_TURN";
-      payload: {
-        message: string;
-        timeLimit: number;
-        currentCardType: CardType | null;
-        isFirstPlay: boolean;
-      };
-    }
-  | {
-      type: "PLAYER_TURN";
-      payload: {
-        currentPlayer: string;
-        playerName: string;
-        message: string;
-        timeLimit: number;
-        currentCardType: CardType | null;
-      };
-    }
-  | {
-      type: "TURN_TIMEOUT";
-      payload: { message: string };
-    }
-  | {
-      type: "PLAYER_TIMEOUT";
-      payload: {
-        playerId: string;
-        playerName: string;
-        message: string;
-      };
-    }
-  | {
-      type: "HAND_DEALT";
-      payload: {
-        cards: Card[];
-        handSize: number;
-        totalCards: number;
-      };
-    }
-  | {
-      type: "HAND_UPDATE";
-      payload: {
-        cards: Card[];
-        handSize: number;
-        currentCardType: CardType | null;
-      };
-    }
-  | {
-      type: "CARD_PLAYED";
-      payload: {
-        card: Card;
-        handSize: number;
-        declaredType?: CardType;
-        currentCardType: CardType | null;
-      };
-    }
-  | {
-      type: "CARD_DRAWN";
-      payload: {
-        card: Card;
-        handSize: number;
-      };
-    }
-  | {
-      type: "OPPONENT_PLAYED_CARD";
-      payload: {
-        playerId: string;
-        playerName: string;
-        cardType: CardType;
-        handSize: number;
-        currentCardType: CardType | null;
-        isJoker: boolean;
-      };
-    }
-  | {
-      type: "PLAYER_CHALLENGED";
-      payload: {
-        challengerId: string;
-        challengerName: string;
-        targetId: string;
-        targetName: string;
-        message: string;
-      };
-    }
-  | {
-      type: "CHALLENGE_RESULT";
-      payload: {
-        challengerId: string;
-        targetId: string;
-        success: boolean;
-        message: string;
-        revealedCards: Card[];
-      };
-    }
-  | {
-      type: "PLAYERS_READY_UPDATE";
-      payload: {
-        readyCount: number;
-        totalPlayers: number;
-        message: string;
-      };
-    }
-  | {
-      type: "CHAT_BROADCAST";
-      payload: {
-        author: string;
-        message: string;
-        timestamp: Date;
-      };
-    }
-  | {
-      type: "PLAYER_RECONNECTED";
-      payload: {
-        playerId: string;
-        playerName: string;
-        message: string;
-      };
-    }
-  | {
-      type: "PLAYER_DISCONNECTED";
-      payload: {
-        playerId: string;
-        playerName: string;
-        message: string;
-      };
-    };
+  | { type: "PLAYER_LEFT"; payload: { playerId: string; playerName: string; message: string; currentPlayers: number; }; }
+  | { type: "LEFT_ROOM"; payload: { message: string }; }
+  | { type: "WAITING_ROOMS"; payload: { rooms: { code: string; name: string; currentPlayers: number; maxPlayers: number; hasPassword: boolean; }[]; }; }
+  | { type: "ROOM_CREATED"; payload: { code: string, name: string, currentPlayers: number, maxPlayers: number, hasPassword: boolean, ownerId: string, }; }
+  | { type: "JOINED_ROOM"; payload: { roomCode: string; asSpectator: boolean; message: string }; }
+  | { type: "ERROR"; payload: { message: string }; }
+  | { type: "ROOM_STATE_UPDATE"; payload: RoomStateForApi; }
+  | { type: "ROOM_CLOSED"; payload: { code: string, name: string }; }
+  | { type: "WAITING_FOR_PLAYERS"; payload: { currentPlayers: number; maxPlayers: number; message: string; playersNeeded: number; }; }
+  | { type: "GAME_STARTED"; payload: { message: string; currentPlayerId: string; players: RoomStateForApi['players']; gameRules: GameRules; }; }
+  | { type: "GAME_FINISHED"; payload: { winnerId: string; winnerName: string; message: string; }; }
+  | { type: "YOUR_TURN"; payload: { message: string; timeLimit: number; currentCardType: CardType | null; canChallenge: boolean; }; }
+  | { type: "PLAYER_TURN"; payload: { currentPlayerId: string; playerName: string; message: string; currentCardType: CardType | null; }; }
+  | { type: "TURN_TIMEOUT"; payload: { message: string }; }
+  | { type: "PLAYER_TIMEOUT"; payload: { playerId: string; playerName: string; message: string; }; }
+  | { type: "HAND_DEALT"; payload: { cards: Card[]; handSize: number; }; }
+  | { type: "CARD_PLAYED_CONFIRMATION"; payload: { cardId: string; handSize: number; message: string; }; }
+  | { type: "CHAT_BROADCAST"; payload: { authorId: string; authorName: string; message: string; timestamp: string; }; }
+  | { type: "PLAYER_DISCONNECTED"; payload: { playerId: string; playerName: string; message: string; }; }
+  | { type: "CHALLENGE_RESULT"; payload: { wasLie: boolean; punishedPlayerId: string; punishedPlayerName: string; revealedCard: Card; message: string; isEliminated: boolean; newRiskLevel: number; }; }
+  | { type: "PLAYER_ELIMINATED"; payload: { playerId: string; playerName: string; message: string; }; };

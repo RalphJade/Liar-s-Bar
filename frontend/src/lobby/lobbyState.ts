@@ -13,17 +13,10 @@ interface Room {
   currentPlayers: number;
   maxPlayers: number;
   hasPassword: boolean;
+  ownerId?: string; // Optional: Useful for frontend checks
 }
 
 let rooms: Room[] = [];
-
-interface Room {
-  code: string;
-  name: string;
-  currentPlayers: number;
-  maxPlayers: number;
-  hasPassword: boolean;
-}
 
 const state = {
     onlineUsers: [] as User[],
@@ -54,6 +47,7 @@ export function addMessage(message: ChatMessage) {
 export function clearState() {
     state.onlineUsers = [];
     state.chatMessages = [];
+    rooms = [];
 }
 
 export function getOnlineUsers(): User[] {
@@ -75,9 +69,9 @@ export function setRooms(newRooms: Room[]): void {
 export function addRoom(room: Room): void {
   const existingIndex = rooms.findIndex(r => r.code === room.code);
   if (existingIndex >= 0) {
-    rooms[existingIndex] = room; // Atualiza sala existente
+    rooms[existingIndex] = room; // Updates existing room
   } else {
-    rooms.push(room); // Adiciona nova sala
+    rooms.push(room); // Adds new room
   }
 }
 
