@@ -78,6 +78,10 @@ export const renderLobbyPage = (element: HTMLElement) => {
   if (headerContainer) {
     renderHeader(headerContainer);
   }
+
+  const roomSearchInput = document.getElementById(
+    "roomSearchInput"
+  ) as HTMLInputElement;
   const onlineUserListDiv = document.getElementById("onlineUserList");
   const chatMessagesDiv = document.getElementById("chatMessages");
   const chatForm = document.getElementById("chatForm");
@@ -159,11 +163,42 @@ export const renderLobbyPage = (element: HTMLElement) => {
     chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
   };
 
-  const renderRoomList = () => {
+  const filterRooms = (searchTerm: string) => {
+    const allRooms = lobbyState.getRooms();
+
+    if (!searchTerm.trim()) {
+      return allRooms; // Se não há termo de busca, retorna todas
+    }
+
+    const searchLower = searchTerm.toLowerCase().trim();
+
+    return allRooms.filter((room) => {
+      // Busca tanto pelo nome quanto pelo código (ambos completos)
+      const nameMatch = room.name.toLowerCase() === searchLower;
+      const codeMatch = room.code.toLowerCase() === searchLower;
+
+      return nameMatch || codeMatch;
+    });
+  };
+
+  // Adicione os event listeners do search input após os outros event listeners
+  roomSearchInput?.addEventListener("input", (e) => {
+    const searchTerm = (e.target as HTMLInputElement).value;
+    const filteredRooms = filterRooms(searchTerm);
+    renderRoomList(filteredRooms);
+  });
+
+  roomSearchInput?.addEventListener("keyup", (e) => {
+    if ((e.target as HTMLInputElement).value === "") {
+      renderRoomList(); // Mostra todas as salas quando o campo está vazio
+    }
+  });
+
+  const renderRoomList = (filteredRooms?: any[]) => {
     const roomListDiv = document.getElementById("roomList");
     if (!roomListDiv) return;
 
-    const rooms = lobbyState.getRooms(); // Usa o estado igual ao chat e usuários
+    const rooms = filteredRooms || lobbyState.getRooms(); // Usa o estado igual ao chat e usuários
 
     if (rooms.length === 0) {
       roomListDiv.innerHTML =
