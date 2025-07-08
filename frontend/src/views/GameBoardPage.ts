@@ -7,6 +7,7 @@ import { MAX_PLAYERS } from '../../../backend/src/config/game.config.ts';
 
 const API_BASE_URL = 'http://localhost:3001';
 
+// Module-level state for the game
 let gameState: RoomStateForApi | null = null;
 let myCards: Card[] = [];
 let chatMessages: ChatMessage[] = [];
@@ -59,6 +60,7 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
         <div id="roulette-overlay" class="roulette-overlay hidden">
             <div id="roulette-modal" class="roulette-modal">
                 <h2 id="roulette-title"></h2>
+                <div id="revealed-card-container"></div>
                 <div id="roulette-wheel"></div>
                 <p id="roulette-result"></p>
             </div>
@@ -89,10 +91,12 @@ const handleGameMessage = (message: any) => {
             alert(message.payload.message);
             break;
         case 'GAME_FINISHED':
-            showEndGameScreen(message.payload.winnerId === currentUser?.id, message.payload.message);
+            setTimeout(() => {
+                showEndGameScreen(message.payload.winnerId === currentUser?.id, message.payload.message);
+            }, 1000);
             break;
         case 'CHALLENGE_RESULT':
-            showRoulette(message.payload);
+            handleChallengeResult(message.payload);
             break;
         case 'ERROR':
             alert(`Server error: ${message.payload.message}`);
@@ -105,32 +109,54 @@ const handleGameMessage = (message: any) => {
     }
 };
 
-const showRoulette = (payload: any) => {
+const handleChallengeResult = (payload: any) => {
     const overlay = document.getElementById('roulette-overlay')!;
     const title = document.getElementById('roulette-title')!;
     const wheel = document.getElementById('roulette-wheel')!;
     const result = document.getElementById('roulette-result')!;
+    const revealedCardContainer = document.getElementById('revealed-card-container')!;
 
-    title.textContent = `${payload.punishedPlayerName} spins the roulette...`;
-    result.textContent = '';
+    // Step 1: Show the accusation and the revealed card
+    let accusationMessage = "";
+    if (payload.wasLie) {
+        accusationMessage = `${payload.punishedPlayerName} was caught bluffing!`;
+    } else {
+        accusationMessage = `${payload.punishedPlayerName} was falsely accused!`;
+    }
+
+    title.textContent = accusationMessage;
+    revealedCardContainer.innerHTML = createHandCard(payload.revealedCard);
+    wheel.style.display = 'none';
+    result.textContent = `The card was a ${payload.revealedCard.type.toUpperCase()}`;
     overlay.classList.remove('hidden');
 
+    const accusationDuration = 4000; // Increased time to read
     const spinDuration = 4000;
-    const resultDisplayDuration = 2500;
-
-    wheel.style.animation = 'none';
-    void wheel.offsetWidth; 
-    wheel.style.animation = `spin ${spinDuration / 1000}s cubic-bezier(0.25, 1, 0.5, 1)`;
+    const resultDisplayDuration = 3000;
 
     setTimeout(() => {
-        result.textContent = payload.isEliminated ? '💥 BANG! Eliminated! 💥' : '😮‍💨 *click*... Survived!';
-        result.style.color = payload.isEliminated ? 'var(--color-danger)' : 'var(--color-success)';
-        
+        // Step 2: Start the roulette spin
+        revealedCardContainer.innerHTML = '';
+        wheel.style.display = 'block';
+        title.textContent = `${payload.punishedPlayerName} spins the roulette...`;
+        result.textContent = '';
+
+        wheel.style.animation = 'none';
+        void wheel.offsetWidth; 
+        wheel.style.animation = `spin ${spinDuration / 1000}s cubic-bezier(0.25, 1, 0.5, 1)`;
+
         setTimeout(() => {
-            overlay.classList.add('hidden');
-        }, resultDisplayDuration);
-    }, spinDuration);
+            // Step 3: Show the result
+            result.textContent = payload.isEliminated ? '💥 BANG! Eliminated! 💥' : '😮‍💨 *click*... Survived!';
+            result.style.color = payload.isEliminated ? 'var(--color-danger)' : 'var(--color-success)';
+            
+            setTimeout(() => {
+                overlay.classList.add('hidden');
+            }, resultDisplayDuration);
+        }, spinDuration);
+    }, accusationDuration);
 };
+
 
 const showEndGameScreen = (didIWin: boolean, message: string) => {
     const gameArea = document.getElementById('game-area')!;
@@ -154,7 +180,7 @@ const updateUI = () => {
 
     const me = gameState.players.find(p => p.id === currentUser.id);
     if (me?.isEliminated) {
-        showEndGameScreen(false, 'You have been eliminated.');
+        showEndGameScreen(false, "You have been eliminated.");
         return;
     }
 
@@ -405,14 +431,12 @@ const renderDynamicStyles = () => {
         .center-pile { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; display: flex; flex-direction: column; gap: 1rem; align-items: center; }
         .reference-card { width: 70px; height: 98px; }
         .game-status-text { background: rgba(0,0,0,0.7); padding: 0.5rem 1rem; border-radius: 20px; color: #f1f5f9; }
-        
         .player-hand-container { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
         .my-info-area { display: flex; align-items: center; gap: 1rem; background: rgba(0,0,0,0.4); padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid var(--color-border); }
         .my-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-accent-gold); transition: all 0.3s ease;}
         .my-details { text-align: center; display: flex; flex-direction: column; }
         .my-name { font-weight: bold; color: var(--color-accent-gold); }
         .my-risk-level { font-size: 0.8rem; color: #fca5a5; }
-        
         .player-hand-area { min-height: 100px; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 1rem; }
         .hand-cards { display: flex; gap: 0.5rem; }
         .card-face { width: 70px; height: 98px; background: white; border: 2px solid #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #333; cursor: pointer; transition: all 0.2s ease; }
@@ -422,19 +446,19 @@ const renderDynamicStyles = () => {
         .action-btn { padding: 0.75rem 1.5rem; font-size: 1rem; }
         .action-btn:disabled { background: var(--color-primary-disabled); cursor: not-allowed; opacity: 0.6; }
         .player-pod.eliminated .player-avatar { filter: grayscale(100%) brightness(0.5); }
-        .eliminated-screen, .end-game-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; color: white; }
+        .eliminated-screen, .end-game-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.95); }
         .end-game-screen.win h1 { color: var(--color-success); }
         .end-game-screen.lose h1 { color: var(--color-danger); }
         .end-game-screen h1, .eliminated-screen h1 { font-family: var(--font-display); font-size: 3rem; }
         .end-game-screen p { font-size: 1.2rem; }
         .end-game-screen button, .eliminated-screen button { margin-top: 2rem; width: auto; padding: 1rem 2rem; }
-        .roulette-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 2000; }
-        .roulette-modal { text-align: center; color: white; }
+        .roulette-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.85); backdrop-filter: blur(8px); display: flex; justify-content: center; align-items: center; z-index: 2000; }
+        .roulette-modal { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; color: white; gap: 1rem;}
         #roulette-title { font-family: var(--font-display); font-size: 2.5rem; color: var(--color-accent-gold); text-shadow: 2px 2px 4px #000; }
+        #revealed-card-container { margin-bottom: 1rem; }
         #roulette-wheel { width: 150px; height: 150px; background-image: url('https://i.imgur.com/8z6oA0V.png'); background-size: contain; margin: 2rem auto; }
         #roulette-result { font-size: 2rem; font-weight: bold; text-shadow: 2px 2px 4px #000; }
-        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(1080deg); } }
-        /* Chat e outros estilos sem alteração */
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(1440deg); } }
         .chat-sidebar { width: 350px; flex-shrink: 0; display: flex; flex-direction: column; background: #1e293b; border-left: 2px solid var(--color-wood-light); }
         .chat-panel { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .chat-header { padding: 1rem; background: var(--color-wood-dark); color: var(--color-accent-gold); }
