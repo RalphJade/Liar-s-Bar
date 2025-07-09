@@ -11,7 +11,7 @@ const API_BASE_URL = 'http://localhost:3001';
 let gameState: RoomStateForApi | null = null;
 let myCards: Card[] = [];
 let chatMessages: ChatMessage[] = [];
-let selectedCardId: string | null = null;
+let selectedCardId: string [] = [];
 
 export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => {
     // ... (HTML structure remains the same as the previous step) ...
@@ -234,7 +234,8 @@ const renderMyHand = (isMyTurn: boolean) => {
         if (isMyTurn) {
             cardEl.addEventListener('click', () => handleCardSelection(cardEl));
         }
-        if (cardEl.getAttribute('data-card-id') === selectedCardId) {
+        const cardId = cardEl.getAttribute('data-card-id');
+        if (cardId && selectedCardId.includes(cardId)) {
             cardEl.classList.add('selected');
         }
     });
@@ -286,23 +287,32 @@ const renderChat = () => {
 
 const handleCardSelection = (cardEl: Element) => {
     const cardId = cardEl.getAttribute('data-card-id');
-    if (selectedCardId === cardId) {
-        selectedCardId = null;
+    if (!cardId) return;   
+
+    const isSelected = selectedCardId.includes(cardId);
+    
+    if (isSelected) {
+        // Remove da seleção
+        selectedCardId = selectedCardId.filter(id => id !== cardId);
         cardEl.classList.remove('selected');
     } else {
-        selectedCardId = cardId;
-        document.querySelectorAll('.hand-card').forEach(c => c.classList.remove('selected'));
+        // Adiciona à seleção
+        selectedCardId.push(cardId);
         cardEl.classList.add('selected');
     }
 };
 
 const handlePlayCardAction = () => {
-    if (!selectedCardId) {
+    if (selectedCardId.length === 0) {
         alert("Please select a card to play.");
         return;
     }
-    sendWebSocketMessage({ type: 'PLAY_CARD', payload: { cardId: selectedCardId } });
-    selectedCardId = null;
+    sendWebSocketMessage({ 
+        type: 'PLAY_CARD', 
+        payload: { cardsId: selectedCardId }
+    });
+
+    selectedCardId = [];
 };
 
 const handleCallBluffAction = () => {
