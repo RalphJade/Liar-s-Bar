@@ -1237,3 +1237,31 @@ body.lobby-theme {
   transform: none;
   box-shadow: none;
 }
+
+.reconnection-overlay {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 1rem;
+    background-color: var(--color-danger);
+    color: var(--color-text-light);
+    text-align: center;
+    z-index: 9999;
+    font-weight: bold;
+}
+.reconnection-box {
+    animation: pulse-reconnect 2s infinite;
+}
+@keyframes pulse-reconnect {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* .system-message .content {
+    background: rgba(255, 215, 0, 0.15);
+    border-left: 3px solid var(--color-accent-gold);
+    font-style: italic;
+    color: #ccc;
+} */

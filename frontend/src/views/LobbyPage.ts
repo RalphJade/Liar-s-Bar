@@ -8,16 +8,16 @@ import { renderHeader } from "./components/Header.ts";
 export const renderLobbyPage = (element: HTMLElement) => {
   const user = getUser();
   if (!user) {
-    element.innerHTML = `<p>Erro: Usuário não autenticado.</p>`;
+    element.innerHTML = `<p>Error: User is not authenticated.</p>`;
     return;
   }
 
   element.innerHTML = `
     <div id="header-container"></div>
-    <!-- Conteúdo Principal do Lobby -->
+    <!-- Main Lobby Content -->
     <main class="lobby-main">
     <div class="lobby-grid">
-      <!-- Coluna Principal (Salas e Chat) -->
+      <!-- Main Column (Rooms and Chat) -->
       <div class="lobby-main-column">
         <div id="lobbyContainer" class="card lobby-card">
           <div class="card-header">
@@ -40,7 +40,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
           </form>
         </div>
       </div>
-      <!-- Coluna Lateral (Jogadores Online) -->
+      <!-- Side Column (Online Players) -->
       <aside class="lobby-side-column card lobby-card">
         <h3 class="lobby-subtitle">Players in the Bar</h3>
         <div id="onlineUserList" class="scrollable-list"></div>
@@ -48,7 +48,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
       </div>
     </main>
 
-    <!-- Modal de Criar Sala -->
+    <!-- Create Room Modal -->
     <div id="createRoomModal" class="modal-overlay hidden">
       <div class="modal-content">
         <button id="closeModalBtn" class="modal-close-btn">×</button>
@@ -78,6 +78,10 @@ export const renderLobbyPage = (element: HTMLElement) => {
   if (headerContainer) {
     renderHeader(headerContainer);
   }
+
+  const roomSearchInput = document.getElementById(
+    "roomSearchInput"
+  ) as HTMLInputElement;
   const onlineUserListDiv = document.getElementById("onlineUserList");
   const chatMessagesDiv = document.getElementById("chatMessages");
   const chatForm = document.getElementById("chatForm");
@@ -115,8 +119,8 @@ export const renderLobbyPage = (element: HTMLElement) => {
     websocket.sendWebSocketMessage({
       type: "CREATE_ROOM",
       payload: {
-        rooName: roomNameInput.value,
-        password: roomPasswordInput.value,
+        roomName: roomNameInput.value,
+        password: roomPasswordInput.value || undefined,
       },
     });
     roomNameInput.value = "";
@@ -160,17 +164,49 @@ export const renderLobbyPage = (element: HTMLElement) => {
     messages.forEach((msg) => {
       const msgElement = document.createElement("p");
       msgElement.className = "chat-message";
-      msgElement.innerHTML = `<strong>${msg.username}:</strong> ${msg.text}`;
+      msgElement.innerHTML = `<strong>${msg.authorName}:</strong> ${msg.message}`;
       chatMessagesDiv.appendChild(msgElement);
     });
     chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
   };
 
-  const renderRoomList = () => {
+  const filterRooms = (searchTerm: string) => {
+    const allRooms = lobbyState.getRooms();
+
+    if (!searchTerm.trim()) {
+      return allRooms; // Se não há termo de busca, retorna todas
+    }
+
+    const searchLower = searchTerm.toLowerCase().trim();
+
+    return allRooms.filter((room) => {
+      // Busca tanto pelo nome quanto pelo código (ambos completos)
+      const nameMatch = room.name.toLowerCase() === searchLower;
+      const codeMatch = room.code.toLowerCase() === searchLower;
+
+      return nameMatch || codeMatch;
+    });
+  };
+
+  // Adicione os event listeners do search input após os outros event listeners
+  roomSearchInput?.addEventListener("input", (e) => {
+    const searchTerm = (e.target as HTMLInputElement).value;
+    const filteredRooms = filterRooms(searchTerm);
+    renderRoomList(filteredRooms);
+  });
+
+  roomSearchInput?.addEventListener("keyup", (e) => {
+    if ((e.target as HTMLInputElement).value === "") {
+      renderRoomList(); // Mostra todas as salas quando o campo está vazio
+    }
+  });
+
+  const renderRoomList = (filteredRooms?: any[]) => {
     const roomListDiv = document.getElementById("roomList");
     if (!roomListDiv) return;
 
-    const rooms = lobbyState.getRooms(); // Usa o estado igual ao chat e usuários
+    const rooms = filteredRooms || lobbyState.getRooms(); // Usa o estado igual ao chat e usuários
+
 
     if (rooms.length === 0) {
       roomListDiv.innerHTML =
@@ -214,7 +250,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
   const handleJoinRoom = (roomCode: string, hasPassword: boolean) => {
     if (hasPassword) {
       const password = prompt("Enter room password:");
-      if (password === null) return; // User cancelled
+      if (password === null) return; 
 
       websocket.sendWebSocketMessage({
         type: "JOIN_ROOM",
@@ -226,7 +262,6 @@ export const renderLobbyPage = (element: HTMLElement) => {
         payload: { roomCode },
       });
     }
-    navigate(`/gameboard`);
   };
 
   const handleWebSocketMessage = (message: any) => {
@@ -247,25 +282,44 @@ export const renderLobbyPage = (element: HTMLElement) => {
         lobbyState.removeUser(message.payload.user.userId);
         renderOnlineUserList();
         break;
+      // --- FIX ---
+      // This message now only updates the lobby list for OTHER players.
+      // The creator is navigated by the 'JOINED_ROOM' message.
       case "ROOM_CREATED":
-        lobbyState.addRoom({
-          code: message.payload.roomCode,
-          name: message.payload.roomName || message.payload.roomCode,
-          currentPlayers: message.payload.currentPlayers || 1,
-          maxPlayers: message.payload.maxPlayers || 4,
-          hasPassword: !!message.payload.password,
-        });
-        renderRoomList(); // Renderiza novamente
-        navigate(`/gameboard`);
+        lobbyState.addRoom(message.payload);
+        renderRoomList();
         break;
+      // --- END FIX ---
       case "WAITING_ROOMS":
         lobbyState.setRooms(message.payload.rooms);
         renderRoomList();
         break;
       case "JOINED_ROOM":
+        // This now handles BOTH joining and creating a room for the user who performed the action.
         console.log("Joined room:", message.payload);
-        // Redirect to game page or show game interface
+        navigate(`/gameboard/${message.payload.roomCode}`);
         break;
+      case "ROOM_CLOSED":
+        const closedRoomCode = message.payload.roomCode || message.payload.code;
+
+        // Remove a sala da lista (para todos)
+        lobbyState.setRooms(
+          lobbyState.getRooms().filter((room) => room.code !== closedRoomCode)
+        );
+        renderRoomList();
+
+        // Só redireciona se o usuário estava na sala fechada
+        const currentUrl = window.location.pathname;
+        if (currentUrl.includes(`/gameboard/${closedRoomCode}`)) {
+          navigate("/home");
+          alert("A sala foi fechada pelo dono.");
+        }
+        break;
+      case "LEFT_ROOM":
+        navigate("/home");
+        break;
+      case "ERROR":
+        alert(`Error: ${message.payload.message}`);
     }
   };
 

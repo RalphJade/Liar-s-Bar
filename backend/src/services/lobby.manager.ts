@@ -31,17 +31,17 @@ export function handleDisconnect(ws: CustomWebSocket) {
 /**
  * Processa uma mensagem de chat recebida de um cliente e a retransmite.
  */
-export function handleChatMessage(sender: CustomWebSocket, message: any) {
-    if (typeof message.text !== 'string' || message.text.trim() === '') {
+export function handleChatMessage(sender: CustomWebSocket, payload: any) {
+    if (typeof payload.text !== 'string' || payload.text.trim() === '') {
         return; // Ignora mensagens vazias ou mal formatadas
     }
 
     const chatMessage = {
         type: 'NEW_CHAT_MESSAGE',
         payload: {
-            userId: sender.clientId,
-            username: sender.clientUsername,
-            text: message.text.trim(),
+            authorId: sender.clientId,
+            authorName: sender.clientUsername,
+            message: payload.text.trim(),
             timestamp: new Date().toISOString()
         }
     };
@@ -69,7 +69,7 @@ export function broadcastOnlineUserList() {
 /**
  * Envia uma mensagem para TODOS os clientes conectados no lobby.
  */
-function broadcast(message: object) {
+export function broadcast(message: object) {
   const serializedMessage = JSON.stringify(message);
   for (const client of connectedClients.values()) {
     if (client.readyState === WebSocket.OPEN) {

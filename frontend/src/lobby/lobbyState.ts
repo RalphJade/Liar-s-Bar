@@ -5,8 +5,10 @@ interface User {
 }
 
 interface ChatMessage {
-    username: string;
-    text: string;
+    authorId: string;
+    authorName: string;
+    message: string;
+    timestamp: string;
 }
 
 interface Room {
@@ -15,6 +17,7 @@ interface Room {
   currentPlayers: number;
   maxPlayers: number;
   hasPassword: boolean;
+  ownerId?: string; // Optional: Useful for frontend checks
 }
 
 let rooms: Room[] = [];
@@ -48,6 +51,7 @@ export function addMessage(message: ChatMessage) {
 export function clearState() {
     state.onlineUsers = [];
     state.chatMessages = [];
+    rooms = [];
 }
 
 export function getOnlineUsers(): User[] {
@@ -69,9 +73,9 @@ export function setRooms(newRooms: Room[]): void {
 export function addRoom(room: Room): void {
   const existingIndex = rooms.findIndex(r => r.code === room.code);
   if (existingIndex >= 0) {
-    rooms[existingIndex] = room; // Atualiza sala existente
+    rooms[existingIndex] = room; // Updates existing room
   } else {
-    rooms.push(room); // Adiciona nova sala
+    rooms.push(room); // Adds new room
   }
 }
 
