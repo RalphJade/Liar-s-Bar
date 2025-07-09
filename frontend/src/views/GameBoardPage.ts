@@ -143,6 +143,8 @@ const handleChallengeResult = (payload: any) => {
     const wheelContainer = document.getElementById('roulette-wheel-container')!;
     const result = document.getElementById('roulette-result')!;
     const revealedCardContainer = document.getElementById('revealed-card-container')!;
+    const targetPlayer = gameState?.players.find(p => p.id === gameState?.game?.lastPlayerId);
+    const targetPlayerName = targetPlayer?.username || 'The previous player';
 
     // Find the punished player to determine their risk level.
     const punishedPlayer = gameState?.players.find(p => p.username === payload.punishedPlayerName);
@@ -153,7 +155,7 @@ const handleChallengeResult = (payload: any) => {
     // --- Step 1: Show the accusation result and the revealed card. ---
     let accusationMessage = "";
     if (payload.wasLie) {
-        accusationMessage = `${payload.targetName} was bluffing! The card was a ${payload.revealedCard.type.toUpperCase()}.`;
+        accusationMessage = `${targetPlayerName} was bluffing! The card was a ${payload.revealedCard.type.toUpperCase()}.`;
     } else {
         accusationMessage = `False accusation! The card was a ${payload.revealedCard.type.toUpperCase()}.`;
     }
