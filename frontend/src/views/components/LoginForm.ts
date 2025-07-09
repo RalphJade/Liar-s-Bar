@@ -39,17 +39,32 @@ export const renderLoginForm = (element: HTMLElement) => {
     submitBtn.textContent = 'Logging in...';
 
     const formData = new FormData(form);
+    const data = Object.fromEntries(formData);
     try {
       // Send login credentials to the backend API.
-      const response = await api.post('/auth/login', {
-        email: formData.get('email'),
-        password: formData.get('password'),
-      });
+      const response = await api.post('/auth/login', data);
       // On success, update the global auth state and trigger navigation.
       login(response.data.data.user);
     } catch (err: any) {
-      // On failure, display an error message and re-enable the form.
-      feedbackDiv.innerHTML = `<div class="form-feedback error">${err.response?.data?.message || 'Login failed.'}</div>`;
+      // On failure, display an error message from the API or a generic one.
+      const errorData = err.response?.data;
+      let errorMessage = '<div class="form-feedback error">';
+
+      // Handle Zod validation errors, which come as an array
+      if (errorData && Array.isArray(errorData.message)) {
+        errorMessage += '<ul>';
+        errorData.message.forEach((zodError: { message: string }) => {
+          errorMessage += `<li>${zodError.message}</li>`;
+        });
+        errorMessage += '</ul>';
+      } else {
+        // Handle other string-based errors
+        errorMessage += errorData?.message || 'Login failed.';
+      }
+
+      errorMessage += '</div>';
+      feedbackDiv.innerHTML = errorMessage;
+      
       submitBtn.disabled = false;
       submitBtn.textContent = 'Login';
     }
