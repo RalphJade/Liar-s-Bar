@@ -12,7 +12,7 @@ export interface CardGame {
   turnTimer: NodeJS.Timeout | null;
   currentCardType: CardType | null;
   playedCards: Card[];
-  lastPlayedCard: Card | null;
+  lastPlayedCard: Card[];
   lastPlayerId: string | null;
 }
 
@@ -103,5 +103,5 @@ export function canPlayCard(card: Card, currentCardType: CardType | null): boole
 }
 
 export {
-  createSpecialDeck, dealCards
+  createSpecialDeck
 };

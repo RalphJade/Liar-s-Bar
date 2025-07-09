@@ -1,35 +1,42 @@
 // Import necessary functions and types from other modules.
-import { getUser } from '../auth/auth.ts';
-import { sendWebSocketMessage, initLobbyConnection, disconnect } from '../lobby/websocket.ts';
-import { navigate } from '../router/router.ts';
-import { renderHeader } from './components/Header.ts';
-import { RoomStateForApi, Card, ChatMessage } from '../types/game.types.ts';
-import { MAX_PLAYERS } from '../../../backend/src/config/game.config.ts';
+import { getUser } from "../auth/auth.ts";
+import {
+  sendWebSocketMessage,
+  initLobbyConnection,
+  disconnect,
+} from "../lobby/websocket.ts";
+import { navigate } from "../router/router.ts";
+import { renderHeader } from "./components/Header.ts";
+import { RoomStateForApi, Card, ChatMessage } from "../types/game.types.ts";
+import { MAX_PLAYERS } from "../../../backend/src/config/game.config.ts";
 
 // Base URL for the API.
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = "http://localhost:3001";
 
 // Module-level state variables to hold game data.
 let gameState: RoomStateForApi | null = null;
 let myCards: Card[] = [];
 let chatMessages: ChatMessage[] = [];
-let selectedCardId: string | null = null;
+let selectedCardId: string[] = [];
 
 /**
  * Renders the main game board page.
  * @param {HTMLElement} element - The root element to render the page into.
  * @param {string} [roomCode] - The code of the room to join.
  */
-export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => {
-    // Get the current user; if no user or room code, navigate to the home page.
-    const currentUser = getUser();
-    if (!currentUser || !roomCode) {
-        navigate('/');
-        return;
-    }
+export const renderGameBoardPage = (
+  element: HTMLElement,
+  roomCode?: string
+) => {
+  // Get the current user; if no user or room code, navigate to the home page.
+  const currentUser = getUser();
+  if (!currentUser || !roomCode) {
+    navigate("/");
+    return;
+  }
 
-    // Set the inner HTML of the root element with the game layout.
-    element.innerHTML = `
+  // Set the inner HTML of the root element with the game layout.
+  element.innerHTML = `
         <div id="header-container"></div>
         <div class="game-layout">
             <div id="game-area" class="game-area">
@@ -61,7 +68,7 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
                     </form>
                 </div>
                 <div class="game-controls">
-                    <button id="quit-game-btn" class="button-quit-game">
+                    <button id="button-quit-game" class="button-quit-game">
                         <span class="quit-icon">🚪</span><span class="quit-text">Leave Table</span>
                     </button>
                 </div>
@@ -81,12 +88,12 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
         </div>
     `;
 
-    // Render the header component.
-    renderHeader(document.getElementById('header-container')!);
-    // Initialize the WebSocket connection and set up the message handler.
-    initLobbyConnection(handleGameMessage);
-    // Set up all event listeners for the page.
-    setupEventListeners();
+  // Render the header component.
+  renderHeader(document.getElementById("header-container")!);
+  // Initialize the WebSocket connection and set up the message handler.
+  initLobbyConnection(handleGameMessage);
+  // Set up all event listeners for the page.
+  setupEventListeners();
 };
 
 /**
@@ -94,42 +101,45 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
  * @param {any} message - The message object received from the server.
  */
 const handleGameMessage = (message: any) => {
-    console.log('[Game WS] Received:', message);
-    const currentUser = getUser();
+  console.log("[Game WS] Received:", message);
+  const currentUser = getUser();
 
-    // Process message based on its type.
-    switch(message.type) {
-        case 'ROOM_STATE_UPDATE':
-            gameState = message.payload;
-            myCards = message.payload.myCards || myCards;
-            updateUI();
-            break;
-        case 'CHAT_BROADCAST':
-            chatMessages.push(message.payload);
-            if (chatMessages.length > 100) chatMessages.shift(); // Keep chat history limited.
-            renderChat();
-            break;
-        case 'GAME_STARTED':
-            alert(message.payload.message);
-            break;
-        case 'GAME_FINISHED':
-            // Delay showing the end screen to allow animations to complete.
-            setTimeout(() => {
-                showEndGameScreen(message.payload.winnerId === currentUser?.id, message.payload.message);
-            }, 1000);
-            break;
-        case 'CHALLENGE_RESULT':
-            handleChallengeResult(message.payload);
-            break;
-        case 'ERROR':
-            alert(`Server error: ${message.payload.message}`);
-            break;
-        case 'ROOM_CLOSED':
-            alert(`The room "${message.payload.name}" has been closed.`);
-            disconnect();
-            navigate('/home');
-            break;
-    }
+  // Process message based on its type.
+  switch (message.type) {
+    case "ROOM_STATE_UPDATE":
+      gameState = message.payload;
+      myCards = message.payload.myCards || myCards;
+      updateUI();
+      break;
+    case "CHAT_BROADCAST":
+      chatMessages.push(message.payload);
+      if (chatMessages.length > 100) chatMessages.shift(); // Keep chat history limited.
+      renderChat();
+      break;
+    case "GAME_STARTED":
+      alert(message.payload.message);
+      break;
+    case "GAME_FINISHED":
+      // Delay showing the end screen to allow animations to complete.
+      setTimeout(() => {
+        showEndGameScreen(
+          message.payload.winnerId === currentUser?.id,
+          message.payload.message
+        );
+      }, 1000);
+      break;
+    case "CHALLENGE_RESULT":
+      handleChallengeResult(message.payload);
+      break;
+    case "ERROR":
+      alert(`Server error: ${message.payload.message}`);
+      break;
+    case "ROOM_CLOSED":
+      alert(`The room "${message.payload.name}" has been closed.`);
+      disconnect();
+      navigate("/home");
+      break;
+  }
 };
 
 /**
@@ -137,77 +147,89 @@ const handleGameMessage = (message: any) => {
  * @param {any} payload - The data from the server about the challenge result.
  */
 const handleChallengeResult = (payload: any) => {
-    // Get all necessary DOM elements for the roulette modal.
-    const overlay = document.getElementById('roulette-overlay')!;
-    const title = document.getElementById('roulette-title')!;
-    const wheelContainer = document.getElementById('roulette-wheel-container')!;
-    const result = document.getElementById('roulette-result')!;
-    const revealedCardContainer = document.getElementById('revealed-card-container')!;
+  // Get all necessary DOM elements for the roulette modal.
+  const overlay = document.getElementById("roulette-overlay")!;
+  const title = document.getElementById("roulette-title")!;
+  const wheelContainer = document.getElementById("roulette-wheel-container")!;
+  const result = document.getElementById("roulette-result")!;
+  const revealedCardContainer = document.getElementById(
+    "revealed-card-container"
+  )!;
 
-    // Derive the challenged player's name from the local game state for reliability.
-    const targetPlayer = gameState?.players.find(p => p.id === gameState?.game?.lastPlayerId);
-    const targetPlayerName = targetPlayer?.username || 'The previous player';
+  const punishedPlayer = gameState?.players.find(
+    (p) => p.username === payload.punishedPlayerName
+  );
+  const riskLevel = punishedPlayer?.riskLevel || 0;
+  const totalChambers = 6 - riskLevel; // Fewer chambers for higher risk.
+  const heartChambers = totalChambers - 1; // Always one skull.
 
-    // Find the punished player to determine their risk level.
-    const punishedPlayer = gameState?.players.find(p => p.username === payload.punishedPlayerName);
-    const riskLevel = punishedPlayer?.riskLevel || 0;
-    const totalChambers = 6 - riskLevel; // Fewer chambers for higher risk.
-    const heartChambers = totalChambers - 1; // Always one skull.
+  // Construct the accusation message based on the challenge outcome.
+  let accusationMessage = "";
+  if (payload.wasLie) {
+    accusationMessage = `${payload.targetName} was caught bluffing!`;
+  } else {
+    accusationMessage = `False accusation! ${payload.targetName} was telling the truth.`;
+  }
 
-    // Construct the accusation message based on the challenge outcome.
-    let accusationMessage = "";
-    if (payload.wasLie) {
-        accusationMessage = `${targetPlayerName} was bluffing! The card was a ${payload.revealedCard.type.toUpperCase()}.`;
-    } else {
-        accusationMessage = `False accusation! The card was a ${payload.revealedCard.type.toUpperCase()}.`;
-    }
+  // --- Step 1: Show the accusation result and the revealed card. ---
+  title.textContent = accusationMessage;
+  if (payload.revealedCard && payload.revealedCard.length > 0) {
+    revealedCardContainer.innerHTML = createRevealedCards(payload.revealedCard);
+  } else {
+    revealedCardContainer.innerHTML = "";
+  }
+  wheelContainer.innerHTML = "";
+  wheelContainer.style.display = "none";
+  result.textContent = "";
+  overlay.classList.remove("hidden");
 
-    // --- Step 1: Show the accusation result and the revealed card. ---
-    title.textContent = accusationMessage;
-    revealedCardContainer.innerHTML = createHandCard(payload.revealedCard);
-    wheelContainer.innerHTML = '';
-    wheelContainer.style.display = 'none';
-    result.textContent = '';
-    overlay.classList.remove('hidden');
+  // Define durations for each step of the animation sequence.
+  const accusationDuration = 3000;
+  const spinDuration = 4000;
+  const resultDisplayDuration = 2500;
 
-    // Define durations for each step of the animation sequence.
-    const accusationDuration = 3000;
-    const spinDuration = 4000;
-    const resultDisplayDuration = 2500;
+  // --- Step 2: After a delay, show the roulette wheel and start the spin. ---
+  setTimeout(() => {
+    revealedCardContainer.innerHTML = "";
+    wheelContainer.style.display = "flex";
+    title.textContent = `${payload.punishedPlayerName} spins the chamber... (${heartChambers} ❤️ | 1 💀)`;
 
-    // --- Step 2: After a delay, show the roulette wheel and start the spin. ---
+    const cylinder = createRouletteWheel(
+      wheelContainer,
+      totalChambers,
+      payload.isEliminated
+    );
+
+    // Reset and trigger the spin animation.
+    cylinder.style.animation = "none";
+    void cylinder.offsetWidth; // Trigger a reflow to restart the animation.
+    cylinder.style.animation = `spin ${
+      spinDuration / 1000
+    }s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
+
+    // --- Step 3: After the spin animation finishes, show the result. ---
     setTimeout(() => {
-        revealedCardContainer.innerHTML = '';
-        wheelContainer.style.display = 'flex';
-        title.textContent = `${payload.punishedPlayerName} spins the chamber... (${heartChambers} ❤️ | 1 💀)`;
-        
-        const cylinder = createRouletteWheel(wheelContainer, totalChambers, payload.isEliminated);
-        
-        // Reset and trigger the spin animation.
-        cylinder.style.animation = 'none';
-        void cylinder.offsetWidth; // Trigger a reflow to restart the animation.
-        cylinder.style.animation = `spin ${spinDuration / 1000}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
+      const resultText = payload.isEliminated
+        ? "💀 BANG! ELIMINATED! 💀"
+        : "❤️ *CLICK*... SURVIVED! ❤️";
+      const resultColor = payload.isEliminated ? "#dc2626" : "#16a34a";
 
-        // --- Step 3: After the spin animation finishes, show the result. ---
+      result.innerHTML = `<div class="roulette-result-text" style="color: ${resultColor};">${resultText}</div>`;
+
+      // Add a screen shake effect for dramatic impact if a player is eliminated.
+      if (payload.isEliminated) {
+        document.body.style.animation = "shake 0.5s ease-in-out";
         setTimeout(() => {
-            const resultText = payload.isEliminated ? '💀 BANG! ELIMINATED! 💀' : '❤️ *CLICK*... SURVIVED! ❤️';
-            const resultColor = payload.isEliminated ? '#dc2626' : '#16a34a';
-            
-            result.innerHTML = `<div class="roulette-result-text" style="color: ${resultColor};">${resultText}</div>`;
-            
-            // Add a screen shake effect for dramatic impact if a player is eliminated.
-            if (payload.isEliminated) {
-                document.body.style.animation = 'shake 0.5s ease-in-out';
-                setTimeout(() => { document.body.style.animation = ''; }, 500);
-            }
-            
-            // --- Step 4: After showing the result, hide the overlay. ---
-            setTimeout(() => {
-                overlay.classList.add('hidden');
-            }, resultDisplayDuration);
+          document.body.style.animation = "";
+        }, 500);
+      }
 
-        }, spinDuration);
-    }, accusationDuration);
+      // --- Step 4: After showing the result, hide the overlay. ---
+      setTimeout(() => {
+        overlay.classList.add("hidden");
+      }, resultDisplayDuration);
+    }, spinDuration);
+  }, accusationDuration);
 };
 
 /**
@@ -217,62 +239,71 @@ const handleChallengeResult = (payload: any) => {
  * @param {boolean} willHitSkull - Whether the spin will result in elimination.
  * @returns {HTMLElement} The cylinder element that will be animated.
  */
-const createRouletteWheel = (container: HTMLElement, totalChambers: number, willHitSkull: boolean): HTMLElement => {
-    container.innerHTML = '';
-    container.className = 'roulette-wheel';
-    
-    const cylinder = document.createElement('div');
-    cylinder.className = 'revolver-cylinder';
-    
-    const angleStep = 360 / totalChambers;
-    
-    // Randomly distribute one skull among the heart chambers.
-    const chambers: ('skull' | 'heart')[] = [];
-    const skullPosition = Math.floor(Math.random() * totalChambers);
-    
-    for (let i = 0; i < totalChambers; i++) {
-        chambers.push(i === skullPosition ? 'skull' : 'heart');
-    }
-    
-    // Create and position the chamber elements inside the cylinder.
-    for (let i = 0; i < totalChambers; i++) {
-        const chamber = document.createElement('div');
-        chamber.className = 'chamber';
-        
-        const isSkull = chambers[i] === 'skull';
-        chamber.innerHTML = isSkull ? '💀' : '❤️';
-        chamber.classList.add(isSkull ? 'skull-chamber' : 'heart-chamber');
-        
-        const angle = i * angleStep;
-        chamber.style.transform = `rotate(${angle}deg) translateY(-60px) rotate(-${angle}deg)`;
-        
-        cylinder.appendChild(chamber);
-    }
-    
-    const firingPin = document.createElement('div');
-    firingPin.className = 'firing-pin';
-    firingPin.innerHTML = '▼';
-    
-    container.appendChild(cylinder);
-    container.appendChild(firingPin);
-    
-    // Determine which chamber should land under the firing pin.
-    let targetChamberIndex;
-    if (willHitSkull) {
-        targetChamberIndex = skullPosition;
-    } else {
-        const heartChamberIndices = chambers.map((c, index) => c === 'heart' ? index : -1).filter(i => i !== -1);
-        targetChamberIndex = heartChamberIndices[Math.floor(Math.random() * heartChamberIndices.length)];
-    }
-    
-    // Calculate the final rotation angle for the animation.
-    const baseRotation = 1080; // 3 full spins for drama.
-    const targetAngle = targetChamberIndex * angleStep;
-    const finalRotation = baseRotation - targetAngle;
-    
-    cylinder.style.setProperty('--final-rotation', `${finalRotation}deg`);
-    
-    return cylinder;
+const createRouletteWheel = (
+  container: HTMLElement,
+  totalChambers: number,
+  willHitSkull: boolean
+): HTMLElement => {
+  container.innerHTML = "";
+  container.className = "roulette-wheel";
+
+  const cylinder = document.createElement("div");
+  cylinder.className = "revolver-cylinder";
+
+  const angleStep = 360 / totalChambers;
+
+  // Randomly distribute one skull among the heart chambers.
+  const chambers: ("skull" | "heart")[] = [];
+  const skullPosition = Math.floor(Math.random() * totalChambers);
+
+  for (let i = 0; i < totalChambers; i++) {
+    chambers.push(i === skullPosition ? "skull" : "heart");
+  }
+
+  // Create and position the chamber elements inside the cylinder.
+  for (let i = 0; i < totalChambers; i++) {
+    const chamber = document.createElement("div");
+    chamber.className = "chamber";
+
+    const isSkull = chambers[i] === "skull";
+    chamber.innerHTML = isSkull ? "💀" : "❤️";
+    chamber.classList.add(isSkull ? "skull-chamber" : "heart-chamber");
+
+    const angle = i * angleStep;
+    chamber.style.transform = `rotate(${angle}deg) translateY(-60px) rotate(-${angle}deg)`;
+
+    cylinder.appendChild(chamber);
+  }
+
+  const firingPin = document.createElement("div");
+  firingPin.className = "firing-pin";
+  firingPin.innerHTML = "▼";
+
+  container.appendChild(cylinder);
+  container.appendChild(firingPin);
+
+  // Determine which chamber should land under the firing pin.
+  let targetChamberIndex;
+  if (willHitSkull) {
+    targetChamberIndex = skullPosition;
+  } else {
+    const heartChamberIndices = chambers
+      .map((c, index) => (c === "heart" ? index : -1))
+      .filter((i) => i !== -1);
+    targetChamberIndex =
+      heartChamberIndices[
+        Math.floor(Math.random() * heartChamberIndices.length)
+      ];
+  }
+
+  // Calculate the final rotation angle for the animation.
+  const baseRotation = 1080; // 3 full spins for drama.
+  const targetAngle = targetChamberIndex * angleStep;
+  const finalRotation = baseRotation - targetAngle;
+
+  cylinder.style.setProperty("--final-rotation", `${finalRotation}deg`);
+
+  return cylinder;
 };
 
 /**
@@ -281,45 +312,47 @@ const createRouletteWheel = (container: HTMLElement, totalChambers: number, will
  * @param {string} message - The message to display (e.g., "John Doe wins!").
  */
 const showEndGameScreen = (didIWin: boolean, message: string) => {
-    const gameArea = document.getElementById('game-area')!;
-    gameArea.innerHTML = `
-        <div class="end-game-screen ${didIWin ? 'win' : 'lose'}">
-            <h1>${didIWin ? 'Victory!' : 'Defeat!'}</h1>
+  const gameArea = document.getElementById("game-area")!;
+  gameArea.innerHTML = `
+        <div class="end-game-screen ${didIWin ? "win" : "lose"}">
+            <h1>${didIWin ? "Victory!" : "Defeat!"}</h1>
             <p>${message}</p>
             <button id="back-to-lobby" class="button button-primary">Back to Lobby</button>
         </div>
     `;
-    document.getElementById('back-to-lobby')?.addEventListener('click', () => {
-        disconnect();
-        navigate('/home');
-    });
+  document.getElementById("back-to-lobby")?.addEventListener("click", () => {
+    disconnect();
+    navigate("/home");
+  });
 };
 
 /**
  * Main function to update the entire UI based on the current game state.
  */
 const updateUI = () => {
-    if (!gameState) return;
-    const currentUser = getUser();
-    if (!currentUser) return;
+  if (!gameState) return;
+  const currentUser = getUser();
+  if (!currentUser) return;
 
-    // If the current player is eliminated, show the end game screen for them.
-    const me = gameState.players.find(p => p.id === currentUser.id);
-    if (me?.isEliminated) {
-        showEndGameScreen(false, "You have been eliminated.");
-        return;
-    }
+  // If the current player is eliminated, show the end game screen for them.
+  const me = gameState.players.find((p) => p.id === currentUser.id);
+  if (me?.isEliminated) {
+    showEndGameScreen(false, "You have been eliminated.");
+    return;
+  }
 
-    const isMyTurn = gameState.game?.currentPlayerId === currentUser.id;
-    const canChallenge = gameState.game?.lastPlayerId !== null && gameState.game?.lastPlayerId !== currentUser.id;
+  const isMyTurn = gameState.game?.currentPlayerId === currentUser.id;
+  const canChallenge =
+    gameState.game?.lastPlayerId !== null &&
+    gameState.game?.lastPlayerId !== currentUser.id;
 
-    // Call individual render functions to update parts of the UI.
-    renderPlayerPods(currentUser.id);
-    renderMyInfo(currentUser.id);
-    renderMyHand(isMyTurn);
-    renderGameStatus();
-    renderActionButtons(isMyTurn, canChallenge);
-    renderReferenceCard();
+  // Call individual render functions to update parts of the UI.
+  renderPlayerPods(currentUser.id);
+  renderMyInfo(currentUser.id);
+  renderMyHand(isMyTurn);
+  renderGameStatus();
+  renderActionButtons(isMyTurn, canChallenge);
+  renderReferenceCard();
 };
 
 /**
@@ -329,26 +362,29 @@ const updateUI = () => {
  * @param {number} totalPlayers - The total number of players in the game.
  * @returns {string} The CSS class for positioning (e.g., 'pos-top', 'pos-left').
  */
-const getPlayerPositionClass = (opponentIndex: number, totalPlayers: number): string => {
-    // In a 1v1 game, the single opponent is always positioned at the top.
-    if (totalPlayers === 2) {
-        return 'pos-top';
-    }
+const getPlayerPositionClass = (
+  opponentIndex: number,
+  totalPlayers: number
+): string => {
+  // In a 1v1 game, the single opponent is always positioned at the top.
+  if (totalPlayers === 2) {
+    return "pos-top";
+  }
 
-    // In a 3-player game, opponents are on the left and right.
-    if (totalPlayers === 3) {
-        if (opponentIndex === 1) return 'pos-left';  // 1st opponent in turn order.
-        if (opponentIndex === 2) return 'pos-right'; // 2nd opponent in turn order.
-    }
+  // In a 3-player game, opponents are on the left and right.
+  if (totalPlayers === 3) {
+    if (opponentIndex === 1) return "pos-left"; // 1st opponent in turn order.
+    if (opponentIndex === 2) return "pos-right"; // 2nd opponent in turn order.
+  }
 
-    // In a 4-player game, opponents are at the left, top, and right.
-    if (totalPlayers === 4) {
-        if (opponentIndex === 1) return 'pos-left';  // 1st opponent.
-        if (opponentIndex === 2) return 'pos-top';   // 2nd opponent.
-        if (opponentIndex === 3) return 'pos-right'; // 3rd opponent.
-    }
+  // In a 4-player game, opponents are at the left, top, and right.
+  if (totalPlayers === 4) {
+    if (opponentIndex === 1) return "pos-left"; // 1st opponent.
+    if (opponentIndex === 2) return "pos-top"; // 2nd opponent.
+    if (opponentIndex === 3) return "pos-right"; // 3rd opponent.
+  }
 
-    return ''; // Fallback for any other case.
+  return ""; // Fallback for any other case.
 };
 
 /**
@@ -356,33 +392,35 @@ const getPlayerPositionClass = (opponentIndex: number, totalPlayers: number): st
  * @param {string} currentUserId - The ID of the current user to exclude them from the pods.
  */
 const renderPlayerPods = (currentUserId: string) => {
-    const container = document.getElementById('player-pods-container');
-    if (!container || !gameState) return;
-    
-    const players = gameState.players || [];
-    const totalPlayers = players.length;
+  const container = document.getElementById("player-pods-container");
+  if (!container || !gameState) return;
 
-    // Reorder players so the current user is conceptually at the bottom/start.
-    const playerPositions = assignPlayerPositions(players, currentUserId);
-    
-    let opponentIndex = 0;
+  const players = gameState.players || [];
+  const totalPlayers = Number(players.length);
 
-    container.innerHTML = playerPositions.map((player) => {
-        // Skip rendering the current user in the opponent pods area.
-        if (player.id === currentUserId) return '';
-        
-        opponentIndex++;
-        
-        // Get the correct position class using the layout logic function.
-        const positionClass = getPlayerPositionClass(opponentIndex, totalPlayers);
+  // Reorder players so the current user is conceptually at the bottom/start.
+  const playerPositions = assignPlayerPositions(players, currentUserId);
 
-        if (player.isEliminated) {
-            return createEliminatedPod(player, positionClass);
-        }
-        
-        const isCurrentTurn = player.id === gameState?.game?.currentPlayerId;
-        return createPlayerPod(player, positionClass, isCurrentTurn);
-    }).join('');
+  let opponentIndex = 0;
+
+  container.innerHTML = playerPositions
+    .map((player) => {
+      // Skip rendering the current user in the opponent pods area.
+      if (player.id === currentUserId) return "";
+
+      opponentIndex++;
+
+      // Get the correct position class using the layout logic function.
+      const positionClass = getPlayerPositionClass(opponentIndex, totalPlayers);
+
+      if (player.isEliminated) {
+        return createEliminatedPod(player, positionClass);
+      }
+
+      const isCurrentTurn = player.id === gameState?.game?.currentPlayerId;
+      return createPlayerPod(player, positionClass, isCurrentTurn);
+    })
+    .join("");
 };
 
 /**
@@ -390,13 +428,13 @@ const renderPlayerPods = (currentUserId: string) => {
  * @param {string} currentUserId - The ID of the current user.
  */
 const renderMyInfo = (currentUserId: string) => {
-    const container = document.getElementById('my-info-area');
-    if (!container || !gameState) return;
+  const container = document.getElementById("my-info-area");
+  if (!container || !gameState) return;
 
-    const me = gameState.players.find(p => p.id === currentUserId);
-    if (me) {
-        container.innerHTML = createMyInfoPod(me);
-    }
+  const me = gameState.players.find((p) => p.id === currentUserId);
+  if (me) {
+    container.innerHTML = createMyInfoPod(me);
+  }
 };
 
 /**
@@ -404,35 +442,40 @@ const renderMyInfo = (currentUserId: string) => {
  * @param {boolean} isMyTurn - True if it's the current player's turn.
  */
 const renderMyHand = (isMyTurn: boolean) => {
-    const container = document.getElementById('my-hand-cards');
-    if (!container) return;
-    container.innerHTML = myCards.map(card => createHandCard(card)).join('');
-    
-    // Add click listeners to cards only if it's the player's turn.
-    container.querySelectorAll('.hand-card').forEach(cardEl => {
-        if (isMyTurn) {
-            cardEl.addEventListener('click', () => handleCardSelection(cardEl));
-        }
-        // Re-apply 'selected' class if a card was already selected.
-        if (cardEl.getAttribute('data-card-id') === selectedCardId) {
-            cardEl.classList.add('selected');
-        }
-    });
+  const container = document.getElementById("my-hand-cards");
+  if (!container) return;
+  container.innerHTML = myCards.map((card) => createHandCard(card)).join("");
+
+  // Add click listeners to cards only if it's the player's turn.
+  container.querySelectorAll(".hand-card").forEach((cardEl) => {
+    if (isMyTurn) {
+      cardEl.addEventListener("click", () => handleCardSelection(cardEl));
+    }
+    // Re-apply 'selected' class if a card was already selected.
+    const cardId = cardEl.getAttribute("data-card-id");
+    if (cardId && selectedCardId.includes(cardId)) {
+      cardEl.classList.add("selected");
+    }
+  });
 };
 
 /**
  * Renders the current game status text, such as the required card or current player.
  */
 const renderGameStatus = () => {
-    const statusText = document.getElementById('game-status-text');
-    if (!statusText || !gameState || !gameState.game) return;
+  const statusText = document.getElementById("game-status-text");
+  if (!statusText || !gameState || !gameState.game) return;
 
-    if (gameState.status === 'playing') {
-        const currentPlayer = gameState.players.find(p => p.id === gameState!.game!.currentPlayerId);
-        statusText.textContent = `Required: ${gameState.game.currentCardType?.toUpperCase() || 'ANY'} | Turn: ${currentPlayer?.username}`;
-    } else {
-        statusText.textContent = `Waiting for players... (${gameState.players.length}/${MAX_PLAYERS})`;
-    }
+  if (gameState.status === "playing") {
+    const currentPlayer = gameState.players.find(
+      (p) => p.id === gameState!.game!.currentPlayerId
+    );
+    statusText.textContent = `Required: ${
+      gameState.game.currentCardType?.toUpperCase() || "ANY"
+    } | Turn: ${currentPlayer?.username}`;
+  } else {
+    statusText.textContent = `Waiting for players... (${gameState.players.length}/${MAX_PLAYERS})`;
+  }
 };
 
 /**
@@ -441,42 +484,59 @@ const renderGameStatus = () => {
  * @param {boolean} canChallenge - True if a challenge is possible.
  */
 const renderActionButtons = (isMyTurn: boolean, canChallenge: boolean) => {
-    const container = document.getElementById('action-buttons');
-    if (!container) return;
-    container.innerHTML = createActionButtons(isMyTurn, canChallenge);
-    document.getElementById('play-card-btn')?.addEventListener('click', handlePlayCardAction);
-    document.getElementById('call-bluff-btn')?.addEventListener('click', handleCallBluffAction);
+  const container = document.getElementById("action-buttons");
+  if (!container) return;
+  container.innerHTML = createActionButtons(isMyTurn, canChallenge);
+  document
+    .getElementById("play-card-btn")
+    ?.addEventListener("click", handlePlayCardAction);
+  document
+    .getElementById("call-bluff-btn")
+    ?.addEventListener("click", handleCallBluffAction);
 };
 
 /**
  * Renders the reference card in the center of the table.
  */
 const renderReferenceCard = () => {
-    const container = document.getElementById('reference-card-container');
-    if (!container || !gameState || !gameState.game) return;
-    
-    const referenceType = gameState.game.currentCardType;
-    if (referenceType) {
-        container.innerHTML = `<div class="card-face reference-card">${referenceType.charAt(0).toUpperCase()}</div>`;
-    } else {
-        container.innerHTML = 'New Round...';
-    }
+  const container = document.getElementById("reference-card-container");
+  if (!container || !gameState || !gameState.game) return;
+
+  const referenceType = gameState.game.currentCardType;
+  if (referenceType) {
+    container.innerHTML = `<div class="card-face reference-card">${referenceType
+      .charAt(0)
+      .toUpperCase()}</div>`;
+  } else {
+    container.innerHTML = "New Round...";
+  }
 };
 
 /**
  * Renders the chat messages in the chat panel.
  */
 const renderChat = () => {
-    const container = document.getElementById('chat-messages');
-    if (!container) return;
-    container.innerHTML = chatMessages.map(msg => `
+  const container = document.getElementById("chat-messages");
+  if (!container) return;
+  container.innerHTML = chatMessages
+    .map(
+      (msg) => `
         <div class="message">
-            <span class="timestamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-            <span class="content"><strong>${msg.authorName}:</strong> ${msg.message}</span>
+            <span class="timestamp">${new Date(
+              msg.timestamp
+            ).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}</span>
+            <span class="content"><strong>${msg.authorName}:</strong> ${
+        msg.message
+      }</span>
         </div>
-    `).join('');
-    // Auto-scroll to the latest message.
-    container.scrollTop = container.scrollHeight;
+    `
+    )
+    .join("");
+  // Auto-scroll to the latest message.
+  container.scrollTop = container.scrollHeight;
 };
 
 /**
@@ -484,69 +544,85 @@ const renderChat = () => {
  * @param {Element} cardEl - The card element that was clicked.
  */
 const handleCardSelection = (cardEl: Element) => {
-    const cardId = cardEl.getAttribute('data-card-id');
-    if (selectedCardId === cardId) {
-        selectedCardId = null;
-        cardEl.classList.remove('selected');
-    } else {
-        selectedCardId = cardId;
-        document.querySelectorAll('.hand-card').forEach(c => c.classList.remove('selected'));
-        cardEl.classList.add('selected');
-    }
+  const cardId = cardEl.getAttribute("data-card-id");
+  if (!cardId) return;
+
+  const isSelected = selectedCardId.includes(cardId);
+
+  if (isSelected) {
+    // Remove da seleção
+    selectedCardId = selectedCardId.filter((id) => id !== cardId);
+    cardEl.classList.remove("selected");
+  } else {
+    // Adiciona à seleção
+    selectedCardId.push(cardId);
+    cardEl.classList.add("selected");
+  }
 };
 
 /**
  * Handles the "Play Card" action.
  */
 const handlePlayCardAction = () => {
-    if (!selectedCardId) {
-        alert("Please select a card to play.");
-        return;
-    }
-    sendWebSocketMessage({ type: 'PLAY_CARD', payload: { cardId: selectedCardId } });
-    selectedCardId = null;
+  if (selectedCardId.length === 0) {
+    alert("Please select a card to play.");
+    return;
+  }
+  sendWebSocketMessage({
+    type: "PLAY_CARD",
+    payload: { cardsId: selectedCardId },
+  });
+
+  selectedCardId = [];
 };
 
 /**
  * Handles the "Call Bluff" action.
  */
 const handleCallBluffAction = () => {
-    if (confirm("Are you sure you want to call a bluff?")) {
-        sendWebSocketMessage({ type: 'CALL_BLUFF', payload: {} });
-    }
+  if (confirm("Are you sure you want to call a bluff?")) {
+    sendWebSocketMessage({ type: "CALL_BLUFF", payload: {} });
+  }
 };
 
 /**
  * Sets up all static event listeners for the page, such as chat and modals.
  */
 const setupEventListeners = () => {
-    const chatForm = document.getElementById('chat-form');
-    chatForm?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const chatInput = document.getElementById('chat-input') as HTMLInputElement;
-        const message = chatInput.value.trim();
-        if (message) {
-            sendWebSocketMessage({ type: 'CHAT_MESSAGE', payload: { message } });
-            chatInput.value = '';
-        }
-    });
+  const chatForm = document.getElementById("chat-form");
+  chatForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const chatInput = document.getElementById("chat-input") as HTMLInputElement;
+    const message = chatInput.value.trim();
+    if (message) {
+      sendWebSocketMessage({ type: "CHAT_MESSAGE", payload: { message } });
+      chatInput.value = "";
+    }
+  });
 
-    const quitModal = document.getElementById('quit-game-modal') as HTMLDivElement;
-    const quitBtn = document.getElementById('quit-game-btn');
-    const confirmQuitBtn = document.getElementById('confirm-quit-btn');
-    const cancelQuitBtn = document.getElementById('cancel-quit-btn');
+  const quitModal = document.getElementById(
+    "quit-game-modal"
+  ) as HTMLDivElement;
+  const quitBtn = document.getElementById("button-quit-game");
+  const confirmQuitBtn = document.getElementById("confirm-quit-btn");
+  const cancelQuitBtn = document.getElementById("cancel-quit-btn");
 
-    const openModal = () => quitModal.classList.add('show');
-    const closeModal = () => quitModal.classList.remove('show');
+  const openModal = () => quitModal.classList.add("show");
+  const closeModal = () => quitModal.classList.remove("show");
 
-    quitBtn?.addEventListener('click', openModal);
-    cancelQuitBtn?.addEventListener('click', closeModal);
-    confirmQuitBtn?.addEventListener('click', () => {
-        sendWebSocketMessage({type: "LEAVE_ROOM", payload:{}});
-        closeModal();
-    });
-    quitModal.addEventListener('click', (e) => { if (e.target === quitModal) closeModal(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && quitModal.classList.contains('show')) closeModal(); });
+  quitBtn?.addEventListener("click", openModal);
+  cancelQuitBtn?.addEventListener("click", closeModal);
+  confirmQuitBtn?.addEventListener("click", () => {
+    sendWebSocketMessage({ type: "LEAVE_ROOM", payload: {} });
+    closeModal();
+  });
+  quitModal.addEventListener("click", (e) => {
+    if (e.target === quitModal) closeModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && quitModal.classList.contains("show"))
+      closeModal();
+  });
 };
 
 /**
@@ -557,11 +633,13 @@ const setupEventListeners = () => {
  * @returns {any[]} The reordered array of players.
  */
 function assignPlayerPositions(players: any[], currentUserId: string): any[] {
-    const currentUserIndex = players.findIndex(p => p.id === currentUserId);
-    if (currentUserIndex === -1) return players;
-    const reordered = [...players];
-    // Slice the array at the current user's index and move the first part to the end.
-    return reordered.slice(currentUserIndex).concat(reordered.slice(0, currentUserIndex));
+  const currentUserIndex = players.findIndex((p) => p.id === currentUserId);
+  if (currentUserIndex === -1) return players;
+  const reordered = [...players];
+  // Slice the array at the current user's index and move the first part to the end.
+  return reordered
+    .slice(currentUserIndex)
+    .concat(reordered.slice(0, currentUserIndex));
 }
 
 // --- HTML Template Creation Functions ---
@@ -573,18 +651,35 @@ function assignPlayerPositions(players: any[], currentUserId: string): any[] {
  * @param isCurrentTurn - Boolean indicating if it's this player's turn.
  * @returns The HTML string for the player pod.
  */
-const createPlayerPod = (player: any, positionClass: string, isCurrentTurn: boolean) => {
-    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
-    return `
-        <div class="player-pod ${positionClass} ${isCurrentTurn ? 'active-turn' : ''}" data-player-id="${player.id}">
+const createPlayerPod = (
+  player: any,
+  positionClass: string,
+  isCurrentTurn: boolean
+) => {
+  const avatarSrc = player.avatar_url
+    ? `${API_BASE_URL}${player.avatar_url}`
+    : "https://via.placeholder.com/60";
+  if (player.isInactive) {
+    return createInactivePod(player, positionClass);
+  }
+  return `
+        <div class="player-pod ${positionClass} ${
+    isCurrentTurn ? "active-turn" : ""
+  }" data-player-id="${player.id}">
             <div class="opponent-hand">
-                ${Array(player.handSize || 0).fill('<div class="card-back small-card"></div>').join('')}
+                ${Array(player.handSize || 0)
+                  .fill('<div class="card-back small-card"></div>')
+                  .join("")}
             </div>
             <div class="player-info">
-                <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar" />
+                <img src="${avatarSrc}" alt="${
+    player.username
+  }'s avatar" class="player-avatar" />
                 <div class="player-details">
                     <span class="player-name">${player.username}</span>
-                    <span class="player-risk-level">Risk: ${player.riskLevel || 0}/6</span>
+                    <span class="player-risk-level">Risk: ${
+                      player.riskLevel || 0
+                    }/6</span>
                 </div>
             </div>
         </div>`;
@@ -596,10 +691,14 @@ const createPlayerPod = (player: any, positionClass: string, isCurrentTurn: bool
  * @returns The HTML string for the user info area.
  */
 const createMyInfoPod = (player: any) => {
-    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
-    const isMyTurn = gameState?.game?.currentPlayerId === player.id;
-    return `
-        <img src="${avatarSrc}" alt="${player.username}'s avatar" class="my-avatar ${isMyTurn ? 'active-turn' : ''}" />
+  const avatarSrc = player.avatar_url
+    ? `${API_BASE_URL}${player.avatar_url}`
+    : "https://via.placeholder.com/60";
+  const isMyTurn = gameState?.game?.currentPlayerId === player.id;
+  return `
+        <img src="${avatarSrc}" alt="${
+    player.username
+  }'s avatar" class="my-avatar ${isMyTurn ? "active-turn" : ""}" />
         <div class="my-details">
             <span class="my-name">${player.username}</span>
             <span class="my-risk-level">Risk: ${player.riskLevel || 0}/6</span>
@@ -614,8 +713,10 @@ const createMyInfoPod = (player: any) => {
  * @returns The HTML string for the eliminated player pod.
  */
 const createEliminatedPod = (player: any, positionClass: string) => {
-    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
-    return `
+  const avatarSrc = player.avatar_url
+    ? `${API_BASE_URL}${player.avatar_url}`
+    : "https://via.placeholder.com/60";
+  return `
         <div class="player-pod ${positionClass} eliminated" data-player-id="${player.id}">
             <div class="player-info">
                 <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar eliminated-avatar" />
@@ -627,14 +728,43 @@ const createEliminatedPod = (player: any, positionClass: string) => {
         </div>`;
 };
 
+const createInactivePod = (player: any, position: string) => {
+  const avatarSrc = player.avatar_url
+    ? `${API_BASE_URL}${player.avatar_url}`
+    : "https://via.placeholder.com/60";
+  return `
+    <div class="player-pod player-${position} inactive" data-player-id="${player.id}">
+      <div class="player-info">
+        <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar inactive-avatar" />
+        <div class="player-details">
+          <span class="player-name">${player.username}</span>
+          <span class="player-risk-level">PLAYED ALL CARDS</span>
+        </div>
+      </div>
+    </div>`;
+};
+
 /**
  * Creates the HTML for a single card in the player's hand.
  * @param card - The card object.
  * @returns The HTML string for the card.
  */
 const createHandCard = (card: Card) => {
-    const cardContent = card.type === 'joker' ? '🃏' : card.type.charAt(0).toUpperCase();
-    return `<div class="card-face hand-card" data-card-id="${card.id}">${cardContent}</div>`;
+  const cardContent =
+    card.type === "joker" ? "🃏" : card.type.charAt(0).toUpperCase();
+  return `<div class="card-face hand-card" data-card-id="${card.id}">${cardContent}</div>`;
+};
+
+const createRevealedCards = (cards: Card[]) => {
+  return cards
+    .map(
+      (card: Card) => `
+        <div class="revealed-card">
+            ${createHandCard(card)}
+        </div>
+    `
+    )
+    .join("");
 };
 
 /**
@@ -644,8 +774,12 @@ const createHandCard = (card: Card) => {
  * @returns The HTML string for the action buttons.
  */
 const createActionButtons = (isMyTurn: boolean, canChallenge: boolean) => `
-    <button id="play-card-btn" class="button button-primary action-btn" ${!isMyTurn ? 'disabled' : ''}>Play Card</button>
-    <button id="call-bluff-btn" class="button button-danger action-btn" ${!isMyTurn || !canChallenge ? 'disabled' : ''}>Call Bluff</button>
+    <button id="play-card-btn" class="button button-primary action-btn" ${
+      !isMyTurn ? "disabled" : ""
+    }>Play Card</button>
+    <button id="call-bluff-btn" class="button button-danger action-btn" ${
+      !isMyTurn || !canChallenge ? "disabled" : ""
+    }>Call Bluff</button>
 `;
 
 /**
@@ -669,8 +803,8 @@ const renderQuitModal = () => `
  * @returns {string} The HTML for the style tag.
  */
 const renderDynamicStyles = () => {
-    const style = document.createElement('style');
-    style.textContent = `
+  const style = document.createElement("style");
+  style.textContent = `
         /* General Layout */
         :root {
             --color-danger: #dc2626;
@@ -688,6 +822,9 @@ const renderDynamicStyles = () => {
         /* Player Pods (Opponents) */
         .player-pod { position: absolute; display: flex; flex-direction: column-reverse; align-items: center; gap: 0.5rem; transition: all 0.3s ease; }
         .player-pod.active-turn .player-avatar { box-shadow: 0 0 20px 5px #facc15; transform: scale(1.1); }
+        .player-pod.inactive .player-avatar { filter: grayscale(100%) brightness(0.8);  border-color: #64748b; }
+        .inactive-avatar { opacity: 0.7; }
+        .player-pod.inactive .player-risk-level {   color: #64748b; font-weight: bold; }
         .player-info { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
         .player-avatar { width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--color-accent-gold); object-fit: cover; background: var(--color-wood-dark); }
         .player-details { display:flex; flex-direction:column; align-items: center; background: rgba(0,0,0,0.7); padding: 0.25rem 0.75rem; border-radius: 12px; }
@@ -708,7 +845,7 @@ const renderDynamicStyles = () => {
             left: 2rem;
             transform: translateY(-50%);
         }
-        .pos-right { /* Player positioned on the right side of the table. */
+        .pos-right { /* Player positioned on the right side of the table. */w
             top: 50%;
             right: 2rem;
             transform: translateY(-50%);
@@ -849,6 +986,11 @@ const renderDynamicStyles = () => {
         .modal-body { padding: 1.5rem; }
         .modal-actions { display: flex; gap: 1rem; padding: 1rem; justify-content: flex-end; background: var(--color-wood-dark); }
         .button-secondary { background: var(--color-primary); }
+
+        /*Cards revealed in roulette*/
+        #revealed-card-container {display: flex; gap: 1rem; justify-content: center; align-items: center; flex-wrap: wrap; margin: 1rem 0;}
+        .revealed-card { display: flex; flex-direction: column; align-items: center; }
+        .revealed-card .hand-card { transform: none; cursor: default; transition: none; border-color: var(--color-accent-gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
     `;
-    return style.outerHTML;
+  return style.outerHTML;
 };
