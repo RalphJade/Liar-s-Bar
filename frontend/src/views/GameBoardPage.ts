@@ -74,7 +74,7 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
             <div id="roulette-modal" class="roulette-modal">
                 <h2 id="roulette-title"></h2>
                 <div id="revealed-card-container"></div>
-                <!-- This container will hold the roulette wheel -->
+                <!-- This container holds the roulette wheel -->
                 <div id="roulette-wheel-container"></div>
                 <p id="roulette-result"></p>
             </div>
@@ -143,6 +143,8 @@ const handleChallengeResult = (payload: any) => {
     const wheelContainer = document.getElementById('roulette-wheel-container')!;
     const result = document.getElementById('roulette-result')!;
     const revealedCardContainer = document.getElementById('revealed-card-container')!;
+
+    // Derive the challenged player's name from the local game state for reliability.
     const targetPlayer = gameState?.players.find(p => p.id === gameState?.game?.lastPlayerId);
     const targetPlayerName = targetPlayer?.username || 'The previous player';
 
@@ -152,7 +154,7 @@ const handleChallengeResult = (payload: any) => {
     const totalChambers = 6 - riskLevel; // Fewer chambers for higher risk.
     const heartChambers = totalChambers - 1; // Always one skull.
 
-    // --- Step 1: Show the accusation result and the revealed card. ---
+    // Construct the accusation message based on the challenge outcome.
     let accusationMessage = "";
     if (payload.wasLie) {
         accusationMessage = `${targetPlayerName} was bluffing! The card was a ${payload.revealedCard.type.toUpperCase()}.`;
@@ -160,12 +162,13 @@ const handleChallengeResult = (payload: any) => {
         accusationMessage = `False accusation! The card was a ${payload.revealedCard.type.toUpperCase()}.`;
     }
 
+    // --- Step 1: Show the accusation result and the revealed card. ---
     title.textContent = accusationMessage;
     revealedCardContainer.innerHTML = createHandCard(payload.revealedCard);
-    wheelContainer.innerHTML = ''; // Clear any previous wheel.
-    wheelContainer.style.display = 'none'; // Hide the wheel container for now.
+    wheelContainer.innerHTML = '';
+    wheelContainer.style.display = 'none';
     result.textContent = '';
-    overlay.classList.remove('hidden'); // Show the overlay.
+    overlay.classList.remove('hidden');
 
     // Define durations for each step of the animation sequence.
     const accusationDuration = 3000;
@@ -174,18 +177,15 @@ const handleChallengeResult = (payload: any) => {
 
     // --- Step 2: After a delay, show the roulette wheel and start the spin. ---
     setTimeout(() => {
-        revealedCardContainer.innerHTML = ''; // Hide the revealed card.
-        wheelContainer.style.display = 'flex'; // Show the wheel container.
+        revealedCardContainer.innerHTML = '';
+        wheelContainer.style.display = 'flex';
         title.textContent = `${payload.punishedPlayerName} spins the chamber... (${heartChambers} ❤️ | 1 💀)`;
         
-        // Create the roulette wheel with the correct number of chambers.
-        // This function will set up the HTML and calculate the final rotation.
         const cylinder = createRouletteWheel(wheelContainer, totalChambers, payload.isEliminated);
         
         // Reset and trigger the spin animation.
         cylinder.style.animation = 'none';
         void cylinder.offsetWidth; // Trigger a reflow to restart the animation.
-        // Apply the spin animation. CRITICAL FIX: Added 'forwards' to make the animation stick at its final state.
         cylinder.style.animation = `spin ${spinDuration / 1000}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
 
         // --- Step 3: After the spin animation finishes, show the result. ---
@@ -195,7 +195,7 @@ const handleChallengeResult = (payload: any) => {
             
             result.innerHTML = `<div class="roulette-result-text" style="color: ${resultColor};">${resultText}</div>`;
             
-            // Add a screen shake effect if the player is eliminated for dramatic impact.
+            // Add a screen shake effect for dramatic impact if a player is eliminated.
             if (payload.isEliminated) {
                 document.body.style.animation = 'shake 0.5s ease-in-out';
                 setTimeout(() => { document.body.style.animation = ''; }, 500);
@@ -211,25 +211,22 @@ const handleChallengeResult = (payload: any) => {
 };
 
 /**
- * Creates a visual roulette wheel with chambers.
- * CRITICAL FIX: This function now correctly separates the static firing pin from the rotating cylinder.
+ * Creates a visual roulette wheel, separating the rotating cylinder from the static firing pin.
  * @param {HTMLElement} container - The container element to build the wheel in.
  * @param {number} totalChambers - Total number of chambers (e.g., 6, 5, 4...).
  * @param {boolean} willHitSkull - Whether the spin will result in elimination.
  * @returns {HTMLElement} The cylinder element that will be animated.
  */
 const createRouletteWheel = (container: HTMLElement, totalChambers: number, willHitSkull: boolean): HTMLElement => {
-    container.innerHTML = ''; // Clear the container.
-    container.className = 'roulette-wheel'; // This is now a positioning wrapper.
+    container.innerHTML = '';
+    container.className = 'roulette-wheel';
     
-    // Create the revolver cylinder which will rotate.
     const cylinder = document.createElement('div');
     cylinder.className = 'revolver-cylinder';
     
-    // Calculate the angle for each chamber.
     const angleStep = 360 / totalChambers;
     
-    // Randomly determine the position of the skull among the chambers.
+    // Randomly distribute one skull among the heart chambers.
     const chambers: ('skull' | 'heart')[] = [];
     const skullPosition = Math.floor(Math.random() * totalChambers);
     
@@ -246,20 +243,16 @@ const createRouletteWheel = (container: HTMLElement, totalChambers: number, will
         chamber.innerHTML = isSkull ? '💀' : '❤️';
         chamber.classList.add(isSkull ? 'skull-chamber' : 'heart-chamber');
         
-        // Position chambers using transform rotate and translate.
         const angle = i * angleStep;
         chamber.style.transform = `rotate(${angle}deg) translateY(-60px) rotate(-${angle}deg)`;
         
         cylinder.appendChild(chamber);
     }
     
-    // Create the firing pin (the static arrow). It's a sibling to the cylinder.
     const firingPin = document.createElement('div');
     firingPin.className = 'firing-pin';
-    firingPin.innerHTML = '▼'; // Arrow pointing down.
+    firingPin.innerHTML = '▼';
     
-    // Append both cylinder and firing pin to the main container.
-    // The cylinder will spin, the firing pin will not.
     container.appendChild(cylinder);
     container.appendChild(firingPin);
     
@@ -268,7 +261,6 @@ const createRouletteWheel = (container: HTMLElement, totalChambers: number, will
     if (willHitSkull) {
         targetChamberIndex = skullPosition;
     } else {
-        // Find a random heart chamber to land on.
         const heartChamberIndices = chambers.map((c, index) => c === 'heart' ? index : -1).filter(i => i !== -1);
         targetChamberIndex = heartChamberIndices[Math.floor(Math.random() * heartChamberIndices.length)];
     }
@@ -276,12 +268,10 @@ const createRouletteWheel = (container: HTMLElement, totalChambers: number, will
     // Calculate the final rotation angle for the animation.
     const baseRotation = 1080; // 3 full spins for drama.
     const targetAngle = targetChamberIndex * angleStep;
-    const finalRotation = baseRotation - targetAngle; // Subtract to bring the target chamber to the top (0 deg).
+    const finalRotation = baseRotation - targetAngle;
     
-    // Set the final rotation as a CSS custom property on the cylinder itself.
     cylinder.style.setProperty('--final-rotation', `${finalRotation}deg`);
     
-    // Return the cylinder so the caller can apply the animation to it.
     return cylinder;
 };
 
@@ -300,8 +290,8 @@ const showEndGameScreen = (didIWin: boolean, message: string) => {
         </div>
     `;
     document.getElementById('back-to-lobby')?.addEventListener('click', () => {
-        disconnect(); // Disconnect from WebSocket.
-        navigate('/home'); // Go back to the home/lobby page.
+        disconnect();
+        navigate('/home');
     });
 };
 
@@ -333,7 +323,36 @@ const updateUI = () => {
 };
 
 /**
- * Renders the pods for all opponent players around the table.
+ * Determines the CSS position class for an opponent based on their turn order
+ * and the total number of players, ensuring a clockwise layout.
+ * @param {number} opponentIndex - The order of the opponent (1st, 2nd, etc.).
+ * @param {number} totalPlayers - The total number of players in the game.
+ * @returns {string} The CSS class for positioning (e.g., 'pos-top', 'pos-left').
+ */
+const getPlayerPositionClass = (opponentIndex: number, totalPlayers: number): string => {
+    // In a 1v1 game, the single opponent is always positioned at the top.
+    if (totalPlayers === 2) {
+        return 'pos-top';
+    }
+
+    // In a 3-player game, opponents are on the left and right.
+    if (totalPlayers === 3) {
+        if (opponentIndex === 1) return 'pos-left';  // 1st opponent in turn order.
+        if (opponentIndex === 2) return 'pos-right'; // 2nd opponent in turn order.
+    }
+
+    // In a 4-player game, opponents are at the left, top, and right.
+    if (totalPlayers === 4) {
+        if (opponentIndex === 1) return 'pos-left';  // 1st opponent.
+        if (opponentIndex === 2) return 'pos-top';   // 2nd opponent.
+        if (opponentIndex === 3) return 'pos-right'; // 3rd opponent.
+    }
+
+    return ''; // Fallback for any other case.
+};
+
+/**
+ * Renders the pods for all opponent players around the table in a clockwise order.
  * @param {string} currentUserId - The ID of the current user to exclude them from the pods.
  */
 const renderPlayerPods = (currentUserId: string) => {
@@ -341,16 +360,28 @@ const renderPlayerPods = (currentUserId: string) => {
     if (!container || !gameState) return;
     
     const players = gameState.players || [];
-    // Reorder players so the current user is conceptually at the bottom.
+    const totalPlayers = players.length;
+
+    // Reorder players so the current user is conceptually at the bottom/start.
     const playerPositions = assignPlayerPositions(players, currentUserId);
     
-    container.innerHTML = playerPositions.map((player, index) => {
-        if (player.id === currentUserId) return ''; // Don't render a pod for myself.
+    let opponentIndex = 0;
+
+    container.innerHTML = playerPositions.map((player) => {
+        // Skip rendering the current user in the opponent pods area.
+        if (player.id === currentUserId) return '';
+        
+        opponentIndex++;
+        
+        // Get the correct position class using the layout logic function.
+        const positionClass = getPlayerPositionClass(opponentIndex, totalPlayers);
+
         if (player.isEliminated) {
-            return createEliminatedPod(player, index + 1);
+            return createEliminatedPod(player, positionClass);
         }
+        
         const isCurrentTurn = player.id === gameState?.game?.currentPlayerId;
-        return createPlayerPod(player, index + 1, isCurrentTurn);
+        return createPlayerPod(player, positionClass, isCurrentTurn);
     }).join('');
 };
 
@@ -377,7 +408,7 @@ const renderMyHand = (isMyTurn: boolean) => {
     if (!container) return;
     container.innerHTML = myCards.map(card => createHandCard(card)).join('');
     
-    // Add click listeners to cards only if it's my turn.
+    // Add click listeners to cards only if it's the player's turn.
     container.querySelectorAll('.hand-card').forEach(cardEl => {
         if (isMyTurn) {
             cardEl.addEventListener('click', () => handleCardSelection(cardEl));
@@ -390,7 +421,7 @@ const renderMyHand = (isMyTurn: boolean) => {
 };
 
 /**
- * Renders the current game status text (e.g., current player's turn).
+ * Renders the current game status text, such as the required card or current player.
  */
 const renderGameStatus = () => {
     const statusText = document.getElementById('game-status-text');
@@ -413,7 +444,6 @@ const renderActionButtons = (isMyTurn: boolean, canChallenge: boolean) => {
     const container = document.getElementById('action-buttons');
     if (!container) return;
     container.innerHTML = createActionButtons(isMyTurn, canChallenge);
-    // Add event listeners to the newly created buttons.
     document.getElementById('play-card-btn')?.addEventListener('click', handlePlayCardAction);
     document.getElementById('call-bluff-btn')?.addEventListener('click', handleCallBluffAction);
 };
@@ -456,13 +486,10 @@ const renderChat = () => {
 const handleCardSelection = (cardEl: Element) => {
     const cardId = cardEl.getAttribute('data-card-id');
     if (selectedCardId === cardId) {
-        // Deselect if the same card is clicked again.
         selectedCardId = null;
         cardEl.classList.remove('selected');
     } else {
-        // Select the new card.
         selectedCardId = cardId;
-        // Remove 'selected' from all other cards.
         document.querySelectorAll('.hand-card').forEach(c => c.classList.remove('selected'));
         cardEl.classList.add('selected');
     }
@@ -476,9 +503,8 @@ const handlePlayCardAction = () => {
         alert("Please select a card to play.");
         return;
     }
-    // Send the action to the server via WebSocket.
     sendWebSocketMessage({ type: 'PLAY_CARD', payload: { cardId: selectedCardId } });
-    selectedCardId = null; // Reset selection after playing.
+    selectedCardId = null;
 };
 
 /**
@@ -491,10 +517,9 @@ const handleCallBluffAction = () => {
 };
 
 /**
- * Sets up all static event listeners for the page.
+ * Sets up all static event listeners for the page, such as chat and modals.
  */
 const setupEventListeners = () => {
-    // Chat form submission.
     const chatForm = document.getElementById('chat-form');
     chatForm?.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -506,7 +531,6 @@ const setupEventListeners = () => {
         }
     });
 
-    // Quit game modal logic.
     const quitModal = document.getElementById('quit-game-modal') as HTMLDivElement;
     const quitBtn = document.getElementById('quit-game-btn');
     const confirmQuitBtn = document.getElementById('confirm-quit-btn');
@@ -518,26 +542,23 @@ const setupEventListeners = () => {
     quitBtn?.addEventListener('click', openModal);
     cancelQuitBtn?.addEventListener('click', closeModal);
     confirmQuitBtn?.addEventListener('click', () => {
-        // Send a message to the server that the player is leaving the room.
         sendWebSocketMessage({type: "LEAVE_ROOM", payload:{}});
         closeModal();
     });
-    // Allow closing the modal by clicking outside of it.
     quitModal.addEventListener('click', (e) => { if (e.target === quitModal) closeModal(); });
-    // Allow closing the modal by pressing the Escape key.
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && quitModal.classList.contains('show')) closeModal(); });
 };
 
 /**
- * Helper function to reorder the players array for display purposes.
- * It puts the current user at the "start" of the array to arrange others around them.
+ * Reorders the players array to position the current user at the logical start (index 0),
+ * followed by other players in their natural turn order.
  * @param {any[]} players - The array of player objects.
  * @param {string} currentUserId - The ID of the current user.
  * @returns {any[]} The reordered array of players.
  */
 function assignPlayerPositions(players: any[], currentUserId: string): any[] {
     const currentUserIndex = players.findIndex(p => p.id === currentUserId);
-    if (currentUserIndex === -1) return players; // Should not happen.
+    if (currentUserIndex === -1) return players;
     const reordered = [...players];
     // Slice the array at the current user's index and move the first part to the end.
     return reordered.slice(currentUserIndex).concat(reordered.slice(0, currentUserIndex));
@@ -545,10 +566,17 @@ function assignPlayerPositions(players: any[], currentUserId: string): any[] {
 
 // --- HTML Template Creation Functions ---
 
-const createPlayerPod = (player: any, position: number, isCurrentTurn: boolean) => {
+/**
+ * Creates the HTML for an opponent's pod.
+ * @param player - The player object.
+ * @param positionClass - The CSS class for table positioning (e.g., 'pos-top').
+ * @param isCurrentTurn - Boolean indicating if it's this player's turn.
+ * @returns The HTML string for the player pod.
+ */
+const createPlayerPod = (player: any, positionClass: string, isCurrentTurn: boolean) => {
     const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
     return `
-        <div class="player-pod player-${position} ${isCurrentTurn ? 'active-turn' : ''}" data-player-id="${player.id}">
+        <div class="player-pod ${positionClass} ${isCurrentTurn ? 'active-turn' : ''}" data-player-id="${player.id}">
             <div class="opponent-hand">
                 ${Array(player.handSize || 0).fill('<div class="card-back small-card"></div>').join('')}
             </div>
@@ -562,6 +590,11 @@ const createPlayerPod = (player: any, position: number, isCurrentTurn: boolean) 
         </div>`;
 };
 
+/**
+ * Creates the HTML for the current user's info display area.
+ * @param player - The current user's player object.
+ * @returns The HTML string for the user info area.
+ */
 const createMyInfoPod = (player: any) => {
     const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
     const isMyTurn = gameState?.game?.currentPlayerId === player.id;
@@ -574,10 +607,16 @@ const createMyInfoPod = (player: any) => {
     `;
 };
 
-const createEliminatedPod = (player: any, position: number) => {
+/**
+ * Creates the HTML for an eliminated player's pod.
+ * @param player - The eliminated player object.
+ * @param positionClass - The CSS class for table positioning.
+ * @returns The HTML string for the eliminated player pod.
+ */
+const createEliminatedPod = (player: any, positionClass: string) => {
     const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
     return `
-        <div class="player-pod player-${position} eliminated" data-player-id="${player.id}">
+        <div class="player-pod ${positionClass} eliminated" data-player-id="${player.id}">
             <div class="player-info">
                 <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar eliminated-avatar" />
                 <div class="player-details">
@@ -588,16 +627,31 @@ const createEliminatedPod = (player: any, position: number) => {
         </div>`;
 };
 
+/**
+ * Creates the HTML for a single card in the player's hand.
+ * @param card - The card object.
+ * @returns The HTML string for the card.
+ */
 const createHandCard = (card: Card) => {
     const cardContent = card.type === 'joker' ? '🃏' : card.type.charAt(0).toUpperCase();
     return `<div class="card-face hand-card" data-card-id="${card.id}">${cardContent}</div>`;
 };
 
+/**
+ * Creates the HTML for the main action buttons.
+ * @param isMyTurn - Boolean indicating if it's the current player's turn.
+ * @param canChallenge - Boolean indicating if a challenge is possible.
+ * @returns The HTML string for the action buttons.
+ */
 const createActionButtons = (isMyTurn: boolean, canChallenge: boolean) => `
     <button id="play-card-btn" class="button button-primary action-btn" ${!isMyTurn ? 'disabled' : ''}>Play Card</button>
     <button id="call-bluff-btn" class="button button-danger action-btn" ${!isMyTurn || !canChallenge ? 'disabled' : ''}>Call Bluff</button>
 `;
 
+/**
+ * Creates the HTML for the quit game confirmation modal.
+ * @returns The HTML string for the modal.
+ */
 const renderQuitModal = () => `
     <div id="quit-game-modal" class="modal-overlay hidden">
         <div class="modal-content">
@@ -612,7 +666,6 @@ const renderQuitModal = () => `
 
 /**
  * Generates and returns the CSS styles for the component as a string.
- * This keeps styles encapsulated within the component file.
  * @returns {string} The HTML for the style tag.
  */
 const renderDynamicStyles = () => {
@@ -643,7 +696,23 @@ const renderDynamicStyles = () => {
         .opponent-hand { display: flex; justify-content: center; gap: -20px; margin-bottom: 5px; }
         .card-back { background: linear-gradient(45deg, #b91c1c, #7f1d1d); border: 1px solid var(--color-accent-gold); border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .small-card { width: 30px; height: 42px; }
-        .player-2 { top: 2rem; left: 50%; transform: translateX(-50%); }
+
+        /* Generic positioning classes for players on the table. */
+        .pos-top { /* Player positioned directly across from the user. */
+            top: 2rem; 
+            left: 50%; 
+            transform: translateX(-50%); 
+        }
+        .pos-left { /* Player positioned on the left side of the table. */
+            top: 50%;
+            left: 2rem;
+            transform: translateY(-50%);
+        }
+        .pos-right { /* Player positioned on the right side of the table. */
+            top: 50%;
+            right: 2rem;
+            transform: translateY(-50%);
+        }
 
         /* Center Pile */
         .center-pile { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; display: flex; flex-direction: column; gap: 1rem; align-items: center; }
@@ -700,11 +769,11 @@ const renderDynamicStyles = () => {
             margin-bottom: 1rem; animation: pulse 2s infinite;
         }
         
-        /* Roulette Wheel Styles - CORRECTED */
+        /* Roulette Wheel Styles */
         .roulette-wheel {
             width: 200px; height: 200px;
             margin: 2rem auto;
-            position: relative; /* Acts as a positioning context for the cylinder and firing pin */
+            position: relative; /* This element is a positioning context for the cylinder and firing pin */
             display: flex; justify-content: center; align-items: center;
         }
         
@@ -714,7 +783,6 @@ const renderDynamicStyles = () => {
             background: radial-gradient(circle, #4A4A4A 30%, #2A2A2A 70%);
             border: 4px solid #8B4513;
             box-shadow: inset 0 0 20px rgba(0,0,0,0.6), 0 0 30px rgba(139, 69, 19, 0.4);
-            /* The 'spin' animation will be applied here directly via JS */
         }
         
         .chamber {
@@ -734,7 +802,7 @@ const renderDynamicStyles = () => {
             top: -15px; left: 50%;
             transform: translateX(-50%);
             font-size: 1.8rem; color: #dc2626; text-shadow: 0 0 10px #dc2626;
-            z-index: 10; /* Ensures it's on top of the cylinder */
+            z-index: 10; /* Ensures it is on top of the cylinder */
             animation: firingPinPulse 1s ease-in-out infinite;
         }
         
@@ -760,7 +828,7 @@ const renderDynamicStyles = () => {
         #revealed-card-container { display: flex; justify-content: center; align-items: center; margin: 1rem 0; }
         #revealed-card-container .hand-card { transform: scale(1.2); box-shadow: 0 0 20px rgba(212, 175, 55, 0.6); border: 3px solid var(--color-accent-gold); }
         
-        /* Unchanged Styles */
+        /* Chat and Modal Styles */
         .chat-sidebar { width: 350px; flex-shrink: 0; display: flex; flex-direction: column; background: #1e293b; border-left: 2px solid var(--color-wood-light); }
         .chat-panel { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .chat-header { padding: 1rem; background: var(--color-wood-dark); color: var(--color-accent-gold); }
