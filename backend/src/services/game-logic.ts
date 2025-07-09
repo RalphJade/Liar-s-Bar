@@ -269,6 +269,8 @@ export function handleCallBluff(ws: CustomWebSocket): void {
       return;
     }
 
+    redistributeCards(room);
+
     const punishedPlayerIsChallenger = punishedPlayerId === challengerId;
     const challengerWasEliminated =
       punishedPlayerIsChallenger && eliminatedOnThisTurn;
@@ -411,4 +413,34 @@ function handleTurnTimeout(
 
   broadcastRoomState(room);
   advanceTurnAfterInterruption(room);
+}
+
+// No game-logic.ts, adicionar esta função:
+function redistributeCards(room: Room & { game: CardGame }): void {
+  log(`Redistributing cards in room ${room.roomCode}.`);
+  
+  const roomHands = getRoomHands(room.roomCode);
+  if (!roomHands) return;
+
+  // ✅ Reutilizar dealCards - ela já cria novo deck e distribui 5 cartas
+  const newHands = dealCards(room);
+  
+  // ✅ Manter apenas dados dos jogadores ativos (não eliminados)
+  roomHands.forEach((existingHand, playerId) => {
+    const newHand = newHands.get(playerId);
+    if (newHand && !existingHand.isEliminated) {
+      // Manter dados do jogador, mas trocar apenas as cartas
+      existingHand.cards = newHand.cards;
+      existingHand.hasPlayedThisTurn = false;
+    } else if (existingHand.isEliminated) {
+      // Jogadores eliminados não recebem cartas
+      existingHand.cards = [];
+    }
+  });
+
+  // ✅ O deck já foi atualizado pela função dealCards
+  // ✅ Limpar cartas jogadas
+  room.game.playedCards = [];
+  
+  log(`Cards redistributed using dealCards. Remaining deck: ${room.game.deck.length}`);
 }
