@@ -9,10 +9,12 @@ import { navigate } from '../../router/router.ts';
  * @param {HTMLElement} element The container element where the header will be mounted.
  */
 export const renderHeader = (element: HTMLElement) => {
+  // Get the current authenticated user data
   const user = getUser();
-  if (!user) return; // Do not render the header if the user is not logged in.
+  if (!user) return; // Early return if user is not authenticated - header should not be rendered
 
-  // Dynamically create the avatar element based on whether an avatar_url exists
+  // Dynamically generate avatar element based on user's avatar availability
+  // Uses either the user's uploaded avatar image or a default SVG icon
   const avatarElement = user.avatar_url
     ? `<img src="http://localhost:3001${user.avatar_url}" alt="${user.username}'s avatar" class="avatar-icon" style="width: 28px; height: 28px; object-fit: cover; padding: 0;"/>`
     : `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="avatar-icon">
@@ -20,26 +22,55 @@ export const renderHeader = (element: HTMLElement) => {
         <circle cx="12" cy="7" r="4"></circle>
       </svg>`;
 
+  // Render the complete header structure with logo, navigation, and user interface
   element.innerHTML = `
     <header class="app-header">
       <div class="header-left">
         <div class="logo">
-          <!-- SVG Icon representing playing cards and danger, fitting the dark atmosphere -->
-          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor" class="logo-icon">
-            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
-            <path d="M15.5 4L14.5 9.5H9.5L8.5 4H15.5M17 2H7L8.5 9.5H2.5L4 14.5H20L21.5 9.5H15.5L17 2Z" opacity="0.7"/>
+          <!-- 
+            Final Logo Revision: A stark, graphic icon for maximum impact at small sizes.
+            This design avoids complex details for a clean, memorable, and somber look.
+            - Simplified Skull/Mask: Represents the high stakes and the "poker face" of a liar.
+            - The Crack: Symbolizes the fragility of a lie and the tension of the game.
+            - Red Spade Eye: A direct, unambiguous link to the card game, with the spade representing danger and the red color adding a sense of aggression.
+          -->
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" class="logo-icon">
+            <!-- Dark circular background for contrast -->
+            <circle cx="12" cy="12" r="11" fill="#1a1a1a" stroke="#333" stroke-width="1.5"/>
+            
+            <!-- Main skull/mask shape, filled in white for a bold look -->
+            <path d="M17.5 9C17.5 5 15 3 12 3S6.5 5 6.5 9c0 4 1 8 5.5 11 4.5-3 5.5-7 5.5-11z" fill="#f7fafc"/>
+            
+            <!-- Empty eye socket on the right -->
+            <circle cx="14.5" cy="10.5" r="1.5" fill="#1a1a1a"/>
+            
+            <!-- Red spade eye on the left -->
+            <g transform="translate(7, 8.5) scale(0.2)">
+              <path d="M12 0C6.343 6.343 0 10.5 0 16c0 4.418 3.582 8 8 8s8-3.582 8-8c0-5.5-6.343-9.657-12-16zM12 21a1 1 0 110-2 1 1 0 010 2z" fill="#e53e3e"/>
+              <path d="M11 26h2v-8h-2v8z" fill="#e53e3e"/>
+            </g>
+
+            <!-- The crack, representing the broken facade of a liar -->
+            <path d="M11.5 3.5L10 9l2 2.5-2 3.5" fill="none" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
           </svg>
           <span class="logo-text">Liar's Bar</span>
         </div>
       </div>
+      
+      <!-- Center section containing the game rules button -->
       <div class="header-center">
         <button id="rules-btn" class="button-rules">Game Rules</button>
       </div>
+      
+      <!-- Right section with user profile information and dropdown menu -->
       <div class="header-right">
+        <!-- User profile trigger - displays avatar and username -->
         <div id="user-profile-link" class="user-info">
           ${avatarElement}
           <span class="username">${user.username}</span>
         </div>
+        
+        <!-- Dropdown menu for user actions (hidden by default) -->
         <div id="user-dropdown" class="user-dropdown-menu hidden">
           <ul>
             <li id="profile-menu-item">My Profile</li>
@@ -49,9 +80,18 @@ export const renderHeader = (element: HTMLElement) => {
       </div>
     </header>
 
+    <!-- Modal overlay for game rules - initially hidden -->
     <div id="rules-modal-overlay" class="modal-overlay hidden">
       <div class="modal-content">
-        <button id="close-modal-btn" class="modal-close-btn">×</button>
+        <!-- Enhanced close button with better accessibility and click area -->
+        <button id="close-modal-btn" class="modal-close-btn" aria-label="Close modal" title="Close">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+        
+        <!-- Game rules content -->
         <h2 class="modal-title">How to Play Liar's Deck</h2>
         <div class="modal-body">
           <h3>The Deadly Game</h3>
@@ -96,8 +136,56 @@ export const renderHeader = (element: HTMLElement) => {
         </div>
       </div>
     </div>
+
+    <!-- Additional CSS for improved modal close button -->
+    <style>
+      .modal-close-btn {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        width: 44px;
+        height: 44px;
+        border: none;
+        background: rgba(0, 0, 0, 0.1);
+        border-radius: 50%;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+        z-index: 1000;
+      }
+      
+      .modal-close-btn:hover {
+        background: rgba(0, 0, 0, 0.2);
+        transform: scale(1.1);
+      }
+      
+      .modal-close-btn:active {
+        transform: scale(0.95);
+      }
+      
+      .modal-close-btn svg {
+        color: #666;
+      }
+      
+      .modal-close-btn:hover svg {
+        color: #000;
+      }
+      
+      .logo-icon {
+        filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+      }
+      
+      .logo-text {
+        font-weight: bold;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        margin-left: 8px;
+      }
+    </style>
   `;
 
+  // Get DOM element references for event handling
   const rulesBtn = document.getElementById('rules-btn') as HTMLButtonElement;
   const modalOverlay = document.getElementById('rules-modal-overlay') as HTMLDivElement;
   const closeModalBtn = document.getElementById('close-modal-btn') as HTMLButtonElement;
@@ -106,37 +194,54 @@ export const renderHeader = (element: HTMLElement) => {
   const profileMenuItem = document.getElementById('profile-menu-item');
   const logoutMenuItem = document.getElementById('logout-menu-item');
 
+  // Legacy event listeners (kept for backwards compatibility)
   rulesBtn?.addEventListener('click', () => modalOverlay?.classList.remove('hidden'));
   closeModalBtn?.addEventListener('click', () => modalOverlay?.classList.add('hidden'));
   
+  // Modal control functions for consistent show/hide behavior
   const openModal = () => modalOverlay.style.display = 'flex';
   const closeModal = () => modalOverlay.style.display = 'none';
 
+  // Event listeners for modal interactions
   rulesBtn.addEventListener('click', openModal);
   closeModalBtn.addEventListener('click', closeModal);
   
+  // Close modal when clicking outside the modal content area
   modalOverlay.addEventListener('click', (e) => {
     if (e.target === modalOverlay) {
       closeModal();
     }
   });
 
+  // Enhanced close button interaction - larger click area and better feedback
+  closeModalBtn.addEventListener('mouseenter', () => {
+    closeModalBtn.style.transform = 'scale(1.1)';
+  });
+  
+  closeModalBtn.addEventListener('mouseleave', () => {
+    closeModalBtn.style.transform = 'scale(1)';
+  });
+
+  // User dropdown menu event handlers
   userMenuTrigger?.addEventListener('click', (e) => {
-    e.stopPropagation();
+    e.stopPropagation(); // Prevent event bubbling to avoid immediate closure
     userDropdown?.classList.toggle('hidden');
   });
 
+  // Profile navigation handler
   profileMenuItem?.addEventListener('click', () => {
     navigate('/profile');
     userDropdown?.classList.add('hidden');
   });
 
+  // Logout handler - disconnects websocket and clears user session
   logoutMenuItem?.addEventListener('click', () => {
     websocket.disconnect();
     logout();
     userDropdown?.classList.add('hidden');
   });
 
+  // Global click handler to close dropdown when clicking outside
   window.addEventListener('click', () => {
     userDropdown?.classList.add('hidden');
   });
