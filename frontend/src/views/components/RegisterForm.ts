@@ -8,7 +8,7 @@ import api from '../../api/api.ts';
 export const renderRegisterForm = (element: HTMLElement) => {
   // Set the static HTML content for the registration form.
   element.innerHTML = `
-    <form id="register-form">
+    <form id="register-form" novalidate>
       <h2 class="form-title">Create a New Account</h2>
       <div id="register-feedback"></div>
       <div class="form-group">
@@ -46,11 +46,10 @@ export const renderRegisterForm = (element: HTMLElement) => {
     submitBtn.textContent = 'Registering...';
 
     const formData = new FormData(form);
-    const password = formData.get('password');
-    const confirmPassword = formData.get('confirmPassword');
+    const data = Object.fromEntries(formData);
 
     // Perform client-side validation for password matching.
-    if (password !== confirmPassword) {
+    if (data.password !== data.confirmPassword) {
       feedbackDiv.innerHTML = '<div class="form-feedback error">Passwords do not match.</div>';
       submitBtn.disabled = false;
       submitBtn.textContent = 'Register';
@@ -58,13 +57,29 @@ export const renderRegisterForm = (element: HTMLElement) => {
     }
 
     try {
-      // Send registration data to the backend. `Object.fromEntries` converts FormData to a plain object.
-      await api.post('/auth/register', Object.fromEntries(formData));
+      // Send registration data to the backend.
+      await api.post('/auth/register', data);
       feedbackDiv.innerHTML = '<div class="form-feedback success">Account created! You can now log in.</div>';
       form.reset(); // Clear form fields on success.
     } catch (err: any) {
       // On failure, display an error message from the API or a generic one.
-      feedbackDiv.innerHTML = `<div class="form-feedback error">${err.response?.data?.message || 'Registration failed.'}</div>`;
+      const errorData = err.response?.data;
+      let errorMessage = '<div class="form-feedback error">';
+      
+      // Handle Zod validation errors, which come as an array
+      if (errorData && Array.isArray(errorData.message)) {
+        errorMessage += '<ul>';
+        errorData.message.forEach((zodError: { message: string }) => {
+          errorMessage += `<li>${zodError.message}</li>`;
+        });
+        errorMessage += '</ul>';
+      } else {
+        // Handle other string-based errors
+        errorMessage += errorData?.message || 'Registration failed.';
+      }
+      
+      errorMessage += '</div>';
+      feedbackDiv.innerHTML = errorMessage;
     } finally {
       // Re-enable the submit button in both success and error cases.
       submitBtn.disabled = false;
