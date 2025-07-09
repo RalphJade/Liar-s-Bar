@@ -26,59 +26,87 @@ export const renderProfilePage = (element: HTMLElement) => {
   element.innerHTML = `
     <div id="header-container"></div>
     <main class="page-container">
-      <div class="card profile-card" style="max-width: 600px;">
+      <div class="card profile-card" style="max-width: 800px;">
         <h1 class="profile-title">Player Dossier</h1>
         
-        <!-- Hidden input for file selection -->
-        <input type="file" id="avatar-input" accept="image/png, image/jpeg" style="display: none;" />
-
         <div id="profile-feedback-container"></div>
-
-        <div class="profile-avatar-section" id="avatar-container">
-          ${avatarDisplay}
-          <p style="font-size: 0.9rem; color: var(--color-text-medium); margin-top: 0.5rem;">
-            Click on the image to change your avatar (PNG or JPG).
-          </p>
-        </div>
         
-        <div class="profile-info">
-          <p><strong>Handle:</strong> ${user.username}</p>
-          <p><strong>Contact:</strong> ${user.email}</p>
+        <div class="profile-content-grid">
+            <!-- Left Column: Avatar and Info -->
+            <div class="profile-left-column">
+                <!-- Hidden input for file selection -->
+                <input type="file" id="avatar-input" accept="image/png, image/jpeg" style="display: none;" />
+                <div class="profile-avatar-section" id="avatar-container">
+                  ${avatarDisplay}
+                  <p style="font-size: 0.9rem; color: var(--color-text-medium); margin-top: 0.5rem;">
+                    Click on the image to change your avatar (PNG or JPG).
+                  </p>
+                </div>
+                <div class="profile-info">
+                  <p><strong>Handle:</strong> ${user.username}</p>
+                  <p><strong>Contact:</strong> ${user.email}</p>
+                </div>
+            </div>
+
+            <!-- Right Column: Stats -->
+            <div class="profile-right-column">
+                <div class="stats-grid">
+                    <h3>Combat Record</h3>
+                    <p><strong>Matches Played:</strong> ${user.matches_played}</p>
+                    <p><strong>Wins:</strong> ${user.wins}</p>
+                    <p><strong>Win Rate:</strong> ${winRate}%</p>
+                </div>
+            </div>
         </div>
 
-        <div class="stats-grid">
-            <h3>Combat Record</h3>
-            <p><strong>Matches Played:</strong> ${user.matches_played}</p>
-            <p><strong>Wins:</strong> ${user.wins}</p>
-            <p><strong>Win Rate:</strong> ${winRate}%</p>
-            <h3>Deception Analysis</h3>
-            <p><strong>Successful Bluffs:</strong> ${user.successful_bluffs}</p>
-            <p><strong>Lies Called Correctly:</strong> ${user.lies_called}</p>
-            <p><strong>Times Caught Lying:</strong> ${user.times_caught_lying}</p>
-        </div>
-
-        <button id="back-home-btn" class="button button-primary" style="margin-top: 2rem;">Return to the Bar</button>
+        <button id="back-home-btn" class="button button-primary" style="margin-top: 2rem; max-width: 200px; align-self: center;">Return to the Bar</button>
       </div>
     </main>
   `;
 
-  // --- Add new CSS for the stats grid ---
+  // --- Add new CSS for the profile layout ---
   const style = document.createElement('style');
   style.textContent = `
-    .stats-grid {
+    .profile-content-grid {
+      display: flex;
+      gap: 2rem;
       margin-top: 2rem;
+      align-items: flex-start;
+    }
+    .profile-left-column {
+      flex: 1;
+      text-align: center;
+    }
+    .profile-right-column {
+      flex: 2;
+    }
+    .stats-grid {
       text-align: left;
-      border-top: 1px solid var(--color-border);
-      padding-top: 1.5rem;
+      border: 1px solid var(--color-border);
+      padding: 1.5rem;
+      border-radius: var(--border-radius);
+      background-color: rgba(0,0,0,0.2);
     }
     .stats-grid h3 {
       font-family: var(--font-display);
       font-size: 1.5rem;
       color: var(--color-accent-gold);
+      margin-top: 0;
       margin-bottom: 1rem;
+      border-bottom: 1px solid var(--color-wood-light);
+      padding-bottom: 0.5rem;
     }
     .stats-grid p {
       margin-bottom: 0.5rem;
+      font-size: 1rem;
+    }
+    @media (max-width: 768px) {
+        .profile-content-grid {
+            flex-direction: column;
+        }
+        .profile-right-column {
+            width: 100%;
+        }
     }
   `;
   element.appendChild(style);
