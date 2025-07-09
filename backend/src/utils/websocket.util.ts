@@ -61,27 +61,22 @@ export function broadcastToOthers<T extends ServerMessage["type"]>(
  * @returns The ID of the next player, or null if no valid player is found.
  */
 export function getNextPlayer(room: Room & { game: { currentPlayerIndex: number; direction: 1 | -1 } }): string | null {
-  const playerIds = Array.from(room.players.keys());
-  if (playerIds.length < 2) return null; // Can't get a next player if there's only one or zero
-
   const roomHands = getRoomHands(room.roomCode);
   if (!roomHands) return null;
 
-  let attempts = 0;
-  let nextIndex = room.game.currentPlayerIndex;
-
-  do {
-      nextIndex = (nextIndex + room.game.direction + playerIds.length) % playerIds.length;
-      const nextPlayerId = playerIds[nextIndex];
-      const nextPlayerHand = roomHands.get(nextPlayerId);
-      
-      // If the next player is not eliminated, they are the one.
-      if (nextPlayerHand && !nextPlayerHand.isEliminated) {
-          return nextPlayerId;
-      }
-      attempts++;
-  } while (attempts < playerIds.length);
+  const playerIds = Array.from(room.players.keys());
+  const currentIndex = room.game.currentPlayerIndex;
   
-  // If we loop through everyone and can't find a non-eliminated player (e.g., game over).
-  return null; 
+  for (let i = 1; i <= playerIds.length; i++) {
+    const nextIndex = (currentIndex + i) % playerIds.length;
+    const nextPlayerId = playerIds[nextIndex];
+    const nextPlayerHand = roomHands.get(nextPlayerId);
+    
+    // ✅ PULAR jogadores eliminados OU inativos
+    if (nextPlayerHand && !nextPlayerHand.isEliminated && !nextPlayerHand.isInactive) {
+      return nextPlayerId;
+    }
+  }
+  
+  return null;
 }

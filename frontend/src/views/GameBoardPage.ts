@@ -422,6 +422,11 @@ const createPlayerPod = (
   const avatarSrc = player.avatar_url
     ? `${API_BASE_URL}${player.avatar_url}`
     : "https://via.placeholder.com/60";
+
+  if (player.isInactive) {
+    return createInactivePod(player, position);
+  }
+
   return `
         <div class="player-pod player-${position} ${
     isCurrentTurn ? "active-turn" : ""
@@ -477,6 +482,20 @@ const createEliminatedPod = (player: any, position: number) => {
         </div>`;
 };
 
+const createInactivePod = (player: any, position: number) => {
+  const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : "https://via.placeholder.com/60";
+  return `
+    <div class="player-pod player-${position} inactive" data-player-id="${player.id}">
+      <div class="player-info">
+        <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar inactive-avatar" />
+        <div class="player-details">
+          <span class="player-name">${player.username}</span>
+          <span class="player-risk-level">PLAYED ALL CARDS</span>
+        </div>
+      </div>
+    </div>`;
+};
+
 const createHandCard = (card: Card) => {
   const cardContent =
     card.type === "joker" ? "🃏" : card.type.charAt(0).toUpperCase();
@@ -484,11 +503,15 @@ const createHandCard = (card: Card) => {
 };
 
 const createRevealedCards = (cards: Card[]) => {
-    return cards.map((card: Card) => `
+  return cards
+    .map(
+      (card: Card) => `
         <div class="revealed-card">
             ${createHandCard(card)}
         </div>
-    `).join('');
+    `
+    )
+    .join("");
 };
 
 const createActionButtons = (isMyTurn: boolean, canChallenge: boolean) => `
@@ -525,6 +548,9 @@ const renderDynamicStyles = () => {
         /* Player Pods (Opponents) */
         .player-pod { position: absolute; display: flex; flex-direction: column-reverse; align-items: center; gap: 0.5rem; transition: all 0.3s ease; }
         .player-pod.active-turn .player-avatar { box-shadow: 0 0 20px 5px #facc15; transform: scale(1.1); }
+        .player-pod.inactive .player-avatar { filter: grayscale(100%) brightness(0.8);  border-color: #64748b; }
+        .inactive-avatar { opacity: 0.7; }
+        .player-pod.inactive .player-risk-level {   color: #64748b; font-weight: bold; }
         .player-info { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
         .player-avatar { width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--color-accent-gold); object-fit: cover; background: var(--color-wood-dark); }
         .player-details { display:flex; flex-direction:column; align-items: center; background: rgba(0,0,0,0.7); padding: 0.25rem 0.75rem; border-radius: 12px; }

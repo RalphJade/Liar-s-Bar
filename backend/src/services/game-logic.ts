@@ -168,11 +168,16 @@ export function handlePlayCard(
 
   log(`Player ${ws.clientUsername} is playing card(s) ${cardsToPlay}.`);
 
-   cardsToPlay.forEach(card => {
-       playerHand.cards = playerHand.cards.filter(c => c.id !== card.id);
-   });
+  cardsToPlay.forEach((card) => {
+    playerHand.cards = playerHand.cards.filter((c) => c.id !== card.id);
+  });
 
-  room.game.lastPlayedCard = [...cardsToPlay]
+  if (playerHand.cards.length === 0) {
+    playerHand.isInactive = true;
+    log(`Player ${ws.clientUsername} is now inactive (no cards left).`);
+  }
+
+  room.game.lastPlayedCard = [...cardsToPlay];
   room.game.lastPlayerId = ws.clientId;
   room.game.playedCards.push(...cardsToPlay);
 
@@ -212,11 +217,11 @@ export function handleCallBluff(ws: CustomWebSocket): void {
 
   const playedCards = room.game.lastPlayedCard;
   const requiredType = room.game.currentCardType!;
-  
+
   const invalidCards: Card[] = [];
   const validCards: Card[] = [];
-  
-  playedCards.forEach(card => {
+
+  playedCards.forEach((card) => {
     if (card.type === requiredType || card.type === "joker") {
       validCards.push(card);
     } else {
@@ -236,7 +241,7 @@ export function handleCallBluff(ws: CustomWebSocket): void {
   punishedHand.riskLevel += 1;
   const eliminatedOnThisTurn = spinRoulette(punishedHand.riskLevel);
 
-  if (wasLie) {    
+  if (wasLie) {
     message = `${target.username} was caught bluffing! `;
   } else {
     message = `${challenger.username} falsely accused ${target.username}! `;
@@ -287,7 +292,8 @@ export function handleCallBluff(ws: CustomWebSocket): void {
       }
     }
 
-    const nextRoundCardType = validCards.length > 0 ? validCards[0].type : undefined;
+    const nextRoundCardType =
+      validCards.length > 0 ? validCards[0].type : undefined;
     startNewRound(room, nextTurnPlayerId, false, nextRoundCardType);
   }, 7000); // Increased delay to match frontend animation
 }
@@ -319,7 +325,7 @@ function startNewRound(
   }
 
   room.game.currentCardType = referenceType as Exclude<CardType, "joker">;
-  room.game.lastPlayedCard =[];
+  room.game.lastPlayedCard = [];
   room.game.lastPlayerId = null;
   room.game.playedCards = [];
 
@@ -335,29 +341,53 @@ function checkForWinner(room: Room & { game: CardGame }): boolean {
   let winnerId: string | null = null;
   let winnerMessage: string = "";
 
-  // Condition 1: A player has no cards left
-  for (const [playerId, hand] of roomHands.entries()) {
+ for (const [playerId, hand] of roomHands.entries()) {
     const player = room.players.get(playerId);
-    if (player && hand.cards.length === 0 && !hand.isEliminated) {
-      winnerId = playerId;
-      winnerMessage = `${player.username} won by playing all their cards!`;
-      break;
+    if (player && hand.cards.length === 0 && !hand.isEliminated && !hand.isInactive) {
+      hand.isInactive = true;
+      log(`Player ${player.username} is now inactive (no cards left).`);
     }
   }
 
-  // Condition 2: Only one player is not eliminated
-  if (!winnerId) {
-    const activePlayers = allPlayerIds.filter(
-      (id) => !roomHands.get(id)?.isEliminated
-    );
-    if (activePlayers.length <= 1) {
-      winnerId = activePlayers[0] || null;
-      if (winnerId) {
-        const winner = room.players.get(winnerId);
-        winnerMessage = `${winner?.username} is the last one standing!`;
-      } else {
-        winnerMessage = "It's a draw! No one survived.";
+  // ✅ VERIFICAR: Se todos os jogadores não eliminados estão inativos
+  const nonEliminatedPlayers = allPlayerIds.filter(id => {
+    const hand = roomHands.get(id);
+    return hand && !hand.isEliminated;
+  });
+
+  const activePlayers = nonEliminatedPlayers.filter(id => {
+    const hand = roomHands.get(id);
+    return hand && !hand.isInactive;
+  });
+
+  // ✅ NOVA LÓGICA: Se todos estão inativos, nova rodada
+  if (nonEliminatedPlayers.length > 1 && activePlayers.length === 0) {
+    log(`All players are inactive. Starting new round.`);
+    
+    // Redistribuir cartas e reativar jogadores
+    redistributeCards(room);
+    
+    // Reativar todos os jogadores não eliminados
+    roomHands.forEach((hand, playerId) => {
+      if (!hand.isEliminated) {
+        hand.isInactive = false;
       }
+    });
+    
+    // Iniciar nova rodada
+    const firstActivePlayer = nonEliminatedPlayers[0];
+    startNewRound(room, firstActivePlayer, false);
+    return false; // Não terminar o jogo
+  }
+
+  // ✅ VITÓRIA: Apenas 1 jogador não eliminado
+  if (nonEliminatedPlayers.length <= 1) {
+    winnerId = nonEliminatedPlayers[0] || null;
+    if (winnerId) {
+      const winner = room.players.get(winnerId);
+      winnerMessage = `${winner?.username} is the last one standing!`;
+    } else {
+      winnerMessage = "It's a draw! No one survived.";
     }
   }
 
@@ -418,13 +448,13 @@ function handleTurnTimeout(
 // No game-logic.ts, adicionar esta função:
 function redistributeCards(room: Room & { game: CardGame }): void {
   log(`Redistributing cards in room ${room.roomCode}.`);
-  
+
   const roomHands = getRoomHands(room.roomCode);
   if (!roomHands) return;
 
   // ✅ Reutilizar dealCards - ela já cria novo deck e distribui 5 cartas
   const newHands = dealCards(room);
-  
+
   // ✅ Manter apenas dados dos jogadores ativos (não eliminados)
   roomHands.forEach((existingHand, playerId) => {
     const newHand = newHands.get(playerId);
@@ -441,6 +471,8 @@ function redistributeCards(room: Room & { game: CardGame }): void {
   // ✅ O deck já foi atualizado pela função dealCards
   // ✅ Limpar cartas jogadas
   room.game.playedCards = [];
-  
-  log(`Cards redistributed using dealCards. Remaining deck: ${room.game.deck.length}`);
+
+  log(
+    `Cards redistributed using dealCards. Remaining deck: ${room.game.deck.length}`
+  );
 }

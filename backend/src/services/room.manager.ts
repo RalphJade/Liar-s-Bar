@@ -474,6 +474,7 @@ export async function getRoomStateForApi(
         score: hand?.score || 0,
         riskLevel: hand?.riskLevel || 0,
         isEliminated: hand?.isEliminated || false,
+        isInactive: hand?.isInactive || false,
         avatar_url: userAvatars.get(id) || null,
       };
     }),

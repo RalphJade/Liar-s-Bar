@@ -36,6 +36,7 @@ export interface PlayerHand {
   score: number;
   riskLevel: number; 
   isEliminated: boolean;
+  isInactive?: boolean;
 }
 
 export interface CardGame {
