@@ -266,6 +266,7 @@ export function handleCallBluff(ws: CustomWebSocket): void {
     validCards: validCards,
     message,
     isEliminated: eliminatedOnThisTurn,
+    isInactive: punishedHand.isInactive,
     newRiskLevel: punishedHand.riskLevel,
   });
 
@@ -452,10 +453,10 @@ function redistributeCards(room: Room & { game: CardGame }): void {
   const roomHands = getRoomHands(room.roomCode);
   if (!roomHands) return;
 
-  // ✅ Reutilizar dealCards - ela já cria novo deck e distribui 5 cartas
+  // Reutilizar dealCards - ela já cria novo deck e distribui 5 cartas
   const newHands = dealCards(room);
 
-  // ✅ Manter apenas dados dos jogadores ativos (não eliminados)
+  // Manter apenas dados dos jogadores ativos (não eliminados)
   roomHands.forEach((existingHand, playerId) => {
     const newHand = newHands.get(playerId);
     if (newHand && !existingHand.isEliminated) {
@@ -468,8 +469,8 @@ function redistributeCards(room: Room & { game: CardGame }): void {
     }
   });
 
-  // ✅ O deck já foi atualizado pela função dealCards
-  // ✅ Limpar cartas jogadas
+  // O deck já foi atualizado pela função dealCards
+  // Limpar cartas jogadas
   room.game.playedCards = [];
 
   log(

@@ -72,7 +72,7 @@ export function getNextPlayer(room: Room & { game: { currentPlayerIndex: number;
     const nextPlayerId = playerIds[nextIndex];
     const nextPlayerHand = roomHands.get(nextPlayerId);
     
-    // ✅ PULAR jogadores eliminados OU inativos
+    // PULAR jogadores eliminados OU inativos
     if (nextPlayerHand && !nextPlayerHand.isEliminated && !nextPlayerHand.isInactive) {
       return nextPlayerId;
     }

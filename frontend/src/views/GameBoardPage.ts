@@ -1,13 +1,17 @@
 // Import necessary functions and types from other modules.
-import { getUser } from '../auth/auth.ts';
-import { sendWebSocketMessage, initLobbyConnection, disconnect } from '../lobby/websocket.ts';
-import { navigate } from '../router/router.ts';
-import { renderHeader } from './components/Header.ts';
-import { RoomStateForApi, Card, ChatMessage } from '../types/game.types.ts';
-import { MAX_PLAYERS } from '../../../backend/src/config/game.config.ts';
+import { getUser } from "../auth/auth.ts";
+import {
+  sendWebSocketMessage,
+  initLobbyConnection,
+  disconnect,
+} from "../lobby/websocket.ts";
+import { navigate } from "../router/router.ts";
+import { renderHeader } from "./components/Header.ts";
+import { RoomStateForApi, Card, ChatMessage } from "../types/game.types.ts";
+import { MAX_PLAYERS } from "../../../backend/src/config/game.config.ts";
 
 // Base URL for the API.
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = "http://localhost:3001";
 
 // Module-level state variables to hold game data.
 let gameState: RoomStateForApi | null = null;
@@ -20,16 +24,19 @@ let selectedCardId: string[] = [];
  * @param {HTMLElement} element - The root element to render the page into.
  * @param {string} [roomCode] - The code of the room to join.
  */
-export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => {
-    // Get the current user; if no user or room code, navigate to the home page.
-    const currentUser = getUser();
-    if (!currentUser || !roomCode) {
-        navigate('/');
-        return;
-    }
+export const renderGameBoardPage = (
+  element: HTMLElement,
+  roomCode?: string
+) => {
+  // Get the current user; if no user or room code, navigate to the home page.
+  const currentUser = getUser();
+  if (!currentUser || !roomCode) {
+    navigate("/");
+    return;
+  }
 
-    // Set the inner HTML of the root element with the game layout.
-    element.innerHTML = `
+  // Set the inner HTML of the root element with the game layout.
+  element.innerHTML = `
         <div id="header-container"></div>
         <div class="game-layout">
             <div id="game-area" class="game-area">
@@ -61,7 +68,7 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
                     </form>
                 </div>
                 <div class="game-controls">
-                    <button id="quit-game-btn" class="button-quit-game">
+                    <button id="button-quit-game" class="button-quit-game">
                         <span class="quit-icon">🚪</span><span class="quit-text">Leave Table</span>
                     </button>
                 </div>
@@ -81,12 +88,12 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
         </div>
     `;
 
-    // Render the header component.
-    renderHeader(document.getElementById('header-container')!);
-    // Initialize the WebSocket connection and set up the message handler.
-    initLobbyConnection(handleGameMessage);
-    // Set up all event listeners for the page.
-    setupEventListeners();
+  // Render the header component.
+  renderHeader(document.getElementById("header-container")!);
+  // Initialize the WebSocket connection and set up the message handler.
+  initLobbyConnection(handleGameMessage);
+  // Set up all event listeners for the page.
+  setupEventListeners();
 };
 
 /**
@@ -97,39 +104,42 @@ const handleGameMessage = (message: any) => {
   console.log("[Game WS] Received:", message);
   const currentUser = getUser();
 
-    // Process message based on its type.
-    switch(message.type) {
-        case 'ROOM_STATE_UPDATE':
-            gameState = message.payload;
-            myCards = message.payload.myCards || myCards;
-            updateUI();
-            break;
-        case 'CHAT_BROADCAST':
-            chatMessages.push(message.payload);
-            if (chatMessages.length > 100) chatMessages.shift(); // Keep chat history limited.
-            renderChat();
-            break;
-        case 'GAME_STARTED':
-            alert(message.payload.message);
-            break;
-        case 'GAME_FINISHED':
-            // Delay showing the end screen to allow animations to complete.
-            setTimeout(() => {
-                showEndGameScreen(message.payload.winnerId === currentUser?.id, message.payload.message);
-            }, 1000);
-            break;
-        case 'CHALLENGE_RESULT':
-            handleChallengeResult(message.payload);
-            break;
-        case 'ERROR':
-            alert(`Server error: ${message.payload.message}`);
-            break;
-        case 'ROOM_CLOSED':
-            alert(`The room "${message.payload.name}" has been closed.`);
-            disconnect();
-            navigate('/home');
-            break;
-    }
+  // Process message based on its type.
+  switch (message.type) {
+    case "ROOM_STATE_UPDATE":
+      gameState = message.payload;
+      myCards = message.payload.myCards || myCards;
+      updateUI();
+      break;
+    case "CHAT_BROADCAST":
+      chatMessages.push(message.payload);
+      if (chatMessages.length > 100) chatMessages.shift(); // Keep chat history limited.
+      renderChat();
+      break;
+    case "GAME_STARTED":
+      alert(message.payload.message);
+      break;
+    case "GAME_FINISHED":
+      // Delay showing the end screen to allow animations to complete.
+      setTimeout(() => {
+        showEndGameScreen(
+          message.payload.winnerId === currentUser?.id,
+          message.payload.message
+        );
+      }, 1000);
+      break;
+    case "CHALLENGE_RESULT":
+      handleChallengeResult(message.payload);
+      break;
+    case "ERROR":
+      alert(`Server error: ${message.payload.message}`);
+      break;
+    case "ROOM_CLOSED":
+      alert(`The room "${message.payload.name}" has been closed.`);
+      disconnect();
+      navigate("/home");
+      break;
+  }
 };
 
 /**
@@ -137,77 +147,89 @@ const handleGameMessage = (message: any) => {
  * @param {any} payload - The data from the server about the challenge result.
  */
 const handleChallengeResult = (payload: any) => {
-    // Get all necessary DOM elements for the roulette modal.
-    const overlay = document.getElementById('roulette-overlay')!;
-    const title = document.getElementById('roulette-title')!;
-    const wheelContainer = document.getElementById('roulette-wheel-container')!;
-    const result = document.getElementById('roulette-result')!;
-    const revealedCardContainer = document.getElementById('revealed-card-container')!;
+  // Get all necessary DOM elements for the roulette modal.
+  const overlay = document.getElementById("roulette-overlay")!;
+  const title = document.getElementById("roulette-title")!;
+  const wheelContainer = document.getElementById("roulette-wheel-container")!;
+  const result = document.getElementById("roulette-result")!;
+  const revealedCardContainer = document.getElementById(
+    "revealed-card-container"
+  )!;
 
-    // Derive the challenged player's name from the local game state for reliability.
-    const targetPlayer = gameState?.players.find(p => p.id === gameState?.game?.lastPlayerId);
-    const targetPlayerName = targetPlayer?.username || 'The previous player';
+  const punishedPlayer = gameState?.players.find(
+    (p) => p.username === payload.punishedPlayerName
+  );
+  const riskLevel = punishedPlayer?.riskLevel || 0;
+  const totalChambers = 6 - riskLevel; // Fewer chambers for higher risk.
+  const heartChambers = totalChambers - 1; // Always one skull.
 
-    // Find the punished player to determine their risk level.
-    const punishedPlayer = gameState?.players.find(p => p.username === payload.punishedPlayerName);
-    const riskLevel = punishedPlayer?.riskLevel || 0;
-    const totalChambers = 6 - riskLevel; // Fewer chambers for higher risk.
-    const heartChambers = totalChambers - 1; // Always one skull.
+  // Construct the accusation message based on the challenge outcome.
+  let accusationMessage = "";
+  if (payload.wasLie) {
+    accusationMessage = `${payload.targetName} was caught bluffing!`;
+  } else {
+    accusationMessage = `False accusation! ${payload.targetName} was telling the truth.`;
+  }
 
-    // Construct the accusation message based on the challenge outcome.
-    let accusationMessage = "";
-    if (payload.wasLie) {
-        accusationMessage = `${targetPlayerName} was bluffing! The card was a ${payload.revealedCard.type.toUpperCase()}.`;
-    } else {
-        accusationMessage = `False accusation! The card was a ${payload.revealedCard.type.toUpperCase()}.`;
-    }
-
-    // --- Step 1: Show the accusation result and the revealed card. ---
+  // --- Step 1: Show the accusation result and the revealed card. ---
   title.textContent = accusationMessage;
-  revealedCardContainer.innerHTML = createRevealedCards(payload.revealedCard);
-    wheelContainer.innerHTML = '';
+  if (payload.revealedCard && payload.revealedCard.length > 0) {
+    revealedCardContainer.innerHTML = createRevealedCards(payload.revealedCard);
+  } else {
+    revealedCardContainer.innerHTML = "";
+  }
+  wheelContainer.innerHTML = "";
   wheelContainer.style.display = "none";
   result.textContent = "";
   overlay.classList.remove("hidden");
 
-    // Define durations for each step of the animation sequence.
-    const accusationDuration = 3000;
-    const spinDuration = 4000;
-    const resultDisplayDuration = 2500;
+  // Define durations for each step of the animation sequence.
+  const accusationDuration = 3000;
+  const spinDuration = 4000;
+  const resultDisplayDuration = 2500;
 
-    // --- Step 2: After a delay, show the roulette wheel and start the spin. ---
+  // --- Step 2: After a delay, show the roulette wheel and start the spin. ---
+  setTimeout(() => {
+    revealedCardContainer.innerHTML = "";
+    wheelContainer.style.display = "flex";
+    title.textContent = `${payload.punishedPlayerName} spins the chamber... (${heartChambers} ❤️ | 1 💀)`;
+
+    const cylinder = createRouletteWheel(
+      wheelContainer,
+      totalChambers,
+      payload.isEliminated
+    );
+
+    // Reset and trigger the spin animation.
+    cylinder.style.animation = "none";
+    void cylinder.offsetWidth; // Trigger a reflow to restart the animation.
+    cylinder.style.animation = `spin ${
+      spinDuration / 1000
+    }s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
+
+    // --- Step 3: After the spin animation finishes, show the result. ---
     setTimeout(() => {
-        revealedCardContainer.innerHTML = '';
-        wheelContainer.style.display = 'flex';
-        title.textContent = `${payload.punishedPlayerName} spins the chamber... (${heartChambers} ❤️ | 1 💀)`;
-        
-        const cylinder = createRouletteWheel(wheelContainer, totalChambers, payload.isEliminated);
-        
-        // Reset and trigger the spin animation.
-        cylinder.style.animation = 'none';
-        void cylinder.offsetWidth; // Trigger a reflow to restart the animation.
-        cylinder.style.animation = `spin ${spinDuration / 1000}s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
+      const resultText = payload.isEliminated
+        ? "💀 BANG! ELIMINATED! 💀"
+        : "❤️ *CLICK*... SURVIVED! ❤️";
+      const resultColor = payload.isEliminated ? "#dc2626" : "#16a34a";
 
-        // --- Step 3: After the spin animation finishes, show the result. ---
+      result.innerHTML = `<div class="roulette-result-text" style="color: ${resultColor};">${resultText}</div>`;
+
+      // Add a screen shake effect for dramatic impact if a player is eliminated.
+      if (payload.isEliminated) {
+        document.body.style.animation = "shake 0.5s ease-in-out";
         setTimeout(() => {
-            const resultText = payload.isEliminated ? '💀 BANG! ELIMINATED! 💀' : '❤️ *CLICK*... SURVIVED! ❤️';
-            const resultColor = payload.isEliminated ? '#dc2626' : '#16a34a';
-            
-            result.innerHTML = `<div class="roulette-result-text" style="color: ${resultColor};">${resultText}</div>`;
-            
-            // Add a screen shake effect for dramatic impact if a player is eliminated.
-            if (payload.isEliminated) {
-                document.body.style.animation = 'shake 0.5s ease-in-out';
-                setTimeout(() => { document.body.style.animation = ''; }, 500);
-            }
-            
-            // --- Step 4: After showing the result, hide the overlay. ---
-            setTimeout(() => {
-                overlay.classList.add('hidden');
-            }, resultDisplayDuration);
+          document.body.style.animation = "";
+        }, 500);
+      }
 
-        }, spinDuration);
-    }, accusationDuration);
+      // --- Step 4: After showing the result, hide the overlay. ---
+      setTimeout(() => {
+        overlay.classList.add("hidden");
+      }, resultDisplayDuration);
+    }, spinDuration);
+  }, accusationDuration);
 };
 
 /**
@@ -217,62 +239,71 @@ const handleChallengeResult = (payload: any) => {
  * @param {boolean} willHitSkull - Whether the spin will result in elimination.
  * @returns {HTMLElement} The cylinder element that will be animated.
  */
-const createRouletteWheel = (container: HTMLElement, totalChambers: number, willHitSkull: boolean): HTMLElement => {
-    container.innerHTML = '';
-    container.className = 'roulette-wheel';
-    
-    const cylinder = document.createElement('div');
-    cylinder.className = 'revolver-cylinder';
-    
-    const angleStep = 360 / totalChambers;
-    
-    // Randomly distribute one skull among the heart chambers.
-    const chambers: ('skull' | 'heart')[] = [];
-    const skullPosition = Math.floor(Math.random() * totalChambers);
-    
-    for (let i = 0; i < totalChambers; i++) {
-        chambers.push(i === skullPosition ? 'skull' : 'heart');
-    }
-    
-    // Create and position the chamber elements inside the cylinder.
-    for (let i = 0; i < totalChambers; i++) {
-        const chamber = document.createElement('div');
-        chamber.className = 'chamber';
-        
-        const isSkull = chambers[i] === 'skull';
-        chamber.innerHTML = isSkull ? '💀' : '❤️';
-        chamber.classList.add(isSkull ? 'skull-chamber' : 'heart-chamber');
-        
-        const angle = i * angleStep;
-        chamber.style.transform = `rotate(${angle}deg) translateY(-60px) rotate(-${angle}deg)`;
-        
-        cylinder.appendChild(chamber);
-    }
-    
-    const firingPin = document.createElement('div');
-    firingPin.className = 'firing-pin';
-    firingPin.innerHTML = '▼';
-    
-    container.appendChild(cylinder);
-    container.appendChild(firingPin);
-    
-    // Determine which chamber should land under the firing pin.
-    let targetChamberIndex;
-    if (willHitSkull) {
-        targetChamberIndex = skullPosition;
-    } else {
-        const heartChamberIndices = chambers.map((c, index) => c === 'heart' ? index : -1).filter(i => i !== -1);
-        targetChamberIndex = heartChamberIndices[Math.floor(Math.random() * heartChamberIndices.length)];
-    }
-    
-    // Calculate the final rotation angle for the animation.
-    const baseRotation = 1080; // 3 full spins for drama.
-    const targetAngle = targetChamberIndex * angleStep;
-    const finalRotation = baseRotation - targetAngle;
-    
-    cylinder.style.setProperty('--final-rotation', `${finalRotation}deg`);
-    
-    return cylinder;
+const createRouletteWheel = (
+  container: HTMLElement,
+  totalChambers: number,
+  willHitSkull: boolean
+): HTMLElement => {
+  container.innerHTML = "";
+  container.className = "roulette-wheel";
+
+  const cylinder = document.createElement("div");
+  cylinder.className = "revolver-cylinder";
+
+  const angleStep = 360 / totalChambers;
+
+  // Randomly distribute one skull among the heart chambers.
+  const chambers: ("skull" | "heart")[] = [];
+  const skullPosition = Math.floor(Math.random() * totalChambers);
+
+  for (let i = 0; i < totalChambers; i++) {
+    chambers.push(i === skullPosition ? "skull" : "heart");
+  }
+
+  // Create and position the chamber elements inside the cylinder.
+  for (let i = 0; i < totalChambers; i++) {
+    const chamber = document.createElement("div");
+    chamber.className = "chamber";
+
+    const isSkull = chambers[i] === "skull";
+    chamber.innerHTML = isSkull ? "💀" : "❤️";
+    chamber.classList.add(isSkull ? "skull-chamber" : "heart-chamber");
+
+    const angle = i * angleStep;
+    chamber.style.transform = `rotate(${angle}deg) translateY(-60px) rotate(-${angle}deg)`;
+
+    cylinder.appendChild(chamber);
+  }
+
+  const firingPin = document.createElement("div");
+  firingPin.className = "firing-pin";
+  firingPin.innerHTML = "▼";
+
+  container.appendChild(cylinder);
+  container.appendChild(firingPin);
+
+  // Determine which chamber should land under the firing pin.
+  let targetChamberIndex;
+  if (willHitSkull) {
+    targetChamberIndex = skullPosition;
+  } else {
+    const heartChamberIndices = chambers
+      .map((c, index) => (c === "heart" ? index : -1))
+      .filter((i) => i !== -1);
+    targetChamberIndex =
+      heartChamberIndices[
+        Math.floor(Math.random() * heartChamberIndices.length)
+      ];
+  }
+
+  // Calculate the final rotation angle for the animation.
+  const baseRotation = 1080; // 3 full spins for drama.
+  const targetAngle = targetChamberIndex * angleStep;
+  const finalRotation = baseRotation - targetAngle;
+
+  cylinder.style.setProperty("--final-rotation", `${finalRotation}deg`);
+
+  return cylinder;
 };
 
 /**
@@ -303,7 +334,7 @@ const updateUI = () => {
   const currentUser = getUser();
   if (!currentUser) return;
 
-    // If the current player is eliminated, show the end game screen for them.
+  // If the current player is eliminated, show the end game screen for them.
   const me = gameState.players.find((p) => p.id === currentUser.id);
   if (me?.isEliminated) {
     showEndGameScreen(false, "You have been eliminated.");
@@ -315,13 +346,13 @@ const updateUI = () => {
     gameState.game?.lastPlayerId !== null &&
     gameState.game?.lastPlayerId !== currentUser.id;
 
-    // Call individual render functions to update parts of the UI.
-    renderPlayerPods(currentUser.id);
-    renderMyInfo(currentUser.id);
-    renderMyHand(isMyTurn);
-    renderGameStatus();
-    renderActionButtons(isMyTurn, canChallenge);
-    renderReferenceCard();
+  // Call individual render functions to update parts of the UI.
+  renderPlayerPods(currentUser.id);
+  renderMyInfo(currentUser.id);
+  renderMyHand(isMyTurn);
+  renderGameStatus();
+  renderActionButtons(isMyTurn, canChallenge);
+  renderReferenceCard();
 };
 
 /**
@@ -331,26 +362,29 @@ const updateUI = () => {
  * @param {number} totalPlayers - The total number of players in the game.
  * @returns {string} The CSS class for positioning (e.g., 'pos-top', 'pos-left').
  */
-const getPlayerPositionClass = (opponentIndex: number, totalPlayers: number): string => {
-    // In a 1v1 game, the single opponent is always positioned at the top.
-    if (totalPlayers === 2) {
-        return 'pos-top';
-    }
+const getPlayerPositionClass = (
+  opponentIndex: number,
+  totalPlayers: number
+): string => {
+  // In a 1v1 game, the single opponent is always positioned at the top.
+  if (totalPlayers === 2) {
+    return "pos-top";
+  }
 
-    // In a 3-player game, opponents are on the left and right.
-    if (totalPlayers === 3) {
-        if (opponentIndex === 1) return 'pos-left';  // 1st opponent in turn order.
-        if (opponentIndex === 2) return 'pos-right'; // 2nd opponent in turn order.
-    }
+  // In a 3-player game, opponents are on the left and right.
+  if (totalPlayers === 3) {
+    if (opponentIndex === 1) return "pos-left"; // 1st opponent in turn order.
+    if (opponentIndex === 2) return "pos-right"; // 2nd opponent in turn order.
+  }
 
-    // In a 4-player game, opponents are at the left, top, and right.
-    if (totalPlayers === 4) {
-        if (opponentIndex === 1) return 'pos-left';  // 1st opponent.
-        if (opponentIndex === 2) return 'pos-top';   // 2nd opponent.
-        if (opponentIndex === 3) return 'pos-right'; // 3rd opponent.
-    }
+  // In a 4-player game, opponents are at the left, top, and right.
+  if (totalPlayers === 4) {
+    if (opponentIndex === 1) return "pos-left"; // 1st opponent.
+    if (opponentIndex === 2) return "pos-top"; // 2nd opponent.
+    if (opponentIndex === 3) return "pos-right"; // 3rd opponent.
+  }
 
-    return ''; // Fallback for any other case.
+  return ""; // Fallback for any other case.
 };
 
 /**
@@ -362,27 +396,27 @@ const renderPlayerPods = (currentUserId: string) => {
   if (!container || !gameState) return;
 
   const players = gameState.players || [];
-    const totalPlayers = players.length;
+  const totalPlayers = Number(players.length);
 
-    // Reorder players so the current user is conceptually at the bottom/start.
+  // Reorder players so the current user is conceptually at the bottom/start.
   const playerPositions = assignPlayerPositions(players, currentUserId);
 
-    let opponentIndex = 0;
+  let opponentIndex = 0;
 
   container.innerHTML = playerPositions
     .map((player) => {
-        // Skip rendering the current user in the opponent pods area.
+      // Skip rendering the current user in the opponent pods area.
       if (player.id === currentUserId) return "";
-        
-        opponentIndex++;
-        
-        // Get the correct position class using the layout logic function.
-        const positionClass = getPlayerPositionClass(opponentIndex, totalPlayers);
+
+      opponentIndex++;
+
+      // Get the correct position class using the layout logic function.
+      const positionClass = getPlayerPositionClass(opponentIndex, totalPlayers);
 
       if (player.isEliminated) {
         return createEliminatedPod(player, positionClass);
       }
-        
+
       const isCurrentTurn = player.id === gameState?.game?.currentPlayerId;
       return createPlayerPod(player, positionClass, isCurrentTurn);
     })
@@ -412,12 +446,12 @@ const renderMyHand = (isMyTurn: boolean) => {
   if (!container) return;
   container.innerHTML = myCards.map((card) => createHandCard(card)).join("");
 
-    // Add click listeners to cards only if it's the player's turn.
+  // Add click listeners to cards only if it's the player's turn.
   container.querySelectorAll(".hand-card").forEach((cardEl) => {
     if (isMyTurn) {
       cardEl.addEventListener("click", () => handleCardSelection(cardEl));
     }
-        // Re-apply 'selected' class if a card was already selected.
+    // Re-apply 'selected' class if a card was already selected.
     const cardId = cardEl.getAttribute("data-card-id");
     if (cardId && selectedCardId.includes(cardId)) {
       cardEl.classList.add("selected");
@@ -498,9 +532,11 @@ const renderChat = () => {
         msg.message
       }</span>
         </div>
-    `).join('');
-    // Auto-scroll to the latest message.
-    container.scrollTop = container.scrollHeight;
+    `
+    )
+    .join("");
+  // Auto-scroll to the latest message.
+  container.scrollTop = container.scrollHeight;
 };
 
 /**
@@ -564,22 +600,29 @@ const setupEventListeners = () => {
     }
   });
 
-    const quitModal = document.getElementById('quit-game-modal') as HTMLDivElement;
-    const quitBtn = document.getElementById('quit-game-btn');
-    const confirmQuitBtn = document.getElementById('confirm-quit-btn');
-    const cancelQuitBtn = document.getElementById('cancel-quit-btn');
+  const quitModal = document.getElementById(
+    "quit-game-modal"
+  ) as HTMLDivElement;
+  const quitBtn = document.getElementById("button-quit-game");
+  const confirmQuitBtn = document.getElementById("confirm-quit-btn");
+  const cancelQuitBtn = document.getElementById("cancel-quit-btn");
 
   const openModal = () => quitModal.classList.add("show");
   const closeModal = () => quitModal.classList.remove("show");
 
-    quitBtn?.addEventListener('click', openModal);
-    cancelQuitBtn?.addEventListener('click', closeModal);
-    confirmQuitBtn?.addEventListener('click', () => {
-        sendWebSocketMessage({type: "LEAVE_ROOM", payload:{}});
-        closeModal();
-    });
-    quitModal.addEventListener('click', (e) => { if (e.target === quitModal) closeModal(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && quitModal.classList.contains('show')) closeModal(); });
+  quitBtn?.addEventListener("click", openModal);
+  cancelQuitBtn?.addEventListener("click", closeModal);
+  confirmQuitBtn?.addEventListener("click", () => {
+    sendWebSocketMessage({ type: "LEAVE_ROOM", payload: {} });
+    closeModal();
+  });
+  quitModal.addEventListener("click", (e) => {
+    if (e.target === quitModal) closeModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && quitModal.classList.contains("show"))
+      closeModal();
+  });
 };
 
 /**
@@ -590,11 +633,13 @@ const setupEventListeners = () => {
  * @returns {any[]} The reordered array of players.
  */
 function assignPlayerPositions(players: any[], currentUserId: string): any[] {
-    const currentUserIndex = players.findIndex(p => p.id === currentUserId);
-    if (currentUserIndex === -1) return players;
-    const reordered = [...players];
-    // Slice the array at the current user's index and move the first part to the end.
-    return reordered.slice(currentUserIndex).concat(reordered.slice(0, currentUserIndex));
+  const currentUserIndex = players.findIndex((p) => p.id === currentUserId);
+  if (currentUserIndex === -1) return players;
+  const reordered = [...players];
+  // Slice the array at the current user's index and move the first part to the end.
+  return reordered
+    .slice(currentUserIndex)
+    .concat(reordered.slice(0, currentUserIndex));
 }
 
 // --- HTML Template Creation Functions ---
@@ -606,13 +651,21 @@ function assignPlayerPositions(players: any[], currentUserId: string): any[] {
  * @param isCurrentTurn - Boolean indicating if it's this player's turn.
  * @returns The HTML string for the player pod.
  */
-const createPlayerPod = (player: any, positionClass: string, isCurrentTurn: boolean) => {
-    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
-    if (player.isInactive) {
-        return createInactivePod(player, positionClass);
-    }
-    return `
-        <div class="player-pod ${positionClass} ${isCurrentTurn ? 'active-turn' : ''}" data-player-id="${player.id}">
+const createPlayerPod = (
+  player: any,
+  positionClass: string,
+  isCurrentTurn: boolean
+) => {
+  const avatarSrc = player.avatar_url
+    ? `${API_BASE_URL}${player.avatar_url}`
+    : "https://via.placeholder.com/60";
+  if (player.isInactive) {
+    return createInactivePod(player, positionClass);
+  }
+  return `
+        <div class="player-pod ${positionClass} ${
+    isCurrentTurn ? "active-turn" : ""
+  }" data-player-id="${player.id}">
             <div class="opponent-hand">
                 ${Array(player.handSize || 0)
                   .fill('<div class="card-back small-card"></div>')
@@ -660,8 +713,10 @@ const createMyInfoPod = (player: any) => {
  * @returns The HTML string for the eliminated player pod.
  */
 const createEliminatedPod = (player: any, positionClass: string) => {
-    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
-    return `
+  const avatarSrc = player.avatar_url
+    ? `${API_BASE_URL}${player.avatar_url}`
+    : "https://via.placeholder.com/60";
+  return `
         <div class="player-pod ${positionClass} eliminated" data-player-id="${player.id}">
             <div class="player-info">
                 <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar eliminated-avatar" />
@@ -673,8 +728,10 @@ const createEliminatedPod = (player: any, positionClass: string) => {
         </div>`;
 };
 
-const createInactivePod = (player: any, position: number) => {
-  const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : "https://via.placeholder.com/60";
+const createInactivePod = (player: any, position: string) => {
+  const avatarSrc = player.avatar_url
+    ? `${API_BASE_URL}${player.avatar_url}`
+    : "https://via.placeholder.com/60";
   return `
     <div class="player-pod player-${position} inactive" data-player-id="${player.id}">
       <div class="player-info">
@@ -788,7 +845,7 @@ const renderDynamicStyles = () => {
             left: 2rem;
             transform: translateY(-50%);
         }
-        .pos-right { /* Player positioned on the right side of the table. */
+        .pos-right { /* Player positioned on the right side of the table. */w
             top: 50%;
             right: 2rem;
             transform: translateY(-50%);
