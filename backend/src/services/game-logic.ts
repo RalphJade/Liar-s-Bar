@@ -129,7 +129,7 @@ export function startPlayerTurn(
 
 export function handlePlayCard(
   ws: CustomWebSocket,
-  payload: { cardsId: string }
+  payload: { cardsId: string[] }
 ): void {
   const { cardsId } = payload;
   const roomCode = ws.currentRoomCode;
