@@ -48,7 +48,7 @@ export interface CardGame {
   turnTimer: NodeJS.Timeout | null;
   currentCardType: CardType | null; 
   playedCards: Card[]; 
-  lastPlayedCard: Card | null; 
+  lastPlayedCard: Card[]; 
   lastPlayerId: string | null;
 }
 

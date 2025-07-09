@@ -62,7 +62,7 @@ export async function handleCreateRoom(
       turnTimer: null,
       currentCardType: null,
       playedCards: [],
-      lastPlayedCard: null,
+      lastPlayedCard: [],
       lastPlayerId: null,
     },
   };

@@ -1,27 +1,34 @@
-import { getUser } from '../auth/auth.ts';
-import { sendWebSocketMessage, initLobbyConnection, disconnect } from '../lobby/websocket.ts';
-import { navigate } from '../router/router.ts';
-import { renderHeader } from './components/Header.ts';
-import { RoomStateForApi, Card, ChatMessage } from '../types/game.types.ts';
-import { MAX_PLAYERS } from '../../../backend/src/config/game.config.ts';
+import { getUser } from "../auth/auth.ts";
+import {
+  sendWebSocketMessage,
+  initLobbyConnection,
+  disconnect,
+} from "../lobby/websocket.ts";
+import { navigate } from "../router/router.ts";
+import { renderHeader } from "./components/Header.ts";
+import { RoomStateForApi, Card, ChatMessage } from "../types/game.types.ts";
+import { MAX_PLAYERS } from "../../../backend/src/config/game.config.ts";
 
-const API_BASE_URL = 'http://localhost:3001';
+const API_BASE_URL = "http://localhost:3001";
 
 // Module-level state for the game
 let gameState: RoomStateForApi | null = null;
 let myCards: Card[] = [];
 let chatMessages: ChatMessage[] = [];
-let selectedCardId: string [] = [];
+let selectedCardId: string[] = [];
 
-export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => {
-    // ... (HTML structure remains the same as the previous step) ...
-    const currentUser = getUser();
-    if (!currentUser || !roomCode) {
-        navigate('/');
-        return;
-    }
+export const renderGameBoardPage = (
+  element: HTMLElement,
+  roomCode?: string
+) => {
+  // ... (HTML structure remains the same as the previous step) ...
+  const currentUser = getUser();
+  if (!currentUser || !roomCode) {
+    navigate("/");
+    return;
+  }
 
-    element.innerHTML = `
+  element.innerHTML = `
         <div id="header-container"></div>
         <div class="game-layout">
             <div id="game-area" class="game-area">
@@ -71,317 +78,382 @@ export const renderGameBoardPage = (element: HTMLElement, roomCode?: string) => 
         </div>
     `;
 
-    renderHeader(document.getElementById('header-container')!);
-    initLobbyConnection(handleGameMessage);
-    setupEventListeners();
+  renderHeader(document.getElementById("header-container")!);
+  initLobbyConnection(handleGameMessage);
+  setupEventListeners();
 };
 
 const handleGameMessage = (message: any) => {
-    console.log('[Game WS] Received:', message);
-    const currentUser = getUser();
+  console.log("[Game WS] Received:", message);
+  const currentUser = getUser();
 
-    switch(message.type) {
-        case 'ROOM_STATE_UPDATE':
-            gameState = message.payload;
-            myCards = message.payload.myCards || myCards;
-            updateUI();
-            break;
-        case 'CHAT_BROADCAST':
-            chatMessages.push(message.payload);
-            if (chatMessages.length > 100) chatMessages.shift();
-            renderChat();
-            break;
-        case 'GAME_STARTED':
-            alert(message.payload.message);
-            break;
-        case 'GAME_FINISHED':
-            // Wait for the roulette animation (if any) to finish before showing the end screen
-            setTimeout(() => {
-                showEndGameScreen(message.payload.winnerId === currentUser?.id, message.payload.message);
-            }, 1000);
-            break;
-        case 'CHALLENGE_RESULT':
-            handleChallengeResult(message.payload);
-            break;
-        case 'ERROR':
-            alert(`Server error: ${message.payload.message}`);
-            break;
-        case 'ROOM_CLOSED':
-            alert(`The room "${message.payload.name}" has been closed.`);
-            disconnect();
-            navigate('/home');
-            break;
-    }
+  switch (message.type) {
+    case "ROOM_STATE_UPDATE":
+      gameState = message.payload;
+      myCards = message.payload.myCards || myCards;
+      updateUI();
+      break;
+    case "CHAT_BROADCAST":
+      chatMessages.push(message.payload);
+      if (chatMessages.length > 100) chatMessages.shift();
+      renderChat();
+      break;
+    case "GAME_STARTED":
+      alert(message.payload.message);
+      break;
+    case "GAME_FINISHED":
+      // Wait for the roulette animation (if any) to finish before showing the end screen
+      setTimeout(() => {
+        showEndGameScreen(
+          message.payload.winnerId === currentUser?.id,
+          message.payload.message
+        );
+      }, 1000);
+      break;
+    case "CHALLENGE_RESULT":
+      handleChallengeResult(message.payload);
+      break;
+    case "ERROR":
+      alert(`Server error: ${message.payload.message}`);
+      break;
+    case "ROOM_CLOSED":
+      alert(`The room "${message.payload.name}" has been closed.`);
+      disconnect();
+      navigate("/home");
+      break;
+  }
 };
 
 const handleChallengeResult = (payload: any) => {
-    const overlay = document.getElementById('roulette-overlay')!;
-    const title = document.getElementById('roulette-title')!;
-    const wheel = document.getElementById('roulette-wheel')!;
-    const result = document.getElementById('roulette-result')!;
-    const revealedCardContainer = document.getElementById('revealed-card-container')!;
+  const overlay = document.getElementById("roulette-overlay")!;
+  const title = document.getElementById("roulette-title")!;
+  const wheel = document.getElementById("roulette-wheel")!;
+  const result = document.getElementById("roulette-result")!;
+  const revealedCardContainer = document.getElementById(
+    "revealed-card-container"
+  )!;
 
-    // Step 1: Show the accusation and the revealed card
-    let accusationMessage = "";
-    if (payload.wasLie) {
-        accusationMessage = `${payload.targetName} was bluffing! The card was a ${payload.revealedCard.type.toUpperCase()}.`;
-    } else {
-        accusationMessage = `False accusation! The card was a ${payload.revealedCard.type.toUpperCase()}.`;
-    }
+  // Step 1: Show the accusation and the revealed card
+  let accusationMessage = "";
+  if (payload.wasLie) {
+    accusationMessage = `${payload.targetName} was caught bluffing!`;
+  } else {
+    accusationMessage = `False accusation! All cards were valid.`;
+  }
 
-    title.textContent = accusationMessage;
-    revealedCardContainer.innerHTML = createHandCard(payload.revealedCard); // Show the revealed card
-    wheel.style.display = 'none';
-    result.textContent = '';
-    overlay.classList.remove('hidden');
+  title.textContent = accusationMessage;
+  revealedCardContainer.innerHTML = createRevealedCards(payload.revealedCard); // Show the revealed card
+  wheel.style.display = "none";
+  result.textContent = "";
+  overlay.classList.remove("hidden");
 
-    const accusationDuration = 3000; // Time to read the accusation
-    const spinDuration = 4000; 
-    const resultDisplayDuration = 2500; 
+  const accusationDuration = 3000; // Time to read the accusation
+  const spinDuration = 4000;
+  const resultDisplayDuration = 2500;
+
+  setTimeout(() => {
+    // Step 2: Start the roulette spin
+    revealedCardContainer.innerHTML = ""; // Hide the card
+    wheel.style.display = "block";
+    title.textContent = `${payload.punishedPlayerName} spins the roulette...`;
+
+    wheel.style.animation = "none";
+    void wheel.offsetWidth;
+    wheel.style.animation = `spin ${
+      spinDuration / 1000
+    }s cubic-bezier(0.25, 1, 0.5, 1)`;
 
     setTimeout(() => {
-        // Step 2: Start the roulette spin
-        revealedCardContainer.innerHTML = ''; // Hide the card
-        wheel.style.display = 'block';
-        title.textContent = `${payload.punishedPlayerName} spins the roulette...`;
+      // Step 3: Show the result
+      result.textContent = payload.isEliminated
+        ? "💥 BANG! Eliminated! 💥"
+        : "😮‍💨 *click*... Survived!";
+      result.style.color = payload.isEliminated
+        ? "var(--color-danger)"
+        : "var(--color-success)";
 
-        wheel.style.animation = 'none';
-        void wheel.offsetWidth; 
-        wheel.style.animation = `spin ${spinDuration / 1000}s cubic-bezier(0.25, 1, 0.5, 1)`;
-
-        setTimeout(() => {
-            // Step 3: Show the result
-            result.textContent = payload.isEliminated ? '💥 BANG! Eliminated! 💥' : '😮‍💨 *click*... Survived!';
-            result.style.color = payload.isEliminated ? 'var(--color-danger)' : 'var(--color-success)';
-            
-            setTimeout(() => {
-                overlay.classList.add('hidden');
-            }, resultDisplayDuration);
-        }, spinDuration);
-    }, accusationDuration);
+      setTimeout(() => {
+        overlay.classList.add("hidden");
+      }, resultDisplayDuration);
+    }, spinDuration);
+  }, accusationDuration);
 };
 
 const showEndGameScreen = (didIWin: boolean, message: string) => {
-    const gameArea = document.getElementById('game-area')!;
-    gameArea.innerHTML = `
-        <div class="end-game-screen ${didIWin ? 'win' : 'lose'}">
-            <h1>${didIWin ? 'Victory!' : 'Defeat!'}</h1>
+  const gameArea = document.getElementById("game-area")!;
+  gameArea.innerHTML = `
+        <div class="end-game-screen ${didIWin ? "win" : "lose"}">
+            <h1>${didIWin ? "Victory!" : "Defeat!"}</h1>
             <p>${message}</p>
             <button id="back-to-lobby" class="button button-primary">Back to Lobby</button>
         </div>
     `;
-    document.getElementById('back-to-lobby')?.addEventListener('click', () => {
-        disconnect();
-        navigate('/home');
-    });
+  document.getElementById("back-to-lobby")?.addEventListener("click", () => {
+    disconnect();
+    navigate("/home");
+  });
 };
 
 const updateUI = () => {
-    if (!gameState) return;
-    const currentUser = getUser();
-    if (!currentUser) return;
+  if (!gameState) return;
+  const currentUser = getUser();
+  if (!currentUser) return;
 
-    const me = gameState.players.find(p => p.id === currentUser.id);
-    if (me?.isEliminated) {
-        showEndGameScreen(false, "You have been eliminated.");
-        return;
-    }
+  const me = gameState.players.find((p) => p.id === currentUser.id);
+  if (me?.isEliminated) {
+    showEndGameScreen(false, "You have been eliminated.");
+    return;
+  }
 
-    const isMyTurn = gameState.game?.currentPlayerId === currentUser.id;
-    const canChallenge = gameState.game?.lastPlayerId !== null && gameState.game?.lastPlayerId !== currentUser.id;
+  const isMyTurn = gameState.game?.currentPlayerId === currentUser.id;
+  const canChallenge =
+    gameState.game?.lastPlayerId !== null &&
+    gameState.game?.lastPlayerId !== currentUser.id;
 
-    renderPlayerPods(currentUser.id);
-    renderMyInfo(currentUser.id);
-    renderMyHand(isMyTurn);
-    renderGameStatus();
-    renderActionButtons(isMyTurn, canChallenge);
-    renderReferenceCard();
+  renderPlayerPods(currentUser.id);
+  renderMyInfo(currentUser.id);
+  renderMyHand(isMyTurn);
+  renderGameStatus();
+  renderActionButtons(isMyTurn, canChallenge);
+  renderReferenceCard();
 };
 
 const renderPlayerPods = (currentUserId: string) => {
-    const container = document.getElementById('player-pods-container');
-    if (!container || !gameState) return;
-    
-    const players = gameState.players || [];
-    const playerPositions = assignPlayerPositions(players, currentUserId);
-    
-    container.innerHTML = playerPositions.map((player, index) => {
-        if (player.id === currentUserId) return '';
-        if (player.isEliminated) {
-            return createEliminatedPod(player, index + 1);
-        }
-        const isCurrentTurn = player.id === gameState?.game?.currentPlayerId;
-        return createPlayerPod(player, index + 1, isCurrentTurn);
-    }).join('');
+  const container = document.getElementById("player-pods-container");
+  if (!container || !gameState) return;
+
+  const players = gameState.players || [];
+  const playerPositions = assignPlayerPositions(players, currentUserId);
+
+  container.innerHTML = playerPositions
+    .map((player, index) => {
+      if (player.id === currentUserId) return "";
+      if (player.isEliminated) {
+        return createEliminatedPod(player, index + 1);
+      }
+      const isCurrentTurn = player.id === gameState?.game?.currentPlayerId;
+      return createPlayerPod(player, index + 1, isCurrentTurn);
+    })
+    .join("");
 };
 
 const renderMyInfo = (currentUserId: string) => {
-    const container = document.getElementById('my-info-area');
-    if (!container || !gameState) return;
+  const container = document.getElementById("my-info-area");
+  if (!container || !gameState) return;
 
-    const me = gameState.players.find(p => p.id === currentUserId);
-    if (me) {
-        container.innerHTML = createMyInfoPod(me);
-    }
+  const me = gameState.players.find((p) => p.id === currentUserId);
+  if (me) {
+    container.innerHTML = createMyInfoPod(me);
+  }
 };
 
 const renderMyHand = (isMyTurn: boolean) => {
-    const container = document.getElementById('my-hand-cards');
-    if (!container) return;
-    container.innerHTML = myCards.map(card => createHandCard(card)).join('');
-    
-    container.querySelectorAll('.hand-card').forEach(cardEl => {
-        if (isMyTurn) {
-            cardEl.addEventListener('click', () => handleCardSelection(cardEl));
-        }
-        const cardId = cardEl.getAttribute('data-card-id');
-        if (cardId && selectedCardId.includes(cardId)) {
-            cardEl.classList.add('selected');
-        }
-    });
+  const container = document.getElementById("my-hand-cards");
+  if (!container) return;
+  container.innerHTML = myCards.map((card) => createHandCard(card)).join("");
+
+  container.querySelectorAll(".hand-card").forEach((cardEl) => {
+    if (isMyTurn) {
+      cardEl.addEventListener("click", () => handleCardSelection(cardEl));
+    }
+    const cardId = cardEl.getAttribute("data-card-id");
+    if (cardId && selectedCardId.includes(cardId)) {
+      cardEl.classList.add("selected");
+    }
+  });
 };
 
 const renderGameStatus = () => {
-    const statusText = document.getElementById('game-status-text');
-    if (!statusText || !gameState || !gameState.game) return;
+  const statusText = document.getElementById("game-status-text");
+  if (!statusText || !gameState || !gameState.game) return;
 
-    if (gameState.status === 'playing') {
-        const currentPlayer = gameState.players.find(p => p.id === gameState!.game!.currentPlayerId);
-        statusText.textContent = `Required: ${gameState.game.currentCardType?.toUpperCase() || 'ANY'} | Turn: ${currentPlayer?.username}`;
-    } else {
-        statusText.textContent = `Waiting for players... (${gameState.players.length}/${MAX_PLAYERS})`;
-    }
+  if (gameState.status === "playing") {
+    const currentPlayer = gameState.players.find(
+      (p) => p.id === gameState!.game!.currentPlayerId
+    );
+    statusText.textContent = `Required: ${
+      gameState.game.currentCardType?.toUpperCase() || "ANY"
+    } | Turn: ${currentPlayer?.username}`;
+  } else {
+    statusText.textContent = `Waiting for players... (${gameState.players.length}/${MAX_PLAYERS})`;
+  }
 };
 
 const renderActionButtons = (isMyTurn: boolean, canChallenge: boolean) => {
-    const container = document.getElementById('action-buttons');
-    if (!container) return;
-    container.innerHTML = createActionButtons(isMyTurn, canChallenge);
-    document.getElementById('play-card-btn')?.addEventListener('click', handlePlayCardAction);
-    document.getElementById('call-bluff-btn')?.addEventListener('click', handleCallBluffAction);
+  const container = document.getElementById("action-buttons");
+  if (!container) return;
+  container.innerHTML = createActionButtons(isMyTurn, canChallenge);
+  document
+    .getElementById("play-card-btn")
+    ?.addEventListener("click", handlePlayCardAction);
+  document
+    .getElementById("call-bluff-btn")
+    ?.addEventListener("click", handleCallBluffAction);
 };
 
 const renderReferenceCard = () => {
-    const container = document.getElementById('reference-card-container');
-    if (!container || !gameState || !gameState.game) return;
-    
-    const referenceType = gameState.game.currentCardType;
-    if (referenceType) {
-        container.innerHTML = `<div class="card-face reference-card">${referenceType.charAt(0).toUpperCase()}</div>`;
-    } else {
-        container.innerHTML = 'New Round...';
-    }
+  const container = document.getElementById("reference-card-container");
+  if (!container || !gameState || !gameState.game) return;
+
+  const referenceType = gameState.game.currentCardType;
+  if (referenceType) {
+    container.innerHTML = `<div class="card-face reference-card">${referenceType
+      .charAt(0)
+      .toUpperCase()}</div>`;
+  } else {
+    container.innerHTML = "New Round...";
+  }
 };
 
 const renderChat = () => {
-    const container = document.getElementById('chat-messages');
-    if (!container) return;
-    container.innerHTML = chatMessages.map(msg => `
+  const container = document.getElementById("chat-messages");
+  if (!container) return;
+  container.innerHTML = chatMessages
+    .map(
+      (msg) => `
         <div class="message">
-            <span class="timestamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-            <span class="content"><strong>${msg.authorName}:</strong> ${msg.message}</span>
+            <span class="timestamp">${new Date(
+              msg.timestamp
+            ).toLocaleTimeString([], {
+              hour: "2-digit",
+              minute: "2-digit",
+            })}</span>
+            <span class="content"><strong>${msg.authorName}:</strong> ${
+        msg.message
+      }</span>
         </div>
-    `).join('');
-    container.scrollTop = container.scrollHeight;
+    `
+    )
+    .join("");
+  container.scrollTop = container.scrollHeight;
 };
 
 const handleCardSelection = (cardEl: Element) => {
-    const cardId = cardEl.getAttribute('data-card-id');
-    if (!cardId) return;   
+  const cardId = cardEl.getAttribute("data-card-id");
+  if (!cardId) return;
 
-    const isSelected = selectedCardId.includes(cardId);
-    
-    if (isSelected) {
-        // Remove da seleção
-        selectedCardId = selectedCardId.filter(id => id !== cardId);
-        cardEl.classList.remove('selected');
-    } else {
-        // Adiciona à seleção
-        selectedCardId.push(cardId);
-        cardEl.classList.add('selected');
-    }
+  const isSelected = selectedCardId.includes(cardId);
+
+  if (isSelected) {
+    // Remove da seleção
+    selectedCardId = selectedCardId.filter((id) => id !== cardId);
+    cardEl.classList.remove("selected");
+  } else {
+    // Adiciona à seleção
+    selectedCardId.push(cardId);
+    cardEl.classList.add("selected");
+  }
 };
 
 const handlePlayCardAction = () => {
-    if (selectedCardId.length === 0) {
-        alert("Please select a card to play.");
-        return;
-    }
-    sendWebSocketMessage({ 
-        type: 'PLAY_CARD', 
-        payload: { cardsId: selectedCardId }
-    });
+  if (selectedCardId.length === 0) {
+    alert("Please select a card to play.");
+    return;
+  }
+  sendWebSocketMessage({
+    type: "PLAY_CARD",
+    payload: { cardsId: selectedCardId },
+  });
 
-    selectedCardId = [];
+  selectedCardId = [];
 };
 
 const handleCallBluffAction = () => {
-    if (confirm("Are you sure you want to call a bluff?")) {
-        sendWebSocketMessage({ type: 'CALL_BLUFF', payload: {} });
-    }
+  if (confirm("Are you sure you want to call a bluff?")) {
+    sendWebSocketMessage({ type: "CALL_BLUFF", payload: {} });
+  }
 };
 
 const setupEventListeners = () => {
-    const chatForm = document.getElementById('chat-form');
-    chatForm?.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const chatInput = document.getElementById('chat-input') as HTMLInputElement;
-        const message = chatInput.value.trim();
-        if (message) {
-            sendWebSocketMessage({ type: 'CHAT_MESSAGE', payload: { message } });
-            chatInput.value = '';
-        }
-    });
+  const chatForm = document.getElementById("chat-form");
+  chatForm?.addEventListener("submit", (e) => {
+    e.preventDefault();
+    const chatInput = document.getElementById("chat-input") as HTMLInputElement;
+    const message = chatInput.value.trim();
+    if (message) {
+      sendWebSocketMessage({ type: "CHAT_MESSAGE", payload: { message } });
+      chatInput.value = "";
+    }
+  });
 
-    const quitModal = document.getElementById('quit-game-modal') as HTMLDivElement;
-    const quitBtn = document.getElementById('quit-game-btn');
-    const confirmQuitBtn = document.getElementById('quit-game-btn') as HTMLButtonElement;
-    const cancelQuitBtn = document.getElementById('cancel-quit-btn');
+  const quitModal = document.getElementById(
+    "quit-game-modal"
+  ) as HTMLDivElement;
+  const quitBtn = document.getElementById("quit-game-btn");
+  const confirmQuitBtn = document.getElementById(
+    "quit-game-btn"
+  ) as HTMLButtonElement;
+  const cancelQuitBtn = document.getElementById("cancel-quit-btn");
 
-    const openModal = () => quitModal.classList.add('show');
-    const closeModal = () => quitModal.classList.remove('show');
+  const openModal = () => quitModal.classList.add("show");
+  const closeModal = () => quitModal.classList.remove("show");
 
-    quitBtn?.addEventListener('click', openModal);
-    cancelQuitBtn?.addEventListener('click', closeModal);
-    confirmQuitBtn?.addEventListener('click', () => {
-        // In a real app, you would send a message to the server here (e.g., via WebSocket)
-        // to notify that the player has forfeited.
-        sendWebSocketMessage({type: "LEAVE_ROOM", payload:{}});
-        closeModal();
-    });
-    quitModal.addEventListener('click', (e) => { if (e.target === quitModal) closeModal(); });
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && quitModal.classList.contains('show')) closeModal(); });
+  quitBtn?.addEventListener("click", openModal);
+  cancelQuitBtn?.addEventListener("click", closeModal);
+  confirmQuitBtn?.addEventListener("click", () => {
+    // In a real app, you would send a message to the server here (e.g., via WebSocket)
+    // to notify that the player has forfeited.
+    sendWebSocketMessage({ type: "LEAVE_ROOM", payload: {} });
+    closeModal();
+  });
+  quitModal.addEventListener("click", (e) => {
+    if (e.target === quitModal) closeModal();
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && quitModal.classList.contains("show"))
+      closeModal();
+  });
 };
 
 function assignPlayerPositions(players: any[], currentUserId: string) {
-    const currentUserIndex = players.findIndex(p => p.id === currentUserId);
-    if (currentUserIndex === -1) return players;
-    const reordered = [...players];
-    return reordered.slice(currentUserIndex).concat(reordered.slice(0, currentUserIndex));
+  const currentUserIndex = players.findIndex((p) => p.id === currentUserId);
+  if (currentUserIndex === -1) return players;
+  const reordered = [...players];
+  return reordered
+    .slice(currentUserIndex)
+    .concat(reordered.slice(0, currentUserIndex));
 }
 
-const createPlayerPod = (player: any, position: number, isCurrentTurn: boolean) => {
-    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
-    return `
-        <div class="player-pod player-${position} ${isCurrentTurn ? 'active-turn' : ''}" data-player-id="${player.id}">
+const createPlayerPod = (
+  player: any,
+  position: number,
+  isCurrentTurn: boolean
+) => {
+  const avatarSrc = player.avatar_url
+    ? `${API_BASE_URL}${player.avatar_url}`
+    : "https://via.placeholder.com/60";
+  return `
+        <div class="player-pod player-${position} ${
+    isCurrentTurn ? "active-turn" : ""
+  }" data-player-id="${player.id}">
             <div class="opponent-hand">
-                ${Array(player.handSize || 0).fill('<div class="card-back small-card"></div>').join('')}
+                ${Array(player.handSize || 0)
+                  .fill('<div class="card-back small-card"></div>')
+                  .join("")}
             </div>
             <div class="player-info">
-                <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar" />
+                <img src="${avatarSrc}" alt="${
+    player.username
+  }'s avatar" class="player-avatar" />
                 <div class="player-details">
                     <span class="player-name">${player.username}</span>
-                    <span class="player-risk-level">Risk: ${player.riskLevel || 0}/6</span>
+                    <span class="player-risk-level">Risk: ${
+                      player.riskLevel || 0
+                    }/6</span>
                 </div>
             </div>
         </div>`;
 };
 
 const createMyInfoPod = (player: any) => {
-    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
-    const isMyTurn = gameState?.game?.currentPlayerId === player.id;
-    return `
-        <img src="${avatarSrc}" alt="${player.username}'s avatar" class="my-avatar ${isMyTurn ? 'active-turn' : ''}" />
+  const avatarSrc = player.avatar_url
+    ? `${API_BASE_URL}${player.avatar_url}`
+    : "https://via.placeholder.com/60";
+  const isMyTurn = gameState?.game?.currentPlayerId === player.id;
+  return `
+        <img src="${avatarSrc}" alt="${
+    player.username
+  }'s avatar" class="my-avatar ${isMyTurn ? "active-turn" : ""}" />
         <div class="my-details">
             <span class="my-name">${player.username}</span>
             <span class="my-risk-level">Risk: ${player.riskLevel || 0}/6</span>
@@ -390,8 +462,10 @@ const createMyInfoPod = (player: any) => {
 };
 
 const createEliminatedPod = (player: any, position: number) => {
-    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : 'https://via.placeholder.com/60';
-    return `
+  const avatarSrc = player.avatar_url
+    ? `${API_BASE_URL}${player.avatar_url}`
+    : "https://via.placeholder.com/60";
+  return `
         <div class="player-pod player-${position} eliminated" data-player-id="${player.id}">
             <div class="player-info">
                 <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar eliminated-avatar" />
@@ -404,13 +478,26 @@ const createEliminatedPod = (player: any, position: number) => {
 };
 
 const createHandCard = (card: Card) => {
-    const cardContent = card.type === 'joker' ? '🃏' : card.type.charAt(0).toUpperCase();
-    return `<div class="card-face hand-card" data-card-id="${card.id}">${cardContent}</div>`;
+  const cardContent =
+    card.type === "joker" ? "🃏" : card.type.charAt(0).toUpperCase();
+  return `<div class="card-face hand-card" data-card-id="${card.id}">${cardContent}</div>`;
+};
+
+const createRevealedCards = (cards: Card[]) => {
+    return cards.map((card: Card) => `
+        <div class="revealed-card">
+            ${createHandCard(card)}
+        </div>
+    `).join('');
 };
 
 const createActionButtons = (isMyTurn: boolean, canChallenge: boolean) => `
-    <button id="play-card-btn" class="button button-primary action-btn" ${!isMyTurn ? 'disabled' : ''}>Play Card</button>
-    <button id="call-bluff-btn" class="button button-danger action-btn" ${!isMyTurn || !canChallenge ? 'disabled' : ''}>Call Bluff</button>
+    <button id="play-card-btn" class="button button-primary action-btn" ${
+      !isMyTurn ? "disabled" : ""
+    }>Play Card</button>
+    <button id="call-bluff-btn" class="button button-danger action-btn" ${
+      !isMyTurn || !canChallenge ? "disabled" : ""
+    }>Call Bluff</button>
 `;
 
 const renderQuitModal = () => `
@@ -426,8 +513,8 @@ const renderQuitModal = () => `
     </div>`;
 
 const renderDynamicStyles = () => {
-    const style = document.createElement('style');
-    style.textContent = `
+  const style = document.createElement("style");
+  style.textContent = `
         /* General Layout */
         .game-layout { display: flex; height: calc(100vh - 80px); background: #0f172a; }
         .game-area { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; position: relative; }
@@ -510,6 +597,11 @@ const renderDynamicStyles = () => {
         .modal-body { padding: 1.5rem; }
         .modal-actions { display: flex; gap: 1rem; padding: 1rem; justify-content: flex-end; background: var(--color-wood-dark); }
         .button-secondary { background: var(--color-primary); }
+
+        /*Cards revealed in roulette*/
+        #revealed-card-container {display: flex; gap: 1rem; justify-content: center; align-items: center; flex-wrap: wrap; margin: 1rem 0;}
+        .revealed-card { display: flex; flex-direction: column; align-items: center; }
+        .revealed-card .hand-card { transform: none; cursor: default; transition: none; border-color: var(--color-accent-gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
     `;
-    return style.outerHTML;
+  return style.outerHTML;
 };

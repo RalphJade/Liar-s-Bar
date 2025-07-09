@@ -171,9 +171,10 @@ export function handlePlayCard(
    cardsToPlay.forEach(card => {
        playerHand.cards = playerHand.cards.filter(c => c.id !== card.id);
    });
-   
-  room.game.lastPlayedCard = cardsToPlay[cardsToPlay.length - 1];
+
+  room.game.lastPlayedCard = [...cardsToPlay]
   room.game.lastPlayerId = ws.clientId;
+  room.game.playedCards.push(...cardsToPlay);
 
   broadcastRoomState(room);
   advanceTurn(room);
@@ -209,11 +210,21 @@ export function handleCallBluff(ws: CustomWebSocket): void {
     `Challenge in room ${room.roomCode}: ${challenger.username} challenges ${target.username}.`
   );
 
-  const revealedCard = room.game.lastPlayedCard;
+  const playedCards = room.game.lastPlayedCard;
   const requiredType = room.game.currentCardType!;
-  const wasLie =
-    revealedCard.type !== requiredType && revealedCard.type !== "joker";
+  
+  const invalidCards: Card[] = [];
+  const validCards: Card[] = [];
+  
+  playedCards.forEach(card => {
+    if (card.type === requiredType || card.type === "joker") {
+      validCards.push(card);
+    } else {
+      invalidCards.push(card);
+    }
+  });
 
+  const wasLie = invalidCards.length > 0;
   const punishedPlayerId = wasLie ? targetId : challengerId;
   const punishedPlayer = room.players.get(punishedPlayerId)!; // Safe to use ! because we know the ID is valid
   let message: string;
@@ -225,14 +236,10 @@ export function handleCallBluff(ws: CustomWebSocket): void {
   punishedHand.riskLevel += 1;
   const eliminatedOnThisTurn = spinRoulette(punishedHand.riskLevel);
 
-  if (wasLie) {
-    message = `${
-      target.username
-    } was caught bluffing! The card was a ${revealedCard.type.toUpperCase()}.`;
+  if (wasLie) {    
+    message = `${target.username} was caught bluffing! `;
   } else {
-    message = `${challenger.username} falsely accused ${
-      target.username
-    }! The card was a ${revealedCard.type.toUpperCase()}.`;
+    message = `${challenger.username} falsely accused ${target.username}! `;
   }
 
   message += ` ${punishedPlayer.username} spins the roulette...`;
@@ -248,7 +255,10 @@ export function handleCallBluff(ws: CustomWebSocket): void {
     wasLie,
     punishedPlayerId,
     punishedPlayerName: punishedPlayer.username,
-    revealedCard,
+    targetName: target.username,
+    revealedCard: playedCards,
+    invalidCards: invalidCards,
+    validCards: validCards,
     message,
     isEliminated: eliminatedOnThisTurn,
     newRiskLevel: punishedHand.riskLevel,
@@ -275,7 +285,8 @@ export function handleCallBluff(ws: CustomWebSocket): void {
       }
     }
 
-    startNewRound(room, nextTurnPlayerId, false, revealedCard.type);
+    const nextRoundCardType = validCards.length > 0 ? validCards[0].type : undefined;
+    startNewRound(room, nextTurnPlayerId, false, nextRoundCardType);
   }, 7000); // Increased delay to match frontend animation
 }
 
@@ -306,7 +317,7 @@ function startNewRound(
   }
 
   room.game.currentCardType = referenceType as Exclude<CardType, "joker">;
-  room.game.lastPlayedCard = null;
+  room.game.lastPlayedCard =[];
   room.game.lastPlayerId = null;
   room.game.playedCards = [];
 
