@@ -9,7 +9,7 @@ import { Room, CustomWebSocket, CardGame } from "../models/types.model";
 import { generateCodeWithFaker } from "../utils/room.util";
 import { getRoomStateForApi, broadcastRoomState } from '../utils/websocket.util';
 import { startCardGame, advanceTurnAfterInterruption } from "./game-logic";
-import { MAX_PLAYERS, TURN_TIME_LIMIT } from "../config/game.config";
+import { MAX_PLAYERS, TURN_TIME_LIMIT, RECONNECTION_TIME_LIMIT } from "../config/game.config";
 import * as LobbyManager from "./lobby.manager";
 
 /**
@@ -289,7 +289,6 @@ export async function handleLeaveRoom(ws: CustomWebSocket): Promise<void> {
 export function handlePlayerDisconnect(ws: CustomWebSocket): void {
   const roomCode = ws.currentRoomCode;
   
-  // Se o jogador não estava em uma sala, apenas notifica o lobby e termina.
   if (!roomCode) {
     LobbyManager.handleDisconnect(ws);
     return;
@@ -304,7 +303,7 @@ export function handlePlayerDisconnect(ws: CustomWebSocket): void {
   const participant = room.players.get(ws.clientId);
   const isPlayer = !!participant;
 
-  if (isPlayer) {
+  if (isPlayer && participant) {
     log(`Jogador ${ws.clientUsername} desconectou da sala ${room.roomCode}.`, { ws });
     participant.ws = null;
 
@@ -325,6 +324,30 @@ export function handlePlayerDisconnect(ws: CustomWebSocket): void {
             advanceTurnAfterInterruption(room);
         }
     }
+
+    participant.disconnectionTimer = setTimeout(() => {
+      
+      const currentRoomState = getRoom(roomCode);
+      const playerStillDisconnected = currentRoomState?.players.get(ws.clientId)?.ws === null;
+
+      if (playerStillDisconnected) {
+        log(`Tempo de reconexão esgotado para ${ws.clientUsername}. Removendo da sala ${roomCode}.`);
+        
+        currentRoomState.players.delete(ws.clientId);
+        
+        const removalMessage = { authorId: 'system', authorName: 'System', message: `${ws.clientUsername} was removed for being disconnected too long.`, timestamp: new Date().toISOString() };
+        addRoomMessage(roomCode, removalMessage);
+        broadcastToRoom(currentRoomState, "CHAT_BROADCAST", removalMessage);
+        
+        broadcastRoomState(currentRoomState);
+        
+        if (currentRoomState.players.size === 0) {
+            log(`Sala ${roomCode} ficou vazia e foi fechada.`);
+            removeRoom(roomCode);
+            LobbyManager.broadcast({ type: "ROOM_REMOVED", payload: { code: roomCode } });
+        }
+      }
+    }, RECONNECTION_TIME_LIMIT);
 
   } else {
     room.spectators.delete(ws.clientId);
@@ -348,6 +371,13 @@ export async function attemptPlayerReconnection(ws: CustomWebSocket): Promise<bo
     const participant = room.players.get(ws.clientId) || room.spectators.get(ws.clientId);
     
     if (participant && participant.ws === null) {
+
+      if (participant.disconnectionTimer) {
+        clearTimeout(participant.disconnectionTimer);
+        participant.disconnectionTimer = undefined;
+        log(`Timer de remoção para ${ws.clientUsername} cancelado com sucesso.`);
+      }
+
       log(`Reconectando ${ws.clientUsername} à sala ${room.roomCode}.`, { ws });
       
       participant.ws = ws;

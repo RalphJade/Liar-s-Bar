@@ -56,6 +56,7 @@ export interface CardGame {
 export interface Participant {
   username: string;
   ws: CustomWebSocket | null;
+  disconnectionTimer?: NodeJS.Timeout;
 }
 
 export interface Room {

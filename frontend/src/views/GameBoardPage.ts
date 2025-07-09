@@ -87,9 +87,7 @@ const handleGameMessage = (message: any) => {
             updateUI();
             break;
         case 'CHAT_BROADCAST':
-            console.log('[DEBUG] Recebido CHAT_BROADCAST. Payload:', message.payload);
             chatMessages.push(message.payload);
-            console.log('[DEBUG] Array chatMessages após push:', chatMessages);
             if (chatMessages.length > 100) chatMessages.shift();
             renderChat();
             break;
@@ -288,9 +286,7 @@ const renderReferenceCard = () => {
 
 const renderChat = () => {
     const container = document.getElementById('chat-messages');
-    console.log('[DEBUG] Chamando renderChat. Contêiner encontrado:', !!container);
     if (!container) return;
-    console.log('[DEBUG] Renderizando com este array de mensagens:', chatMessages);
     container.innerHTML = chatMessages.map(msg =>{
         const messageClass = msg.authorId === 'system' 
             ? 'message system-message' 
@@ -301,7 +297,6 @@ const renderChat = () => {
             <span class="content"><strong>${msg.authorName}:</strong> ${msg.message}</span>
         </div>
     `}).join('');
-    console.log('[DEBUG] innerHTML do contêiner do chat foi definido.');
     container.scrollTop = container.scrollHeight;
 };
 
