@@ -8,7 +8,7 @@ import api from '../../api/api.ts';
 export const renderRegisterForm = (element: HTMLElement) => {
   // Set the static HTML content for the registration form.
   element.innerHTML = `
-    <form id="register-form">
+    <form id="register-form" novalidate>
       <h2 class="form-title">Create a New Account</h2>
       <div id="register-feedback"></div>
       <div class="form-group">
