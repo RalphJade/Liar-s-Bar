@@ -23,7 +23,7 @@ export interface CardGame {
 function createSpecialDeck(): Card[] {
   const deck: Card[] = [];
   const suits = ['hearts', 'diamonds', 'clubs', 'spades'] as const;
-  const cardTypes: CardType[] = ['king', 'queen', 'ace'];
+  const cardTypes: CardType[] = ['king', 'queen', 'jack'];
 
   // Add 6 cards of each specified type, distributing among suits
   cardTypes.forEach(type => {

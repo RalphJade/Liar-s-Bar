@@ -394,7 +394,7 @@ const createEliminatedPod = (player: any, position: number) => {
 };
 
 const createHandCard = (card: Card) => {
-    const cardContent = card.type === 'joker' ? '🃏' : card.type.charAt(0).toUpperCase();
+    const cardContent = card.type === 'ace' ? '🃏' : card.type.charAt(0).toUpperCase();
     return `<div class="card-face hand-card" data-card-id="${card.id}">${cardContent}</div>`;
 };
 
