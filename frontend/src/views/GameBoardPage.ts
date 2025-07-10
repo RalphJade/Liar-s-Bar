@@ -465,6 +465,10 @@
           return createEliminatedPod(player, positionClass);
         }
 
+        if (player.isInactive) {
+        return createInactivePod(player, positionClass);
+        }
+
         if (!player.isOnline && player.reconnectingUntil) {
           return createReconnectingPod(player, positionClass);
         }
@@ -485,7 +489,8 @@
 
     const me = gameState.players.find((p) => p.id === currentUserId);
     if (me) {
-      container.innerHTML = createMyInfoPod(me);
+    const isMyTurn = gameState.game?.currentPlayerId === currentUserId;
+    container.innerHTML = createMyInfoPod(me, isMyTurn);
     }
   };
 
@@ -1057,11 +1062,10 @@
    * @param player - The current user's player object.
    * @returns The HTML string for the user info area.
    */
-  const createMyInfoPod = (player: any) => {
+  const createMyInfoPod = (player: any, isMyTurn: boolean) => {
 const avatarSrc = player.avatar_url
       ? player.avatar_url
       : "/default-avatar.jpg";
-    const isMyTurn = gameState?.game?.currentPlayerId === player.id;
     return `
           <img src="${avatarSrc}" alt="${player.username
       }'s avatar" class="my-avatar ${isMyTurn ? "active-turn" : ""}" />
