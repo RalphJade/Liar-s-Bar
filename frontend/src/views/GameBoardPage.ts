@@ -677,7 +677,7 @@ const createPlayerPod = (
   }'s avatar" class="player-avatar" />
                 <div class="player-details">
                     <span class="player-name">${player.username}</span>
-                    <span class="player-risk-level">Risk: ${
+                    <span class="player-risk-level">Strikes: ${
                       player.riskLevel || 0
                     }/6</span>
                 </div>
@@ -701,7 +701,7 @@ const createMyInfoPod = (player: any) => {
   }'s avatar" class="my-avatar ${isMyTurn ? "active-turn" : ""}" />
         <div class="my-details">
             <span class="my-name">${player.username}</span>
-            <span class="my-risk-level">Risk: ${player.riskLevel || 0}/6</span>
+            <span class="my-risk-level">Strikes: ${player.riskLevel || 0}/6</span>
         </div>
     `;
 };

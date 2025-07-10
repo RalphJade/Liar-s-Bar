@@ -678,7 +678,7 @@ body::before {
 /* --- General button styles --- */
 
 .button {
-  width: 100%;
+  width: auto;
   padding: 0.75rem 1rem;
   border: none;
   border-radius: 0.5rem;
@@ -1178,4 +1178,10 @@ body.lobby-theme {
 .scrollable-list {
   scrollbar-width: thin; /* Deixa a barra mais fina */
   scrollbar-color: var(--color-wood-light) rgba(0, 0, 0, 0.3); /* Cor do polegar e da trilha */
+}
+
+.form-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
 }
