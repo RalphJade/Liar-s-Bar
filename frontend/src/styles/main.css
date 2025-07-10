@@ -7,6 +7,20 @@
  * visual consistency, and simplifies maintenance.
  */
 :root {
+  /* --- TIPOGRAFIA (NOVO E CENTRALIZADO) --- */
+  --font-display: "Pirata One", cursive;
+  --font-body: "Merriweather", serif;
+
+  /* Escala de Tamanhos de Fonte */
+  --font-size-xs: 0.75rem; /* 12px - Para detalhes muito pequenos */
+  --font-size-sm: 0.875rem; /* 14px - Labels, textos de ajuda */
+  --font-size-base: 1rem; /* 16px - Parágrafos, inputs */
+  --font-size-md: 1.125rem; /* 18px - Nomes de salas, etc. */
+  --font-size-lg: 1.25rem; /* 20px - Subtítulos de página */
+  --font-size-xl: 1.75rem; /* 28px - Títulos de card/seção */
+  --font-size-2xl: 2.5rem; /* 40px - Títulos de modal */
+  --font-size-display: 4rem; /* 64px - Títulos de página principal */
+
   /* Color Palette - Dark Bar Theme */
   --color-primary: #8c6d5e; /* Wood Brown */
   --color-primary-hover: #5c3d2e; /* Darker Wood */
@@ -23,8 +37,6 @@
   --color-accent-gold: #d4af37; /* Rich gold accent */
 
   /* Liar's Bar Theme - Enhanced Dark Atmosphere */
-  --font-display: "Pirata One", cursive;
-  --font-body: "Merriweather", serif;
   --color-wood-dark: #2c1810; /* Very dark wood for header */
   --color-wood-light: #8b6f47; /* Lighter wood for accents */
   --color-parchment: #2a2a2a; /* Dark parchment for modal */
@@ -68,7 +80,7 @@
 
 html {
   box-sizing: border-box;
-  font-size: 70%;
+  font-size: 100%;
 }
 *,
 *:before,
@@ -86,6 +98,7 @@ html {
 body {
   margin: 0;
   font-family: var(--font-family);
+  font-size: var(--font-size-base);
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
   background-attachment: fixed;
   color: var(--color-text-light);
@@ -219,7 +232,7 @@ body::before {
   align-items: center;
   gap: 0.75rem;
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: var(--font-size-xl);
   color: var(--color-accent-gold);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
@@ -239,6 +252,7 @@ body::before {
 .button-rules {
   padding: 0.75rem 2rem;
   font-family: var(--font-body);
+  font-size: var(--font-size-sm);
   font-weight: 700;
   background: linear-gradient(
     135deg,
@@ -283,7 +297,7 @@ body::before {
 
 .user-info .username {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -418,7 +432,7 @@ body::before {
 
 .modal-title {
   font-family: var(--font-display);
-  font-size: 2.5rem;
+  font-size: var(--font-size-2xl);
   text-align: center;
   margin-top: 0;
   margin-bottom: 1.5rem;
@@ -439,7 +453,7 @@ body::before {
 
 .modal-body h3 {
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: var(--font-size-lg);
   color: var(--color-accent-gold);
   border-bottom: 2px solid var(--color-wood-light);
   padding-bottom: 0.5rem;
@@ -611,9 +625,15 @@ body::before {
 }
 
 /* --- Form-specific utility classes --- */
+.form-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
 
 .form-title {
-  font-size: 1.5rem;
+  font-size: var(--font-size-xl);
+  font-family: var(--font-body);
   font-weight: 700;
   text-align: center;
   color: var(--color-accent-gold);
@@ -627,7 +647,7 @@ body::before {
 
 .form-label {
   display: block;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-text-light);
   margin-bottom: 0.25rem;
@@ -641,6 +661,7 @@ body::before {
   transition: all 0.3s ease;
   background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
   color: var(--color-text-light);
+  font-size: var(--font-size-base);
 }
 
 .form-input:focus {
@@ -679,7 +700,8 @@ body::before {
 
 .button {
   width: auto;
-  padding: 0.75rem 1rem;
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 0.5rem;
   color: var(--color-text-light);
@@ -789,7 +811,7 @@ body::before {
 }
 
 .homepage-title {
-  font-size: 4.5rem;
+  font-size: var(--font-size-display);
   font-weight: 700;
   font-family: var(--font-display);
   color: var(--color-accent-gold);
@@ -800,7 +822,7 @@ body::before {
 
 .homepage-text {
   margin-top: 1rem;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   color: var(--color-text-light);
   line-height: 1.6;
 }
@@ -1047,14 +1069,14 @@ body.lobby-theme {
 
 .lobby-title {
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: var(--font-size-xl);
   color: var(--color-accent-gold);
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
 }
 
 .lobby-subtitle {
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: var(--font-size-lg);
   color: var(--color-accent-gold);
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
@@ -1180,8 +1202,12 @@ body.lobby-theme {
   scrollbar-color: var(--color-wood-light) rgba(0, 0, 0, 0.3); /* Cor do polegar e da trilha */
 }
 
-.form-actions {
-  margin-top: 1.5rem;
-  display: flex;
-  justify-content: center;
+.room-name {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+}
+
+.room-details {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-medium);
 }

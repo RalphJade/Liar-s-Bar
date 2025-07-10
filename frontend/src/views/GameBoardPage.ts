@@ -68,7 +68,7 @@ export const renderGameBoardPage = (
                     </form>
                 </div>
                 <div class="game-controls">
-                    <button id="button-quit-game" class="button-quit-game">
+                    <button id="button-quit-game" class="button button-quit-game">
                         <span class="quit-icon">🚪</span><span class="quit-text">Leave Table</span>
                     </button>
                 </div>
@@ -677,7 +677,7 @@ const createPlayerPod = (
   }'s avatar" class="player-avatar" />
                 <div class="player-details">
                     <span class="player-name">${player.username}</span>
-                    <span class="player-risk-level">Strikes: ${
+                    <span class="player-risk-level">Risk: ${
                       player.riskLevel || 0
                     }/6</span>
                 </div>
@@ -701,7 +701,7 @@ const createMyInfoPod = (player: any) => {
   }'s avatar" class="my-avatar ${isMyTurn ? "active-turn" : ""}" />
         <div class="my-details">
             <span class="my-name">${player.username}</span>
-            <span class="my-risk-level">Strikes: ${player.riskLevel || 0}/6</span>
+            <span class="my-risk-level">Risk: ${player.riskLevel || 0}/6</span>
         </div>
     `;
 };
@@ -806,13 +806,6 @@ const renderDynamicStyles = () => {
   const style = document.createElement("style");
   style.textContent = `
         /* General Layout */
-        :root {
-            --color-danger: #dc2626;
-            --color-success: #16a34a;
-            --color-wood-dark: #8B4513;
-            --color-accent-gold: #d4af37;
-            --font-display: 'Cinzel', serif;
-        }
         .game-layout { display: flex; height: calc(100vh - 80px); background: #0f172a; }
         .game-area { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; position: relative; }
         
@@ -828,8 +821,8 @@ const renderDynamicStyles = () => {
         .player-info { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; }
         .player-avatar { width: 60px; height: 60px; border-radius: 50%; border: 3px solid var(--color-accent-gold); object-fit: cover; background: var(--color-wood-dark); }
         .player-details { display:flex; flex-direction:column; align-items: center; background: rgba(0,0,0,0.7); padding: 0.25rem 0.75rem; border-radius: 12px; }
-        .player-name { font-weight: 700; color: #f1f5f9; font-size: 0.9rem; }
-        .player-risk-level { font-size: 0.75rem; color: #fca5a5; }
+        .player-name { font-weight: 700; color: #f1f5f9; font-size: var(--font-size-sm); }
+        .player-risk-level { font-size: var(--font-size-xs); color: #fca5a5; }
         .opponent-hand { display: flex; justify-content: center; gap: -20px; margin-bottom: 5px; }
         .card-back { background: linear-gradient(45deg, #b91c1c, #7f1d1d); border: 1px solid var(--color-accent-gold); border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .small-card { width: 30px; height: 42px; }
@@ -845,7 +838,7 @@ const renderDynamicStyles = () => {
             left: 2rem;
             transform: translateY(-50%);
         }
-        .pos-right { /* Player positioned on the right side of the table. */w
+        .pos-right { /* Player positioned on the right side of the table. */
             top: 50%;
             right: 2rem;
             transform: translateY(-50%);
@@ -866,7 +859,7 @@ const renderDynamicStyles = () => {
         
         .player-hand-area { min-height: 100px; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 1rem; }
         .hand-cards { display: flex; gap: 0.5rem; }
-        .card-face { width: 70px; height: 98px; background: white; border: 2px solid #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 2rem; font-weight: bold; color: #333; cursor: pointer; transition: all 0.2s ease; }
+        .card-face { width: 70px; height: 98px; background: white; border: 2px solid #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: var(--font-size-xl); font-weight: bold; color: #333; cursor: pointer; transition: all 0.2s ease; }
         .hand-card:hover { transform: translateY(-10px); }
         .hand-card.selected { transform: translateY(-20px); border-color: var(--color-accent-gold); box-shadow: 0 5px 15px rgba(212, 175, 55, 0.5); }
         
@@ -880,7 +873,7 @@ const renderDynamicStyles = () => {
         .eliminated-screen, .end-game-screen { display: flex; flex-direction: column; justify-content: center; align-items: center; width: 100%; height: 100%; background: #0f172a; color: white; }
         .end-game-screen.win h1 { color: var(--color-success); }
         .end-game-screen.lose h1 { color: var(--color-danger); }
-        .end-game-screen h1, .eliminated-screen h1 { font-family: var(--font-display); font-size: 3rem; }
+        .end-game-screen h1, .eliminated-screen h1 { font-family: var(--font-display); font-size: var(--font-size-2xl); }
         .end-game-screen p { font-size: 1.2rem; }
         
         /* Roulette Overlay */
@@ -901,7 +894,7 @@ const renderDynamicStyles = () => {
         }
         
         #roulette-title { 
-            font-family: var(--font-display); font-size: 2rem; 
+            font-family: var(--font-display); font-size: var(--font-size-xl); 
             color: var(--color-accent-gold); text-shadow: 2px 2px 6px rgba(0,0,0,0.8); 
             margin-bottom: 1rem; animation: pulse 2s infinite;
         }
@@ -944,7 +937,7 @@ const renderDynamicStyles = () => {
         }
         
         .roulette-result-text {
-            font-size: 2.5rem; font-weight: bold; font-family: var(--font-display);
+            font-size: var(--font-size-2xl); font-weight: bold; font-family: var(--font-display);
             animation: resultAppear 0.5s ease-in-out; margin-top: 1rem;
         }
         
@@ -978,11 +971,14 @@ const renderDynamicStyles = () => {
         .chat-input { flex-grow: 1; border-radius: 20px; background: var(--color-bg-white); border: 1px solid var(--color-border); padding: 0.5rem 1rem; color: var(--color-text-light); }
         .send-btn { background: var(--color-accent-gold); border: none; color: var(--color-wood-dark); width: 40px; height: 40px; border-radius: 50%; cursor: pointer; font-size: 1.2rem; flex-shrink: 0; }
         .game-controls { padding: 1rem; background: var(--color-wood-dark); }
-        .button-quit-game { width: 100%; }
+        .button-quit-game { 
+            margin: 0 auto;
+            display: block;
+        }
         .modal-overlay.show { display: flex; }
         .modal-content { background: var(--color-parchment); border: 2px solid var(--color-wood-light); color: var(--color-text-light); max-width: 500px; width: 90%; border-radius: 1rem; overflow: hidden; }
         .modal-header { background: var(--color-wood-dark); padding: 1rem; }
-        .modal-title { margin: 0; font-size: 1.5rem; text-align: center; color: var(--color-accent-gold) }
+        .modal-title { margin: 0; font-size: var(--font-size-xl); text-align: center; color: var(--color-accent-gold) }
         .modal-body { padding: 1.5rem; }
         .modal-actions { display: flex; gap: 1rem; padding: 1rem; justify-content: flex-end; background: var(--color-wood-dark); }
         .button-secondary { background: var(--color-primary); }

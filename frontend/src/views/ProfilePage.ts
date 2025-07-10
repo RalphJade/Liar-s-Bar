@@ -59,7 +59,7 @@ export const renderProfilePage = (element: HTMLElement) => {
             </div>
         </div>
 
-        <button id="back-home-btn" class="button button-primary" style="margin-top: 2rem; max-width: 200px; align-self: center;">Return to the Bar</button>
+        <button id="back-home-btn" class="button button-primary" style="margin: 2rem auto 0; display: block;">Return to the Bar</button>
       </div>
     </main>
   `;
@@ -89,7 +89,7 @@ export const renderProfilePage = (element: HTMLElement) => {
     }
     .stats-grid h3 {
       font-family: var(--font-display);
-      font-size: 1.5rem;
+      font-size: var(--font-size-lg);
       color: var(--color-accent-gold);
       margin-top: 0;
       margin-bottom: 1rem;
@@ -98,7 +98,7 @@ export const renderProfilePage = (element: HTMLElement) => {
     }
     .stats-grid p {
       margin-bottom: 0.5rem;
-      font-size: 1rem;
+      font-size: var(--font-size-base);
     }
     @media (max-width: 768px) {
         .profile-content-grid {
