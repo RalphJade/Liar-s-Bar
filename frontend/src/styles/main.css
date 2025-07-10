@@ -139,9 +139,8 @@ body::before {
 #app {
   display: flex;
   flex-direction: column;
-  height: 100%; /* Herda a altura do body (que é 100vh no lobby) */
-  flex-grow: 1; /* Faz o #app crescer para ocupar todo o espaço do body */
-  min-height: 0; /* Correção para bugs de overflow em contêineres flex */
+  height: 100vh; /* Garante que o app ocupe a altura total da tela */
+  overflow: hidden; /* Previne barras de rolagem duplas */
 }
 
 /* A general-purpose container for centering page content vertically and horizontally. */
@@ -149,10 +148,11 @@ body::before {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: calc(100vh - 80px);
-  padding: 1rem;
+  padding: 2rem 1rem;
   position: relative;
+  overflow-y: auto;
 }
 
 /**
@@ -1210,4 +1210,62 @@ body.lobby-theme {
 .room-details {
   font-size: var(--font-size-sm);
   color: var(--color-text-medium);
+}
+
+/**
+ * ================================================================
+ * PROFILE PAGE - LAYOUT CORRECTION
+ * ================================================================
+ */
+
+.profile-card {
+  max-width: 550px; /* Reduz a largura máxima do card */
+}
+
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem; /* Espaçamento entre os blocos */
+  margin-top: 1rem; /* Margem reduzida do topo */
+}
+
+.profile-avatar-section {
+  text-align: center;
+}
+
+.avatar-caption {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-medium);
+  margin-top: 0.5rem;
+}
+
+.data-box {
+  width: 100%;
+  max-width: 400px;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  padding: 1rem; /* Padding reduzido */
+  border-radius: var(--border-radius);
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.data-box-title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  color: var(--color-accent-gold);
+  margin-top: 0;
+  margin-bottom: 0.75rem; /* Margem reduzida */
+  border-bottom: 1px solid var(--color-wood-light);
+  padding-bottom: 0.5rem;
+}
+
+.data-box p {
+  margin-bottom: 0.5rem;
+  font-size: var(--font-size-base);
+}
+
+.profile-back-btn {
+  margin: 1.5rem auto 0; /* Margem reduzida */
+  display: block;
 }
