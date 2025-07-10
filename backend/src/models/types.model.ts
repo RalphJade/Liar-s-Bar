@@ -116,9 +116,9 @@ export interface GameRules {
 }
 
 export interface ChatMessage {
-    userId: string;
-    username: string;
-    text: string;
+    authorId: string;
+    authorName: string;
+    message: string;
     timestamp: string;
 }
 
