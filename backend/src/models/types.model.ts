@@ -19,7 +19,8 @@ export type Choice = "rock" | "paper" | "scissors";
 
 // === NEW TYPES FOR CARD GAME ===
 
-export type CardType = "king" | "queen" | "ace" | "joker";
+// Tipos específicos para o jogo de cartas
+export type CardType = "king" | "queen" | "jack" | "ace";
 export type CardSuit = "hearts" | "diamonds" | "clubs" | "spades";
 export type GamePhase = "waiting" | "playing" | "challenge" | "finished" | "paused";
 
@@ -56,6 +57,8 @@ export interface CardGame {
 export interface Participant {
   username: string;
   ws: CustomWebSocket | null;
+  disconnectionTimer?: NodeJS.Timeout;
+  reconnectingUntil?: number; // <--- ADICIONE ESTA LINHA (timestamp)
 }
 
 export interface Room {
@@ -110,6 +113,13 @@ export interface GameRules {
   jokersCount: number;
   maxPlayers: number;
   turnTimeLimit: number;
+}
+
+export interface ChatMessage {
+    userId: string;
+    username: string;
+    text: string;
+    timestamp: string;
 }
 
 export type ClientMessage =

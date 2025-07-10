@@ -14,14 +14,7 @@ import {
   sendToClient,
 } from "../utils/websocket.util";
 import { dealCards } from "./cards.service";
-import {
-  MAX_PLAYERS,
-  TURN_TIME_LIMIT,
-  CARDS_PER_PLAYER,
-  CARDS_PER_TYPE,
-  JOKERS_COUNT,
-} from "../config/game.config";
-import { getRoomStateForApi, broadcastRoomState } from "./room.manager";
+import { broadcastRoomState } from "../utils/websocket.util";
 import { updatePlayerStatsAfterGame } from "./user.service";
 
 function spinRoulette(riskLevel: number): boolean {
@@ -222,7 +215,7 @@ export function handleCallBluff(ws: CustomWebSocket): void {
   const validCards: Card[] = [];
 
   playedCards.forEach((card) => {
-    if (card.type === requiredType || card.type === "joker") {
+    if (card.type === requiredType || card.type === "ace") {
       validCards.push(card);
     } else {
       invalidCards.push(card);
@@ -311,11 +304,11 @@ function startNewRound(
   }
 
   let referenceType = newCardType;
-  if (referenceType === "joker" || !referenceType) {
+  if (referenceType === "ace" || !referenceType) {
     let newReferenceCard: Card | undefined;
     do {
       newReferenceCard = room.game.deck.pop();
-    } while (newReferenceCard && newReferenceCard.type === "joker");
+    } while (newReferenceCard && newReferenceCard.type === "ace");
 
     if (!newReferenceCard) {
       log(`Deck is out of non-joker cards. Checking for winner.`);

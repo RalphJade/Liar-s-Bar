@@ -10,7 +10,7 @@ import { CARDS_PER_PLAYER, CARDS_PER_TYPE, JOKERS_COUNT } from '../config/game.c
 function createSpecialDeck(): Card[] {
   const deck: Card[] = [];
   const suits = ['hearts', 'diamonds', 'clubs', 'spades'] as const;
-  const cardTypes: CardType[] = ['king', 'queen', 'ace'];
+  const cardTypes: CardType[] = ['king', 'queen', 'jack'];
 
   // Add 6 cards of each specified type, distributing among suits
   cardTypes.forEach(type => {
@@ -28,8 +28,8 @@ function createSpecialDeck(): Card[] {
   // Add 2 Jokers
   for (let i = 0; i < JOKERS_COUNT; i++) {
     deck.push({
-      id: `joker_${i + 1}`,
-      type: 'joker'
+      id: `ace_${i + 1}`,
+      type: 'ace'
     });
   }
 
@@ -83,7 +83,7 @@ export function canPlayCard(card: Card, currentCardType: CardType | null): boole
   if (currentCardType === null) return true;
   
   // A joker can always be played.
-  if (card.type === 'joker') return true;
+  if (card.type === 'ace') return true;
   
   // The played card's type must match the round's required type.
   return card.type === currentCardType;

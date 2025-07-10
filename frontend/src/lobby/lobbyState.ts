@@ -1,12 +1,16 @@
 interface User {
   userId: string;
   username: string;
+  status?: 'In Game' | 'In Lobby';
 }
 
 interface ChatMessage {
-    username: string;
-    text: string;
+    authorId: string;
+    authorName: string;
+    message: string;
+    timestamp: string;
 }
+
 interface Room {
   code: string;
   name: string;

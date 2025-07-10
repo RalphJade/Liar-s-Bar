@@ -7,6 +7,21 @@ interface WebSocketMessage {
 }
 
 let messageHandler: (message: any) => void;
+let reconnectInterval: number | null = null;
+let reconnectionAttempt = 0;
+
+function showReconnectionMessage(show: boolean) {
+    let messageDiv = document.getElementById('reconnection-overlay');
+    if (show && !messageDiv) {
+        messageDiv = document.createElement('div');
+        messageDiv.id = 'reconnection-overlay';
+        messageDiv.className = 'reconnection-overlay'; 
+        messageDiv.innerHTML = `<div class="reconnection-box">Connection lost. Attempting to reconnect...</div>`;
+        document.body.appendChild(messageDiv);
+    } else if (!show && messageDiv) {
+        messageDiv.remove();
+    }
+}
 
 function connect() {
   if (socket && socket.readyState === WebSocket.OPEN) return;
@@ -15,8 +30,30 @@ function connect() {
   
   socket = new WebSocket(wsUrl);
 
-  socket.onopen = () => console.log('[WS] Conectado ao lobby.');
-  socket.onclose = () => console.log('[WS] Desconectado do lobby.');
+  socket.onopen = () => {
+    console.log('[WS] Conectado ao lobby.');
+    showReconnectionMessage(false); // Esconde a mensagem de reconexão
+    if (reconnectInterval) {
+        clearInterval(reconnectInterval); // Para as tentativas de reconexão
+        reconnectInterval = null;
+    }
+    reconnectionAttempt = 0;
+    // Após conectar, o frontend deve pedir o estado atual (salas, etc.)
+    // sendWebSocketMessage({ type: 'REQUEST_LOBBY_STATE', payload: {} });
+  };
+  socket.onclose = () => {
+    console.log('[WS] Desconectado do lobby.');
+    socket = null;
+    showReconnectionMessage(true); // Mostra a mensagem
+    
+    // Tenta reconectar a cada 5 segundos
+    if (!reconnectInterval) {
+        reconnectInterval = window.setInterval(() => {
+            console.log(`[WS] Tentativa de reconexão #${++reconnectionAttempt}...`);
+            connect(); 
+        }, 5000);
+    }
+  };
   socket.onerror = (err) => console.error('[WS] Erro:', err);
 
   socket.onmessage = (event) => {

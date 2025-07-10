@@ -35,8 +35,8 @@ export interface RoomStateForApi {
     isReady?: boolean;
     riskLevel?: number;
     isEliminated?: boolean;
-    // Added for frontend convenience
-    avatar_url?: string | null; 
+    avatar_url?: string | null;
+    reconnectingUntil?: number | null;
   }[];
   spectators: { id: string; username: string }[];
   status: "waiting" | "playing";

@@ -1,5 +1,6 @@
+import { pool } from "../database";
 import { log } from "./logger";
-import { CustomWebSocket, ServerMessage, Room } from "../models/types.model";
+import { CustomWebSocket, CardGame, RoomStateForApi, ServerMessage, Room } from "../models/types.model";
 import { WebSocket } from "ws";
 import { getRoomHands } from "../services/gameState";
 
@@ -13,6 +14,7 @@ export function sendToClient<T extends ServerMessage["type"]>(
     return;
   }
   const message = { type, payload };
+  console.log(`[DEBUG] Enviando mensagem ${type} para ${ws.clientUsername}`); // ADICIONE AQUI
   ws.send(JSON.stringify(message));
 }
 
@@ -66,17 +68,90 @@ export function getNextPlayer(room: Room & { game: { currentPlayerIndex: number;
 
   const playerIds = Array.from(room.players.keys());
   const currentIndex = room.game.currentPlayerIndex;
-  
+
   for (let i = 1; i <= playerIds.length; i++) {
     const nextIndex = (currentIndex + i) % playerIds.length;
     const nextPlayerId = playerIds[nextIndex];
     const nextPlayerHand = roomHands.get(nextPlayerId);
+    const nextParticipant = room.players.get(nextPlayerId);
     
     // PULAR jogadores eliminados OU inativos
-    if (nextPlayerHand && !nextPlayerHand.isEliminated && !nextPlayerHand.isInactive) {
+    if (nextPlayerHand && nextParticipant && nextParticipant.ws !== null && !nextPlayerHand.isEliminated && !nextPlayerHand.isInactive) {
       return nextPlayerId;
     }
   }
   
   return null;
+  
+}
+
+export function broadcastRoomState(room: Room & { game: CardGame }): void {
+  log(`Transmitindo estado da sala ${room.roomCode} para todos os participantes.`);
+  const allParticipants = [...room.players.values(), ...room.spectators.values()];
+
+  allParticipants.forEach(async (participant) => {
+    if (participant.ws && participant.ws.readyState === WebSocket.OPEN) {
+      const personalRoomState = await getRoomStateForApi(room, participant.ws.clientId);
+      sendToClient(participant.ws, "ROOM_STATE_UPDATE", personalRoomState);
+    }
+  });
+}
+
+export async function getRoomStateForApi(
+  room: Room & { game: CardGame },
+  currentUserId: string
+): Promise<RoomStateForApi> {
+  const roomHands = getRoomHands(room.roomCode);
+  const currentPlayerHand = roomHands?.get(currentUserId);
+
+  const playerIds = Array.from(room.players.keys());
+  const userAvatars = new Map<string, string | null>();
+
+  if (playerIds.length > 0) {
+      const result = await pool.query<{ id: string, avatar_url: string | null }>(
+          'SELECT id, avatar_url FROM users WHERE id = ANY($1::uuid[])',
+          [playerIds]
+      );
+      result.rows.forEach(row => userAvatars.set(row.id, row.avatar_url));
+  }
+  
+  return {
+    roomCode: room.roomCode,
+    ownerId: room.ownerId,
+    players: Array.from(room.players.entries()).map(([id, p]) => {
+      const hand = roomHands?.get(id);
+      return {
+        id,
+        username: p.username,
+        isOnline: p.ws !== null,
+        handSize: hand?.cards.length || 0,
+        isReady: hand?.isReady || false,
+        hasPlayedThisTurn: hand?.hasPlayedThisTurn || false,
+        score: hand?.score || 0,
+        riskLevel: hand?.riskLevel || 0,
+        isEliminated: hand?.isEliminated || false,
+        avatar_url: userAvatars.get(id) || null,
+        reconnectingUntil: p.reconnectingUntil || null,
+      };
+    }),
+    spectators: Array.from(room.spectators.entries()).map(([id, s]) => ({
+      id,
+      username: s.username,
+    })),
+    status: room.status,
+    myChoice: room.choices.get(currentUserId) || null,
+    game: {
+      phase: room.game.phase,
+      currentPlayerIndex: room.game.currentPlayerIndex,
+      currentPlayerId: playerIds[room.game.currentPlayerIndex] || null,
+      currentCardType: room.game.currentCardType,
+      roundNumber: room.game.roundNumber,
+      direction: room.game.direction,
+      playedCardsCount: room.game.playedCards.length,
+      deckSize: room.game.deck.length,
+      lastPlayerId: room.game.lastPlayerId,
+    },
+    myCards: currentPlayerHand?.cards || [],
+    myHandSize: currentPlayerHand?.cards.length || 0,
+  };
 }

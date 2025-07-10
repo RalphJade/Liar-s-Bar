@@ -3,7 +3,6 @@ import { getUser } from "../auth/auth.ts";
 import {
   sendWebSocketMessage,
   initLobbyConnection,
-  disconnect,
 } from "../lobby/websocket.ts";
 import { navigate } from "../router/router.ts";
 import { renderHeader } from "./components/Header.ts";
@@ -18,6 +17,7 @@ let gameState: RoomStateForApi | null = null;
 let myCards: Card[] = [];
 let chatMessages: ChatMessage[] = [];
 let selectedCardId: string[] = [];
+let countdownInterval: number | null = null;
 
 /**
  * Renders the main game board page.
@@ -68,7 +68,9 @@ export const renderGameBoardPage = (
                     </form>
                 </div>
                 <div class="game-controls">
-                    <button id="button-quit-game" class="button button-quit-game">
+
+                    <button id="button-quit-game" class="button button-danger">
+
                         <span class="quit-icon">🚪</span><span class="quit-text">Leave Table</span>
                     </button>
                 </div>
@@ -92,6 +94,10 @@ export const renderGameBoardPage = (
   renderHeader(document.getElementById("header-container")!);
   // Initialize the WebSocket connection and set up the message handler.
   initLobbyConnection(handleGameMessage);
+  // Limpa qualquer timer antigo antes de criar um novo
+  if (countdownInterval) clearInterval(countdownInterval);
+  // Inicia o timer para atualizar a UI a cada segundo
+  countdownInterval = window.setInterval(updateCountdownTimers, 1000);
   // Set up all event listeners for the page.
   setupEventListeners();
 };
@@ -104,42 +110,56 @@ const handleGameMessage = (message: any) => {
   console.log("[Game WS] Received:", message);
   const currentUser = getUser();
 
-  // Process message based on its type.
-  switch (message.type) {
-    case "ROOM_STATE_UPDATE":
-      gameState = message.payload;
-      myCards = message.payload.myCards || myCards;
-      updateUI();
-      break;
-    case "CHAT_BROADCAST":
-      chatMessages.push(message.payload);
-      if (chatMessages.length > 100) chatMessages.shift(); // Keep chat history limited.
-      renderChat();
-      break;
-    case "GAME_STARTED":
-      alert(message.payload.message);
-      break;
-    case "GAME_FINISHED":
-      // Delay showing the end screen to allow animations to complete.
-      setTimeout(() => {
-        showEndGameScreen(
-          message.payload.winnerId === currentUser?.id,
-          message.payload.message
-        );
-      }, 1000);
-      break;
-    case "CHALLENGE_RESULT":
-      handleChallengeResult(message.payload);
-      break;
-    case "ERROR":
-      alert(`Server error: ${message.payload.message}`);
-      break;
-    case "ROOM_CLOSED":
-      alert(`The room "${message.payload.name}" has been closed.`);
-      disconnect();
-      navigate("/home");
-      break;
-  }
+    switch(message.type) {
+        case 'ROOM_STATE_UPDATE':
+            gameState = message.payload;
+            myCards = message.payload.myCards || myCards;
+            updateUI();
+            break;
+        case 'CHAT_BROADCAST':
+            chatMessages.push(message.payload);
+            if (chatMessages.length > 100) chatMessages.shift();
+            renderChat();
+            break;
+        case 'GAME_STARTED':
+            alert(message.payload.message);
+            break;
+        case 'GAME_FINISHED':
+            setTimeout(() => {
+                showEndGameScreen(message.payload.winnerId === currentUser?.id, message.payload.message);
+            }, 1000);
+            break;
+        case 'CHALLENGE_RESULT':
+            handleChallengeResult(message.payload);
+            break;
+        case 'PLAYER_RECONNECTED':
+            const systemText = message.payload.message;
+            console.log(message.payload.message);
+            const systemMessage = {
+                authorId: 'system',
+                authorName: 'System',
+                message: systemText,
+                timestamp: new Date().toISOString()
+            };
+            chatMessages.push(systemMessage);
+            renderChat();
+            break;
+        case 'ERROR':
+            alert(`Server error: ${message.payload.message}`);
+            break;
+        case 'LEFT_ROOM':
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = null;
+            alert(message.payload.message);
+            navigate('/home');
+            break;
+        case 'ROOM_CLOSED':
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = null;
+            alert(`The room "${message.payload.name}" has been closed.`);
+            navigate('/home');
+            break;
+    }
 };
 
 /**
@@ -321,8 +341,7 @@ const showEndGameScreen = (didIWin: boolean, message: string) => {
         </div>
     `;
   document.getElementById("back-to-lobby")?.addEventListener("click", () => {
-    disconnect();
-    navigate("/home");
+    sendWebSocketMessage({ type: 'LEAVE_ROOM', payload: {} });
   });
 };
 
@@ -388,6 +407,30 @@ const getPlayerPositionClass = (
 };
 
 /**
+ * Cria o HTML para um jogador que está se reconectando.
+ * @param player - O objeto do jogador.
+ * @param positionClass - A classe de posicionamento CSS.
+ * @returns O HTML string para o pod.
+ */
+const createReconnectingPod = (player: any, positionClass: string) => {
+    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : "https://via.placeholder.com/60";
+    return `
+        <div class="player-pod ${positionClass} reconnecting" data-player-id="${player.id}">
+            <div class="player-info">
+                <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar" />
+                <div class="player-details">
+                    <span class="player-name">${player.username}</span>
+                    <span class="player-risk-level">Desconectado</span>
+                </div>
+            </div>
+            <div class="reconnection-overlay">
+                <span class="reconnection-timer" data-player-id="${player.id}">--s</span>
+            </div>
+        </div>
+    `;
+};
+
+/**
  * Renders the pods for all opponent players around the table in a clockwise order.
  * @param {string} currentUserId - The ID of the current user to exclude them from the pods.
  */
@@ -415,6 +458,10 @@ const renderPlayerPods = (currentUserId: string) => {
 
       if (player.isEliminated) {
         return createEliminatedPod(player, positionClass);
+      }
+
+      if (!player.isOnline && player.reconnectingUntil) {
+        return createReconnectingPod(player, positionClass);
       }
 
       const isCurrentTurn = player.id === gameState?.game?.currentPlayerId;
@@ -516,27 +563,19 @@ const renderReferenceCard = () => {
  * Renders the chat messages in the chat panel.
  */
 const renderChat = () => {
-  const container = document.getElementById("chat-messages");
-  if (!container) return;
-  container.innerHTML = chatMessages
-    .map(
-      (msg) => `
-        <div class="message">
-            <span class="timestamp">${new Date(
-              msg.timestamp
-            ).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}</span>
-            <span class="content"><strong>${msg.authorName}:</strong> ${
-        msg.message
-      }</span>
+    const container = document.getElementById('chat-messages');
+    if (!container) return;
+    container.innerHTML = chatMessages.map(msg =>{
+        const messageClass = msg.authorId === 'system' 
+            ? 'message system-message' 
+            : 'message player-message';
+        return `
+        <div class="${messageClass}">
+            <span class="timestamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+            <span class="content"><strong>${msg.authorName}:</strong> ${msg.message}</span>
         </div>
-    `
-    )
-    .join("");
-  // Auto-scroll to the latest message.
-  container.scrollTop = container.scrollHeight;
+    `}).join('');
+    container.scrollTop = container.scrollHeight;
 };
 
 /**
@@ -903,17 +942,15 @@ const setupEventListeners = () => {
     }
   });
 
-  const quitModal = document.getElementById(
-    "quit-game-modal"
-  ) as HTMLDivElement;
-  const quitBtn = document.getElementById("button-quit-game");
+  const quitModal = document.getElementById("quit-game-modal") as HTMLDivElement;
+  const openQuitModalBtn = document.getElementById("button-quit-game");
   const confirmQuitBtn = document.getElementById("confirm-quit-btn");
   const cancelQuitBtn = document.getElementById("cancel-quit-btn");
 
-  const openModal = () => quitModal.classList.add("show");
-  const closeModal = () => quitModal.classList.remove("show");
+  const openModal = () => quitModal?.classList.remove('hidden');
+  const closeModal = () => quitModal?.classList.add('hidden');
 
-  quitBtn?.addEventListener("click", openModal);
+  openQuitModalBtn?.addEventListener("click", openModal);
   cancelQuitBtn?.addEventListener("click", closeModal);
   confirmQuitBtn?.addEventListener("click", () => {
     sendWebSocketMessage({ type: "LEAVE_ROOM", payload: {} });
@@ -923,7 +960,7 @@ const setupEventListeners = () => {
     if (e.target === quitModal) closeModal();
   });
   document.addEventListener("keydown", (e) => {
-    if (e.key === "Escape" && quitModal.classList.contains("show"))
+    if (e.key === "Escape" && quitModal.classList.contains("hidden"))
       closeModal();
   });
 };
@@ -943,6 +980,32 @@ function assignPlayerPositions(players: any[], currentUserId: string): any[] {
   return reordered
     .slice(currentUserIndex)
     .concat(reordered.slice(0, currentUserIndex));
+}
+
+function updateCountdownTimers() {
+    if (!gameState) return;
+
+    // Encontra todos os elementos de timer renderizados
+    const timerElements = document.querySelectorAll<HTMLElement>('.reconnection-timer');
+    
+    timerElements.forEach(timerEl => {
+        const playerId = timerEl.dataset.playerId;
+        if (!playerId) return;
+
+        const player = gameState?.players.find(p => p.id === playerId);
+        
+        if (player && player.reconnectingUntil) {
+            const timeLeft = Math.round((player.reconnectingUntil - Date.now()) / 1000);
+            
+            if (timeLeft > 0) {
+                timerEl.textContent = `${timeLeft}s`;
+            } else {
+                // Quando o tempo acabar no frontend, apenas mostramos 'REMOVIDO'
+                // O backend cuidará da remoção real e enviará um novo estado.
+                timerEl.textContent = 'Removido';
+            }
+        }
+    });
 }
 
 // --- HTML Template Creation Functions ---
@@ -1054,7 +1117,7 @@ const createInactivePod = (player: any, position: string) => {
  */
 const createHandCard = (card: Card) => {
   const cardContent =
-    card.type === "joker" ? "🃏" : card.type.charAt(0).toUpperCase();
+    card.type === "ace" ? "🃏" : card.type.charAt(0).toUpperCase();
   return `<div class="card-face hand-card" data-card-id="${card.id}">${cardContent}</div>`;
 };
 
@@ -1290,6 +1353,35 @@ const renderDynamicStyles = () => {
         #revealed-card-container {display: flex; gap: 1rem; justify-content: center; align-items: center; flex-wrap: wrap; margin: 1rem 0;}
         .revealed-card { display: flex; flex-direction: column; align-items: center; }
         .revealed-card .hand-card { transform: none; cursor: default; transition: none; border-color: var(--color-accent-gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
+
+        /* Estilos para o estado de Reconexão */
+        .player-pod.reconnecting {
+            opacity: 0.7;
+            border: 3px dashed #f59e0b; /* Laranja/âmbar para alerta */
+        }
+        .reconnection-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 8px; /* Ajuste se o seu pod tiver bordas arredondadas */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+        .reconnection-timer {
+            font-size: 1.5rem;
+            padding: 0.25rem 0.75rem;
+            background: #f59e0b;
+            color: black;
+            border-radius: 20px;
+            text-shadow: none;
+            box-shadow: 0 0 10px #f59e0b;
+        }
     `;
   return style.outerHTML;
 };

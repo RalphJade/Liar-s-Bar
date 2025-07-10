@@ -31,17 +31,17 @@ export function handleDisconnect(ws: CustomWebSocket) {
 /**
  * Processa uma mensagem de chat recebida de um cliente e a retransmite.
  */
-export function handleChatMessage(sender: CustomWebSocket, message: any) {
-    if (typeof message.text !== 'string' || message.text.trim() === '') {
+export function handleChatMessage(sender: CustomWebSocket, payload: any) {
+    if (typeof payload.text !== 'string' || payload.text.trim() === '') {
         return; // Ignora mensagens vazias ou mal formatadas
     }
 
     const chatMessage = {
         type: 'NEW_CHAT_MESSAGE',
         payload: {
-            userId: sender.clientId,
-            username: sender.clientUsername,
-            text: message.text.trim(),
+            authorId: sender.clientId,
+            authorName: sender.clientUsername,
+            message: payload.text.trim(),
             timestamp: new Date().toISOString()
         }
     };
@@ -51,10 +51,11 @@ export function handleChatMessage(sender: CustomWebSocket, message: any) {
 /**
  * Monta a lista de usuários online e a envia para todos os clientes.
  */
-function broadcastOnlineUserList() {
+export function broadcastOnlineUserList() {
     const users = Array.from(connectedClients.values()).map(client => ({
         userId: client.clientId,
-        username: client.clientUsername
+        username: client.clientUsername,
+        status: client.currentRoomCode ? 'In Game' : 'In Lobby' 
     }));
 
     const message = {

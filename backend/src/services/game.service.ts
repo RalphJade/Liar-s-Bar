@@ -12,9 +12,13 @@ import * as GameLogic from "./game-logic"
  * @param wss The WebSocket server instance.
  */
 export function initializeGameService(wss: WebSocketServer): void {
-  wss.on("connection", (ws: CustomWebSocket) => {
-    LobbyManager.handleNewConnection(ws);
-    RoomManager.handleWaitingRooms(ws);
+  wss.on("connection", async (ws: CustomWebSocket) => {
+    const reconnected = await RoomManager.attemptPlayerReconnection(ws);
+
+    if (!reconnected) {
+      LobbyManager.handleNewConnection(ws);
+      RoomManager.handleWaitingRooms(ws);
+    }
 
     ws.on("message", (message) => {
       try {
