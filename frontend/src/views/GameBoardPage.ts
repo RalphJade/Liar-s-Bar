@@ -465,6 +465,10 @@
           return createEliminatedPod(player, positionClass);
         }
 
+        if (player.isInactive) {
+        return createInactivePod(player, positionClass);
+        }
+
         if (!player.isOnline && player.reconnectingUntil) {
           return createReconnectingPod(player, positionClass);
         }
@@ -485,7 +489,8 @@
 
     const me = gameState.players.find((p) => p.id === currentUserId);
     if (me) {
-      container.innerHTML = createMyInfoPod(me);
+    const isMyTurn = gameState.game?.currentPlayerId === currentUserId;
+    container.innerHTML = createMyInfoPod(me, isMyTurn);
     }
   };
 
@@ -1040,7 +1045,7 @@ const renderChat = () => {
   ) => {
     const avatarSrc = player.avatar_url
       ? player.avatar_url
-      : "https://via.placeholder.com/60";
+      : "/default-avatar.jpg";
     if (player.isInactive) {
       return createInactivePod(player, positionClass);
     }
@@ -1069,11 +1074,10 @@ const renderChat = () => {
    * @param player - The current user's player object.
    * @returns The HTML string for the user info area.
    */
-  const createMyInfoPod = (player: any) => {
-    const avatarSrc = player.avatar_url
-      ? `${API_BASE_URL}${player.avatar_url}`
-      : "https://via.placeholder.com/60";
-    const isMyTurn = gameState?.game?.currentPlayerId === player.id;
+  const createMyInfoPod = (player: any, isMyTurn: boolean) => {
+const avatarSrc = player.avatar_url
+      ? player.avatar_url
+      : "/default-avatar.jpg";
     return `
           <img src="${avatarSrc}" alt="${player.username
       }'s avatar" class="my-avatar ${isMyTurn ? "active-turn" : ""}" />
@@ -1093,7 +1097,7 @@ const renderChat = () => {
   const createEliminatedPod = (player: any, positionClass: string) => {
     const avatarSrc = player.avatar_url
       ? `${API_BASE_URL}${player.avatar_url}`
-      : "https://via.placeholder.com/60";
+      : "/default-avatar.jpg";
     return `
           <div class="player-pod ${positionClass} eliminated" data-player-id="${player.id}">
               <div class="player-info">
@@ -1109,7 +1113,7 @@ const renderChat = () => {
   const createInactivePod = (player: any, position: string) => {
     const avatarSrc = player.avatar_url
       ? `${API_BASE_URL}${player.avatar_url}`
-      : "https://via.placeholder.com/60";
+      : "/default-avatar.jpg";
     return `
       <div class="player-pod ${position} inactive" data-player-id="${player.id}">
         <div class="player-info">

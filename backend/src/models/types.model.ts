@@ -123,6 +123,7 @@ export interface ChatMessage {
 }
 
 export type ClientMessage =
+  | {type: "PING"; payload: {}}
   | { type: "LIST_ROOMS"; payload: {} }
   | { type: "CREATE_ROOM"; payload: { roomName: string; password?: string } }
   | { type: "JOIN_ROOM"; payload: { roomCode: string; password?: string } }
