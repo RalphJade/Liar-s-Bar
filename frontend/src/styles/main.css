@@ -1105,6 +1105,9 @@ body.lobby-theme {
   background-color: rgba(0, 0, 0, 0.2);
   margin-bottom: 0.5rem;
   border: 1px solid var(--color-border);
+  overflow-wrap: break-word;
+  word-wrap: break-word; 
+  word-break: break-all;
 }
 .online-user-item {
   font-weight: 600;

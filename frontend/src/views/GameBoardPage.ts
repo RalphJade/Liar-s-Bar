@@ -566,15 +566,27 @@ const renderChat = () => {
     const container = document.getElementById('chat-messages');
     if (!container) return;
     container.innerHTML = chatMessages.map(msg =>{
-        const messageClass = msg.authorId === 'system' 
-            ? 'message system-message' 
-            : 'message player-message';
+        const isSystemMessage = msg.authorId === 'system';
+        const messageClass = isSystemMessage ? 'message system-message' : 'message player-message';
+
+        const timestamp = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        const escapeHTML = (str: string) => {
+            const p = document.createElement('p');
+            p.textContent = str;
+            return p.innerHTML;
+        };
+
+        const authorHTML = `<strong>${escapeHTML(msg.authorName)}:</strong>`;
+        const messageHTML = escapeHTML(msg.message);
+
         return `
-        <div class="${messageClass}">
-            <span class="timestamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-            <span class="content"><strong>${msg.authorName}:</strong> ${msg.message}</span>
-        </div>
-    `}).join('');
+            <div class="${messageClass}">
+                <span class="timestamp">${timestamp}</span>
+                <span class="content">${authorHTML} ${messageHTML}</span>
+            </div>
+        `;
+    }).join('');
     container.scrollTop = container.scrollHeight;
 };
 
