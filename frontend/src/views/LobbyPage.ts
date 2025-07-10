@@ -174,7 +174,11 @@ export const renderLobbyPage = (element: HTMLElement) => {
     messages.forEach((msg) => {
       const msgElement = document.createElement("p");
       msgElement.className = "chat-message";
-      msgElement.innerHTML = `<strong>${msg.authorName}:</strong> ${msg.message}`;
+      const authorElement = document.createElement("strong");
+      authorElement.textContent = `${msg.authorName}: `;
+      const messageTextNode = document.createTextNode(msg.message);
+      msgElement.appendChild(authorElement);
+      msgElement.appendChild(messageTextNode);
       chatMessagesDiv.appendChild(msgElement);
     });
     chatMessagesDiv.scrollTop = chatMessagesDiv.scrollHeight;
