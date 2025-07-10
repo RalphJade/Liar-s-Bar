@@ -12,7 +12,7 @@ export interface CardGame {
   turnTimer: NodeJS.Timeout | null;
   currentCardType: CardType | null;
   playedCards: Card[];
-  lastPlayedCard: Card | null;
+  lastPlayedCard: Card[];
   lastPlayerId: string | null;
 }
 
@@ -60,7 +60,7 @@ function createSpecialDeck(): Card[] {
  * @param {Room & { game: CardGame }} room - The game room object.
  * @returns {Map<string, PlayerHand>} A map of player IDs to their new hands.
  */
-function dealCards(room: Room & { game: CardGame }): Map<string, PlayerHand> {
+export function dealCards(room: Room & { game: CardGame }): Map<string, PlayerHand> {
   const deck = createSpecialDeck();
   const roomHands = new Map<string, PlayerHand>();
 
@@ -103,5 +103,5 @@ export function canPlayCard(card: Card, currentCardType: CardType | null): boole
 }
 
 export {
-  createSpecialDeck, dealCards
+  createSpecialDeck
 };

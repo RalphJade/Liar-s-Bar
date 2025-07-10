@@ -55,7 +55,7 @@ export async function handleCreateRoom(
       turnTimer: null,
       currentCardType: null,
       playedCards: [],
-      lastPlayedCard: null,
+      lastPlayedCard: [],
       lastPlayerId: null,
     },
   };
@@ -238,15 +238,28 @@ export function handleCloseRoom(ws: CustomWebSocket): void {
   
   log(`Owner ${ws.clientUsername} is closing room ${roomCode}.`);
 
+  const allParticipants = [...room.players.values(), ...room.spectators.values()];
+
+  // 1. Notificar a todos que a sala está fechando
   broadcastToRoom(room, "ROOM_CLOSED", {
     code: roomCode,
     name: room.roomName,
   });
 
+  // 2. ALTERADO: Limpar o estado de cada participante no servidor
+  allParticipants.forEach(participant => {
+    if (participant.ws) {
+      participant.ws.currentRoomCode = undefined;
+      LobbyManager.broadcastOnlineUserList();
+    }
+  });
+
+  // 3. Remover a sala do estado global
   removeRoom(roomCode);
   
+  // 4. Notificar o lobby que a sala foi removida
   LobbyManager.broadcast({
-    type: "ROOM_REMOVED",
+    type: "ROOM_REMOVED", // Você pode usar essa mensagem no frontend para atualizar a lista
     payload: { code: roomCode }
   });
 }
@@ -263,27 +276,61 @@ export async function handleLeaveRoom(ws: CustomWebSocket): Promise<void> {
   }
 
   const room = getRoom(roomCode);
-  if (!room) return;
-
-  log(`Sala ${room.roomCode} está sendo fechada pelo dono ${ws.clientUsername}.`, { ws });
+  if (!room) {
+    ws.currentRoomCode = undefined;
+    LobbyManager.broadcastOnlineUserList();
+    return;
+  }
   
-  // Cancela timer se existir
   if (room.game.turnTimer) {
     clearTimeout(room.game.turnTimer);
   }
+    
+  if (room.ownerId === ws.clientId) {
+    log(`Dono ${ws.clientUsername} saiu da sala ${roomCode}, fechando a sala.`);
+    handleCloseRoom(ws); 
+    return;
+  }
   
-  const closePayload = { message: `A sala ${room.roomCode} foi fechada pelo dono.` };
-  
-  const allParticipants = [...room.players.values(), ...room.spectators.values()];
-  allParticipants.forEach(p => {
-    if (p.ws) {
-      sendToClient(p.ws, "ROOM_CLOSED", closePayload);
-      p.ws.currentRoomCode = "";
-    }
-  });
+  let playerLeft = false;
+  if (room.players.has(ws.clientId)) {
+    log(`Jogador ${ws.clientUsername} saiu da sala ${room.roomCode}.`);
+    room.players.delete(ws.clientId);
+    playerLeft = true;
+  } else if (room.spectators.has(ws.clientId)) {
+    log(`Espectador ${ws.clientUsername} saiu da sala ${room.roomCode}.`);
+    room.spectators.delete(ws.clientId);
+  }
 
-  // Remove mãos dos jogadores
-  removeRoom(roomCode)
+  ws.currentRoomCode = undefined;
+  sendToClient(ws, "LEFT_ROOM", { message: `You have left the room ${room.roomName}.` });
+  LobbyManager.broadcastOnlineUserList();
+
+  if (playerLeft) {
+    const notificationMessage = `${ws.clientUsername} has left the table.`;
+    const chatMessage = { authorId: 'system', authorName: 'System', message: notificationMessage, timestamp: new Date().toISOString() };
+    addRoomMessage(roomCode, chatMessage);
+    broadcastToRoom(room, "CHAT_BROADCAST", chatMessage);
+
+    if (room.status === 'playing') {
+      advanceTurnAfterInterruption(room);
+    }
+  }
+
+  broadcastRoomState(room);
+
+  LobbyManager.broadcast({ 
+    type: "WAITING_ROOMS", 
+    payload: { 
+      rooms: getAllRooms().map((r) => ({
+        code: r.roomCode,
+        name: r.roomName,
+        currentPlayers: r.players.size,
+        maxPlayers: MAX_PLAYERS,
+        hasPassword: !!r.password,
+      })) 
+    }, 
+  });
 }
 
 export function handlePlayerDisconnect(ws: CustomWebSocket): void {
@@ -300,63 +347,89 @@ export function handlePlayerDisconnect(ws: CustomWebSocket): void {
     return;
   }
 
+  // Lógica para Espectadores (eles são removidos imediatamente)
+  if (room.spectators.has(ws.clientId)) {
+    log(`Espectador ${ws.clientUsername} desconectou da sala ${room.roomCode}.`, { ws });
+    room.spectators.delete(ws.clientId);
+    broadcastRoomState(room); // Notifica a sala da saída do espectador
+    LobbyManager.handleDisconnect(ws); // Remove da lista global de clientes
+    return;
+  }
+  
+  // Lógica para Jogadores (eles entram em modo de reconexão)
   const participant = room.players.get(ws.clientId);
-  const isPlayer = !!participant;
+  if (participant) {
+    log(`Jogador ${ws.clientUsername} desconectou. Iniciando timer de reconexão...`, { ws });
+    participant.ws = null; // Marca como offline
 
-  if (isPlayer && participant) {
-    log(`Jogador ${ws.clientUsername} desconectou da sala ${room.roomCode}.`, { ws });
-    participant.ws = null;
-
+    // Notifica a sala que o jogador desconectou e o estado mudou
     const chatMessage = {
-        authorId: 'system',
-        authorName: 'System',
-        message: `${ws.clientUsername} has disconnected.`,
-        timestamp: new Date().toISOString(),
+      authorId: 'system',
+      authorName: 'System',
+      message: `${ws.clientUsername} has disconnected. They have ${RECONNECTION_TIME_LIMIT / 1000} seconds to reconnect.`,
+      timestamp: new Date().toISOString(),
     };
-    
     addRoomMessage(roomCode, chatMessage);
-
     broadcastToRoom(room, "CHAT_BROADCAST", chatMessage);
-    
+    broadcastRoomState(room); // Atualiza a UI para mostrar o jogador como offline
+
+    // Se era o turno dele, avança o jogo
     if (room.status === 'playing') {
-        const playerIds = Array.from(room.players.keys());
-        if (playerIds[room.game.currentPlayerIndex] === ws.clientId) {
-            advanceTurnAfterInterruption(room);
-        }
+      const playerIds = Array.from(room.players.keys());
+      if (playerIds[room.game.currentPlayerIndex] === ws.clientId) {
+        advanceTurnAfterInterruption(room);
+      }
     }
 
+    // Inicia o timer para remoção permanente
     participant.disconnectionTimer = setTimeout(() => {
+      // Este código só roda se o jogador não se reconectar a tempo
       
+      // Precisamos buscar o estado mais recente da sala, caso algo tenha mudado
       const currentRoomState = getRoom(roomCode);
-      const playerStillDisconnected = currentRoomState?.players.get(ws.clientId)?.ws === null;
+      if (!currentRoomState) return; // A sala pode ter sido fechada enquanto o timer rodava
 
-      if (playerStillDisconnected) {
-        log(`Tempo de reconexão esgotado para ${ws.clientUsername}. Removendo da sala ${roomCode}.`);
+      const playerStillInRoom = currentRoomState.players.get(ws.clientId);
+
+      // Só remove se ele ainda estiver na sala e ainda estiver desconectado
+      if (playerStillInRoom && playerStillInRoom.ws === null) {
+        const disconnectedUsername = participant.username
+
+        log(`Tempo de reconexão esgotado para ${ws.clientUsername}. Removendo permanentemente.`);
         
         currentRoomState.players.delete(ws.clientId);
         
-        const removalMessage = { authorId: 'system', authorName: 'System', message: `${ws.clientUsername} was removed for being disconnected too long.`, timestamp: new Date().toISOString() };
+        // Notifica a sala sobre a remoção por timeout
+        const removalMessage = { 
+          authorId: 'system',
+          authorName: 'System',
+          message: `${disconnectedUsername} did not reconnect in time and has been removed from the table.`,
+          timestamp: new Date().toISOString(),
+        };
         addRoomMessage(roomCode, removalMessage);
         broadcastToRoom(currentRoomState, "CHAT_BROADCAST", removalMessage);
         
-        broadcastRoomState(currentRoomState);
-        
+        // --- A CHAMADA CRUCIAL ---
+        // Agora que ele foi removido permanentemente do jogo,
+        // também o removemos da lista global de clientes conectados.
+        LobbyManager.handleDisconnect(ws);
+
+        // Verifica se a sala ficou vazia ou se o jogo acabou
         if (currentRoomState.players.size === 0) {
-            log(`Sala ${roomCode} ficou vazia e foi fechada.`);
+            log(`Room ${roomCode} is now empty. Closing room.`);
             removeRoom(roomCode);
             LobbyManager.broadcast({ type: "ROOM_REMOVED", payload: { code: roomCode } });
+        } else {
+            // Se ainda há jogadores, verifica se temos um vencedor
+            if (currentRoomState.status === 'playing') {
+                advanceTurnAfterInterruption(currentRoomState);
+            }
+            // Atualiza a UI de todos na sala
+            broadcastRoomState(currentRoomState);
         }
       }
     }, RECONNECTION_TIME_LIMIT);
-
-  } else {
-    room.spectators.delete(ws.clientId);
-    log(`Espectador ${ws.clientUsername} desconectou da sala ${room.roomCode}.`, { ws });
   }
-
-  broadcastRoomState(room);
-  
-  LobbyManager.handleDisconnect(ws);
 }
 
 /**

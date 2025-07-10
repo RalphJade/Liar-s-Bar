@@ -11,8 +11,10 @@ export const renderAuthPage = (element: HTMLElement) => {
   element.innerHTML = `
     <div class="page-container">
       <div class="text-center" style="margin-bottom: 2rem;">
-        <h1 style="font-size: 2.25rem; font-weight: 700; color: #111827;">Application Name</h1>
-        <p style="color: #4B5563; margin-top: 0.5rem;">Welcome! Please log in or create an account.</p>
+        <h1 class="homepage-title">Liar's Bar</h1>
+        <p style="color: var(--color-text-medium); margin-top: 0.5rem; font-family: var(--font-body);">
+            Welcome! Please log in or create an account to enter the bar.
+        </p>
       </div>
       <div class="card">
         <div class="tab-container">

@@ -299,16 +299,15 @@ export const renderLobbyPage = (element: HTMLElement) => {
         console.log("Joined room:", message.payload);
         navigate(`/gameboard/${message.payload.roomCode}`);
         break;
+      case "ROOM_REMOVED":
       case "ROOM_CLOSED":
         const closedRoomCode = message.payload.roomCode || message.payload.code;
 
-        // Remove a sala da lista (para todos)
         lobbyState.setRooms(
           lobbyState.getRooms().filter((room) => room.code !== closedRoomCode)
         );
         renderRoomList();
 
-        // Só redireciona se o usuário estava na sala fechada
         const currentUrl = window.location.pathname;
         if (currentUrl.includes(`/gameboard/${closedRoomCode}`)) {
           navigate("/home");
@@ -324,6 +323,8 @@ export const renderLobbyPage = (element: HTMLElement) => {
   };
 
   websocket.initLobbyConnection(handleWebSocketMessage);
+
+  websocket.sendWebSocketMessage({ type: "LIST_ROOMS", payload: {} });
 
   renderOnlineUserList();
   renderChatMessages();

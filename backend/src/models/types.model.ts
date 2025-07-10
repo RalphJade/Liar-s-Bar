@@ -37,6 +37,7 @@ export interface PlayerHand {
   score: number;
   riskLevel: number; 
   isEliminated: boolean;
+  isInactive?: boolean;
 }
 
 export interface CardGame {
@@ -49,7 +50,7 @@ export interface CardGame {
   turnTimer: NodeJS.Timeout | null;
   currentCardType: CardType | null; 
   playedCards: Card[]; 
-  lastPlayedCard: Card | null; 
+  lastPlayedCard: Card[]; 
   lastPlayerId: string | null;
 }
 
@@ -125,7 +126,7 @@ export type ClientMessage =
   | { type: "CREATE_ROOM"; payload: { roomName: string; password?: string } }
   | { type: "JOIN_ROOM"; payload: { roomCode: string; password?: string } }
   | { type: "LEAVE_ROOM"; payload: {} }
-  | { type: "PLAY_CARD"; payload: { cardId: string } }
+  | { type: "PLAY_CARD"; payload: { cardsId: string[] } }
   | { type: "CALL_BLUFF"; payload: {} }
   | { type: "READY_FOR_NEXT_GAME"; payload: {} }
   | { type: "CHAT_MESSAGE"; payload: { message: string } };
