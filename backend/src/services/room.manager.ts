@@ -362,6 +362,9 @@ export function handlePlayerDisconnect(ws: CustomWebSocket): void {
     log(`Jogador ${ws.clientUsername} desconectou. Iniciando timer de reconexão...`, { ws });
     participant.ws = null; // Marca como offline
 
+    const deadline = Date.now() + RECONNECTION_TIME_LIMIT;
+    participant.reconnectingUntil = deadline;
+
     // Notifica a sala que o jogador desconectou e o estado mudou
     const chatMessage = {
       authorId: 'system',
@@ -409,7 +412,6 @@ export function handlePlayerDisconnect(ws: CustomWebSocket): void {
         addRoomMessage(roomCode, removalMessage);
         broadcastToRoom(currentRoomState, "CHAT_BROADCAST", removalMessage);
         
-        // --- A CHAMADA CRUCIAL ---
         // Agora que ele foi removido permanentemente do jogo,
         // também o removemos da lista global de clientes conectados.
         LobbyManager.handleDisconnect(ws);
@@ -450,46 +452,26 @@ export async function attemptPlayerReconnection(ws: CustomWebSocket): Promise<bo
         participant.disconnectionTimer = undefined;
         log(`Timer de remoção para ${ws.clientUsername} cancelado com sucesso.`);
       }
-
+      participant.reconnectingUntil = undefined;
       log(`Reconectando ${ws.clientUsername} à sala ${room.roomCode}.`, { ws });
       
       participant.ws = ws;
       ws.currentRoomCode = room.roomCode;
       
-      broadcastToOthers(room, ws, "PLAYER_RECONNECTED", {
-        playerId: ws.clientId,
-        playerName: ws.clientUsername,
-        message: `${ws.clientUsername} reconnected!`
-      });
-
-      // Envia estado da sala
-      const roomState = await getRoomStateForApi(room, ws.clientId);
-      sendToClient(ws, "ROOM_STATE_UPDATE", roomState);
+      const chatMessage = {
+          authorId: 'system',
+          authorName: 'System',
+          message: `${participant.username} has reconnected!`,
+          timestamp: new Date().toISOString(),
+      };
+      addRoomMessage(room.roomCode, chatMessage);
       
-      // Envia cartas se for jogador
-      if (room.players.has(ws.clientId)) {
-        const roomHands = getRoomHands(room.roomCode);
-        const playerHand = roomHands?.get(ws.clientId);
-        
-        if (playerHand) {
-          sendToClient(ws, "HAND_UPDATE", {
-            cards: playerHand.cards,
-            handSize: playerHand.cards.length,
-            currentCardType: room.game.currentCardType
-          });
-        }
-        
-      }
-        const chatHistory = getRoomChatHistory(room.roomCode);
-        chatHistory.forEach(chatMessage => {
-            sendToClient(ws, "CHAT_BROADCAST", chatMessage);
-        });
-
-        broadcastToOthers(room, ws, "PLAYER_RECONNECTED", {
-          playerId: ws.clientId,
-          playerName: ws.clientUsername,
-          message: `${ws.clientUsername} has reconnected to the game!`
-        });
+      broadcastRoomState(room);
+      
+      const chatHistory = getRoomChatHistory(room.roomCode);
+      chatHistory.forEach(msg => {
+          sendToClient(ws, "CHAT_BROADCAST", msg);
+      });
 
       return true;
     }

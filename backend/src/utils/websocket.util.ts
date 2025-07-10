@@ -131,6 +131,7 @@ export async function getRoomStateForApi(
         riskLevel: hand?.riskLevel || 0,
         isEliminated: hand?.isEliminated || false,
         avatar_url: userAvatars.get(id) || null,
+        reconnectingUntil: p.reconnectingUntil || null,
       };
     }),
     spectators: Array.from(room.spectators.entries()).map(([id, s]) => ({

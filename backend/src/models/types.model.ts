@@ -58,6 +58,7 @@ export interface Participant {
   username: string;
   ws: CustomWebSocket | null;
   disconnectionTimer?: NodeJS.Timeout;
+  reconnectingUntil?: number; // <--- ADICIONE ESTA LINHA (timestamp)
 }
 
 export interface Room {
