@@ -567,7 +567,6 @@ const renderReferenceCard = () => {
  * Renders the chat messages in the chat panel.
  */
 const renderChat = () => {
-<<<<<<< HEAD
     const container = document.getElementById('chat-messages');
     if (!container) return;
     container.innerHTML = chatMessages.map(msg =>{
@@ -578,22 +577,6 @@ const renderChat = () => {
         <div class="${messageClass}">
             <span class="timestamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
             <span class="content"><strong>${msg.authorName}:</strong> ${msg.message}</span>
-=======
-  const container = document.getElementById("chat-messages");
-  if (!container) return;
-  container.innerHTML = chatMessages
-    .map(
-      (msg) => `
-        <div class="message">
-            <span class="timestamp">${new Date(
-        msg.timestamp
-      ).toLocaleTimeString([], {
-        hour: "2-digit",
-        minute: "2-digit",
-      })}</span>
-            <span class="content"><strong>${msg.authorName}:</strong> ${msg.message
-        }</span>
->>>>>>> main
         </div>
     `}).join('');
     container.scrollTop = container.scrollHeight;

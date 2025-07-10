@@ -16,7 +16,6 @@ export const renderProfilePage = (element: HTMLElement) => {
   }
 
   // Calculate win rate, avoiding division by zero
-
   const winRate = user.matches_played > 0 ? ((user.wins / user.matches_played) * 100).toFixed(1) : 0;
 
   const avatarDisplay = user.avatar_url
@@ -61,13 +60,8 @@ export const renderProfilePage = (element: HTMLElement) => {
   // Render the header component
   const headerContainer = document.getElementById('header-container') as HTMLElement;
   renderHeader(headerContainer);
-<<<<<<< HEAD
   
-  // Event Listeners
-=======
-
   // --- Event Listeners for Avatar Upload ---
->>>>>>> main
   const avatarContainer = document.getElementById('avatar-container')!;
   const avatarInput = document.getElementById('avatar-input') as HTMLInputElement;
   const feedbackContainer = document.getElementById('profile-feedback-container')!;
@@ -89,18 +83,11 @@ export const renderProfilePage = (element: HTMLElement) => {
       const response = await api.patch('/users/me/avatar', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-<<<<<<< HEAD
       
-      updateUser(response.data.data.user);
-      renderProfilePage(element);
-      
-=======
-
       // Update local state and re-render the entire page to show changes.
       updateUser(response.data.data.user);
       renderProfilePage(element); // Re-render to show new avatar and clear feedback
-
->>>>>>> main
+      
     } catch (err: any) {
       const message = err.response?.data?.message || 'Upload failed. Please try again.';
       feedbackContainer.innerHTML = `<div class="form-feedback error">${message}</div>`;
