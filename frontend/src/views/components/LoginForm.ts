@@ -20,8 +20,10 @@ export const renderLoginForm = (element: HTMLElement) => {
         <label for="login-password" class="form-label">Password</label>
         <input id="login-password" name="password" type="password" required class="form-input" />
       </div>
-      <button type="submit" id="login-submit-btn" class="button button-primary">Login</button>
-    </form>
+      <div class="form-actions">
+        <button type="submit" id="login-submit-btn" class="button button-primary">Login</button>
+      </div>
+      </form>
   `;
 
   // Get the form element to attach the submit event listener.

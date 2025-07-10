@@ -1,20 +1,7 @@
-import { Card, CardType, PlayerHand, Room, GamePhase } from '../models/types.model';
+import { Card, CardType, PlayerHand, Room, GamePhase, CardGame } from '../models/types.model';
 import { log } from '../utils/logger';
 import { CARDS_PER_PLAYER, CARDS_PER_TYPE, JOKERS_COUNT } from '../config/game.config';
 
-export interface CardGame {
-  deck: Card[];
-  currentPlayerIndex: number;
-  direction: 1 | -1;
-  phase: GamePhase;
-  roundNumber: number;
-  turnTimeLimit: number;
-  turnTimer: NodeJS.Timeout | null;
-  currentCardType: CardType | null;
-  playedCards: Card[];
-  lastPlayedCard: Card[];
-  lastPlayerId: string | null;
-}
 
 /**
  * Creates a specialized deck for the Liar's Bar game.
