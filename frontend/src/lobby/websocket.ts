@@ -102,7 +102,14 @@ export function sendChatMessage(text: string) {
 }
 
 export function disconnect() {
-  if (socket) {
-    socket.close();
-  }
+    if (socket) {
+        socket.onclose = null;
+        if (reconnectInterval) {
+            clearInterval(reconnectInterval);
+            reconnectInterval = null;
+        }
+        socket.close();
+        socket = null;
+        showReconnectionMessage(false);
+    }
 }
