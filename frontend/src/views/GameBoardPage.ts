@@ -1028,7 +1028,7 @@
   ) => {
     const avatarSrc = player.avatar_url
       ? player.avatar_url
-      : "https://via.placeholder.com/60";
+      : "/default-avatar.jpg";
     if (player.isInactive) {
       return createInactivePod(player, positionClass);
     }
@@ -1058,9 +1058,9 @@
    * @returns The HTML string for the user info area.
    */
   const createMyInfoPod = (player: any) => {
-    const avatarSrc = player.avatar_url
-      ? `${API_BASE_URL}${player.avatar_url}`
-      : "https://via.placeholder.com/60";
+const avatarSrc = player.avatar_url
+      ? player.avatar_url
+      : "/default-avatar.jpg";
     const isMyTurn = gameState?.game?.currentPlayerId === player.id;
     return `
           <img src="${avatarSrc}" alt="${player.username
@@ -1081,7 +1081,7 @@
   const createEliminatedPod = (player: any, positionClass: string) => {
     const avatarSrc = player.avatar_url
       ? `${API_BASE_URL}${player.avatar_url}`
-      : "https://via.placeholder.com/60";
+      : "/default-avatar.jpg";
     return `
           <div class="player-pod ${positionClass} eliminated" data-player-id="${player.id}">
               <div class="player-info">
@@ -1097,7 +1097,7 @@
   const createInactivePod = (player: any, position: string) => {
     const avatarSrc = player.avatar_url
       ? `${API_BASE_URL}${player.avatar_url}`
-      : "https://via.placeholder.com/60";
+      : "/default-avatar.jpg";
     return `
       <div class="player-pod ${position} inactive" data-player-id="${player.id}">
         <div class="player-info">

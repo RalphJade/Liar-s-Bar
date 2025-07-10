@@ -23,8 +23,10 @@ export function initializeGameService(wss: WebSocketServer): void {
     ws.on("message", (message) => {
       try {
         const data: ClientMessage = JSON.parse(message.toString());
+        if (data.type !== "PING") {
         log("Message received.", { ws, data });
         handleClientMessage(ws, data);
+        }
       } catch (error: any) {
         log("Error handling client message.", { ws, data: { error: error.message, originalMessage: message.toString() } });
       }
@@ -54,6 +56,8 @@ function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
 
   if (!ws.currentRoomCode) {
     switch (data.type) {
+      case "PING":
+        break
       case "LIST_ROOMS":
         RoomManager.handleWaitingRooms(ws);
         break;
