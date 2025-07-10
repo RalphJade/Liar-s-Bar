@@ -907,6 +907,7 @@ body.lobby-theme {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  gap: 1.5rem;
 }
 
 /* Card adaptado para o tema escuro do lobby */

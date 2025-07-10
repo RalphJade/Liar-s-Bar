@@ -16,35 +16,38 @@ export const renderLobbyPage = (element: HTMLElement) => {
     <div id="header-container"></div>
     <!-- Main Lobby Content -->
     <main class="lobby-main">
-    <div class="lobby-grid">
-      <!-- Main Column (Rooms and Chat) -->
-      <div class="lobby-main-column">
-        <div id="lobbyContainer" class="card lobby-card">
-          <div class="card-header">
-            <h2 class="lobby-title">Available Rooms</h2>
-            <div class="lobby-actions">
-              <input type="search" id="roomSearchInput" class="form-input lobby-search" placeholder="Search...">
-              <button id="createRoomBtn" class="button button-lobby-create">Create Room</button>
+      <div class="lobby-grid">
+        <!-- Main Column (Available Rooms) -->
+        <div class="lobby-main-column">
+          <div id="lobbyContainer" class="card lobby-card" style="height: 100%;">
+            <div class="card-header">
+              <h2 class="lobby-title">Available Rooms</h2>
+              <div class="lobby-actions">
+                <input type="search" id="roomSearchInput" class="form-input lobby-search" placeholder="Search...">
+                <button id="createRoomBtn" class="button button-lobby-create">Create Room</button>
+              </div>
+            </div>
+            <div id="roomList" class="scrollable-list">
+              <p class="empty-list-message">No available rooms. Create the first one!</p>
             </div>
           </div>
-          <div id="roomList" class="scrollable-list">
-            <p class="empty-list-message">No available rooms. Create the first one!</p>
+        </div>
+
+        <!-- Side Column (Players and Chat) -->
+        <aside class="lobby-side-column">
+          <div class="card lobby-card" style="flex: 2; min-height: 0;">
+            <h3 class="lobby-subtitle">Players in the Bar</h3>
+            <div id="onlineUserList" class="scrollable-list"></div>
           </div>
-        </div>
-        <div id="chatContainer" class="card lobby-card">
-          <h3 class="lobby-subtitle">Saloon Chat</h3>
-          <div id="chatMessages" class="scrollable-list chat-messages"></div>
-          <form id="chatForm" class="chat-form">
-            <input type="text" id="chatInput" class="form-input" placeholder="Say something..." required>
-            <button type="submit" class="button button-lobby-send">Send</button>
-          </form>
-        </div>
-      </div>
-      <!-- Side Column (Online Players) -->
-      <aside class="lobby-side-column card lobby-card">
-        <h3 class="lobby-subtitle">Players in the Bar</h3>
-        <div id="onlineUserList" class="scrollable-list"></div>
-      </aside>
+          <div id="chatContainer" class="card lobby-card" style="flex: 3; min-height: 0;">
+            <h3 class="lobby-subtitle">Saloon Chat</h3>
+            <div id="chatMessages" class="scrollable-list chat-messages"></div>
+            <form id="chatForm" class="chat-form">
+              <input type="text" id="chatInput" class="form-input" placeholder="Say something..." required>
+              <button type="submit" class="button button-lobby-send">Send</button>
+            </form>
+          </div>
+        </aside>
       </div>
     </main>
 
@@ -91,12 +94,19 @@ export const renderLobbyPage = (element: HTMLElement) => {
   const closeModalBtn = document.getElementById("closeModalBtn");
   const createRoomForm = document.getElementById("createRoomForm");
 
+  // --- Modal Listeners ---
   createRoomBtn?.addEventListener("click", () =>
     createRoomModal?.classList.remove("hidden")
   );
   closeModalBtn?.addEventListener("click", () =>
     createRoomModal?.classList.add("hidden")
   );
+  // Close modal when clicking the overlay
+  createRoomModal?.addEventListener("click", (e) => {
+    if (e.target === createRoomModal) {
+      createRoomModal.classList.add("hidden");
+    }
+  });
 
   createRoomForm?.addEventListener("submit", (e) => {
     e.preventDefault();
