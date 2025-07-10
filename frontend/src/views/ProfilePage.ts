@@ -20,7 +20,7 @@ export const renderProfilePage = (element: HTMLElement) => {
 
   // Dynamically render the avatar or a placeholder
   const avatarDisplay = user.avatar_url
-    ? `<img src="http://localhost:3001${user.avatar_url}" alt="Your avatar" class="avatar-placeholder" style="border-style: solid; padding: 0; object-fit: cover; cursor: pointer;" />`
+    ? `<img src="${user.avatar_url}" alt="Your avatar" class="avatar-placeholder" style="border-style: solid; padding: 0; object-fit: cover; cursor: pointer;" />`
     : `<img src="/default-avatar.jpg" alt="Default avatar" class="avatar-placeholder" style="border-style: solid; padding: 0; object-fit: cover; cursor: pointer;" />`;
 
   element.innerHTML = `
