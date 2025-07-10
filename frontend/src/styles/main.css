@@ -7,30 +7,42 @@
  * visual consistency, and simplifies maintenance.
  */
 :root {
+  /* --- TIPOGRAFIA --- */
+  --font-display: "Pirata One", cursive;
+  --font-body: "Merriweather", serif;
+
+  /* Escala de Tamanhos de Fonte */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-md: 1.125rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.75rem;
+  --font-size-2xl: 2.5rem;
+  --font-size-display: 4rem;
+
   /* Color Palette - Dark Bar Theme */
-  --color-primary: #8c6d5e; /* Wood Brown */
-  --color-primary-hover: #5c3d2e; /* Darker Wood */
+  --color-primary: #8c6d5e;
+  --color-primary-hover: #5c3d2e;
   --color-primary-disabled: #4a4a4a;
   --color-danger: #dc2626;
   --color-danger-hover: #b91c1c;
   --color-success: #16a34a;
   --color-text-dark: #1a1a1a;
   --color-text-medium: #6b7280;
-  --color-text-light: #f3e9dc; /* Off-white for text on dark bg */
-  --color-bg-light: #0f0f0f; /* Very dark background */
-  --color-bg-white: #1a1a1a; /* Dark card background */
+  --color-text-light: #f3e9dc;
+  --color-bg-light: #0f0f0f;
+  --color-bg-white: #1a1a1a;
   --color-border: #333333;
-  --color-accent-gold: #d4af37; /* Rich gold accent */
+  --color-accent-gold: #d4af37;
 
   /* Liar's Bar Theme - Enhanced Dark Atmosphere */
-  --font-display: "Pirata One", cursive;
-  --font-body: "Merriweather", serif;
-  --color-wood-dark: #2c1810; /* Very dark wood for header */
-  --color-wood-light: #8b6f47; /* Lighter wood for accents */
-  --color-parchment: #2a2a2a; /* Dark parchment for modal */
-  --color-smoke: rgba(255, 255, 255, 0.05); /* Subtle smoke effect */
-  --color-shadow-dark: rgba(0, 0, 0, 0.8); /* Deep shadows */
-  --color-blood-red: #8b0000; /* Dark red for danger elements */
+  --color-wood-dark: #2c1810;
+  --color-wood-light: #8b6f47;
+  --color-parchment: #2a2a2a;
+  --color-smoke: rgba(255, 255, 255, 0.05);
+  --color-shadow-dark: rgba(0, 0, 0, 0.8);
+  --color-blood-red: #8b0000;
 
   /* Atmospheric Effects */
   --blur-smoke: blur(1px);
@@ -44,15 +56,15 @@
   --color-feedback-success-text: #51cf66;
 
   /* Color Palette (Dark Theme - for Lobby) */
-  --dark-bg: #111827; /* bg-gray-900 */
-  --dark-card: #1f2937; /* bg-gray-800 */
-  --dark-input: #374151; /* bg-gray-700 */
-  --dark-text: #f3f4f6; /* text-white / gray-100 */
-  --dark-border: #4b5563; /* border-gray-700 */
-  --dark-yellow: #f59e0b; /* amber-500 */
-  --dark-yellow-hover: #fbbf24; /* amber-400 */
-  --dark-blue: #3b82f6; /* blue-500 */
-  --dark-blue-hover: #60a5fa; /* blue-400 */
+  --dark-bg: #111827;
+  --dark-card: #1f2937;
+  --dark-input: #374151;
+  --dark-text: #f3f4f6;
+  --dark-border: #4b5563;
+  --dark-yellow: #f59e0b;
+  --dark-yellow-hover: #fbbf24;
+  --dark-blue: #3b82f6;
+  --dark-blue-hover: #60a5fa;
 
   /* Typography & Spacing */
   --font-family: var(--font-body);
@@ -68,7 +80,7 @@
 
 html {
   box-sizing: border-box;
-  font-size: 70%;
+  font-size: 100%;
 }
 *,
 *:before,
@@ -86,13 +98,14 @@ html {
 body {
   margin: 0;
   font-family: var(--font-family);
+  font-size: var(--font-size-base);
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
   background-attachment: fixed;
   color: var(--color-text-light);
-  height: 100vh; /* Ocupa 100% da altura da janela de visualização */
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Previne barras de rolagem indesejadas no body */
+  overflow: hidden;
   position: relative;
 }
 
@@ -126,9 +139,8 @@ body::before {
 #app {
   display: flex;
   flex-direction: column;
-  height: 100%; /* Herda a altura do body (que é 100vh no lobby) */
-  flex-grow: 1; /* Faz o #app crescer para ocupar todo o espaço do body */
-  min-height: 0; /* Correção para bugs de overflow em contêineres flex */
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* A general-purpose container for centering page content vertically and horizontally. */
@@ -136,10 +148,11 @@ body::before {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   min-height: calc(100vh - 80px);
-  padding: 1rem;
+  padding: 2rem 1rem;
   position: relative;
+  overflow-y: auto;
 }
 
 /**
@@ -219,7 +232,7 @@ body::before {
   align-items: center;
   gap: 0.75rem;
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: var(--font-size-xl);
   color: var(--color-accent-gold);
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
@@ -239,6 +252,7 @@ body::before {
 .button-rules {
   padding: 0.75rem 2rem;
   font-family: var(--font-body);
+  font-size: var(--font-size-sm);
   font-weight: 700;
   background: linear-gradient(
     135deg,
@@ -283,7 +297,7 @@ body::before {
 
 .user-info .username {
   font-weight: 700;
-  font-size: 1rem;
+  font-size: var(--font-size-base);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -312,16 +326,14 @@ body::before {
 
 .user-dropdown-menu {
   position: absolute;
-  top: calc(
-    100% + 5px
-  ); /* Posiciona logo abaixo do gatilho, com 5px de espaço */
+  top: calc(100% + 5px);
   right: 0;
   width: 200px;
   background: linear-gradient(135deg, #1f1f1f 0%, var(--color-parchment) 100%);
   border: 2px solid var(--color-wood-light);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-dramatic);
-  z-index: 20; /* Garante que fique acima de outros elementos */
+  z-index: 20;
   padding: 0.5rem 0;
   overflow: hidden;
 }
@@ -418,7 +430,7 @@ body::before {
 
 .modal-title {
   font-family: var(--font-display);
-  font-size: 2.5rem;
+  font-size: var(--font-size-2xl);
   text-align: center;
   margin-top: 0;
   margin-bottom: 1.5rem;
@@ -439,7 +451,7 @@ body::before {
 
 .modal-body h3 {
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: var(--font-size-lg);
   color: var(--color-accent-gold);
   border-bottom: 2px solid var(--color-wood-light);
   padding-bottom: 0.5rem;
@@ -611,9 +623,15 @@ body::before {
 }
 
 /* --- Form-specific utility classes --- */
+.form-actions {
+  margin-top: 1.5rem;
+  display: flex;
+  justify-content: center;
+}
 
 .form-title {
-  font-size: 1.5rem;
+  font-size: var(--font-size-xl);
+  font-family: var(--font-body);
   font-weight: 700;
   text-align: center;
   color: var(--color-accent-gold);
@@ -627,7 +645,7 @@ body::before {
 
 .form-label {
   display: block;
-  font-size: 0.875rem;
+  font-size: var(--font-size-sm);
   font-weight: 500;
   color: var(--color-text-light);
   margin-bottom: 0.25rem;
@@ -641,6 +659,7 @@ body::before {
   transition: all 0.3s ease;
   background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
   color: var(--color-text-light);
+  font-size: var(--font-size-base);
 }
 
 .form-input:focus {
@@ -678,8 +697,9 @@ body::before {
 /* --- General button styles --- */
 
 .button {
-  width: 100%;
-  padding: 0.75rem 1rem;
+  width: auto;
+  display: inline-block;
+  padding: 0.75rem 1.5rem;
   border: none;
   border-radius: 0.5rem;
   color: var(--color-text-light);
@@ -789,7 +809,7 @@ body::before {
 }
 
 .homepage-title {
-  font-size: 4.5rem;
+  font-size: var(--font-size-display);
   font-weight: 700;
   font-family: var(--font-display);
   color: var(--color-accent-gold);
@@ -800,7 +820,7 @@ body::before {
 
 .homepage-text {
   margin-top: 1rem;
-  font-size: 1.25rem;
+  font-size: var(--font-size-lg);
   color: var(--color-text-light);
   line-height: 1.6;
 }
@@ -817,7 +837,7 @@ body::before {
 
 /**
  * ================================================================
- * LOBBY PAGE STYLES - NOVO
+ * LOBBY PAGE STYLES 
  * ================================================================
  */
 
@@ -851,16 +871,16 @@ body.lobby-theme {
   gap: 1rem;
 }
 .lobby-navbar .button {
-  width: auto; /* Botões na navbar não ocupam 100% da largura */
+  width: auto;
   padding: 0.5rem 1rem;
 }
 
 .lobby-main {
-  flex-grow: 1; /* Ocupa todo o espaço vertical restante */
+  flex-grow: 1;
   padding: 1rem;
   display: flex;
   gap: 1rem;
-  overflow: hidden; /* Previne scroll no nível do main */
+  overflow: hidden;
 }
 
 /* Colunas do Layout*/
@@ -869,7 +889,7 @@ body.lobby-theme {
   gap: 1.5rem;
   padding: 1.5rem;
   flex-grow: 1;
-  align-items: stretch; /* Faz as colunas terem a mesma altura */
+  align-items: stretch;
 }
 
 .lobby-main-column {
@@ -885,6 +905,7 @@ body.lobby-theme {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  gap: 1.5rem;
 }
 
 /* Card adaptado para o tema escuro do lobby */
@@ -959,19 +980,19 @@ body.lobby-theme {
 }
 
 .scrollable-list {
-  overflow-y: auto; /* Permite que o conteúdo interno tenha scroll */
+  overflow-y: auto;
   padding-right: 0.5rem;
 }
 
 #lobbyContainer {
-  flex: 3; /* Pede para ocupar 2 partes do espaço vertical disponível */
+  flex: 3;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Garante que o conteúdo não vaze */
+  overflow: hidden;
 }
 
 #chatContainer {
-  flex: 2; /* Pede para ocupar 1 parte do espaço vertical disponível */
+  flex: 2;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -979,11 +1000,11 @@ body.lobby-theme {
 }
 
 #onlineUserList {
-  flex-grow: 1; /* Faz a lista de usuários ocupar o espaço restante na sua coluna */
+  flex-grow: 1;
 }
 
 #chatMessages {
-  flex-grow: 1; /* Faz a área de mensagens ocupar o espaço restante no seu card */
+  flex-grow: 1;
   overflow-y: auto;
   margin-bottom: 0.5rem;
 }
@@ -1047,14 +1068,14 @@ body.lobby-theme {
 
 .lobby-title {
   font-family: var(--font-display);
-  font-size: 2rem;
+  font-size: var(--font-size-xl);
   color: var(--color-accent-gold);
   text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
 }
 
 .lobby-subtitle {
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: var(--font-size-lg);
   color: var(--color-accent-gold);
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
@@ -1178,4 +1199,72 @@ body.lobby-theme {
 .scrollable-list {
   scrollbar-width: thin; /* Deixa a barra mais fina */
   scrollbar-color: var(--color-wood-light) rgba(0, 0, 0, 0.3); /* Cor do polegar e da trilha */
+}
+
+.room-name {
+  font-size: var(--font-size-md);
+  font-weight: 700;
+}
+
+.room-details {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-medium);
+}
+
+/**
+ * ================================================================
+ * PROFILE PAGE 
+ * ================================================================
+ */
+
+.profile-card {
+  max-width: 550px;
+}
+
+.profile-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.profile-avatar-section {
+  text-align: center;
+}
+
+.avatar-caption {
+  font-size: var(--font-size-sm);
+  color: var(--color-text-medium);
+  margin-top: 0.5rem;
+}
+
+.data-box {
+  width: 100%;
+  max-width: 400px;
+  text-align: left;
+  border: 1px solid var(--color-border);
+  padding: 1rem; /* Padding reduzido */
+  border-radius: var(--border-radius);
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
+.data-box-title {
+  font-family: var(--font-display);
+  font-size: var(--font-size-lg);
+  color: var(--color-accent-gold);
+  margin-top: 0;
+  margin-bottom: 0.75rem; /* Margem reduzida */
+  border-bottom: 1px solid var(--color-wood-light);
+  padding-bottom: 0.5rem;
+}
+
+.data-box p {
+  margin-bottom: 0.5rem;
+  font-size: var(--font-size-base);
+}
+
+.profile-back-btn {
+  margin: 1.5rem auto 0; /* Margem reduzida */
+  display: block;
 }

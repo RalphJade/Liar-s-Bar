@@ -27,7 +27,9 @@ export const renderRegisterForm = (element: HTMLElement) => {
         <label for="reg-confirmPassword" class="form-label">Confirm Password</label>
         <input id="reg-confirmPassword" name="confirmPassword" type="password" required class="form-input" />
       </div>
+      <div class="form-actions">
       <button type="submit" id="reg-submit-btn" class="button button-primary">Register</button>
+      </div>
     </form>
   `;
 
