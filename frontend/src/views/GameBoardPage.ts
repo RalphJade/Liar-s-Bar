@@ -733,7 +733,7 @@ const createInactivePod = (player: any, position: string) => {
     ? `${API_BASE_URL}${player.avatar_url}`
     : "https://via.placeholder.com/60";
   return `
-    <div class="player-pod player-${position} inactive" data-player-id="${player.id}">
+    <div class="player-pod ${position} inactive" data-player-id="${player.id}">
       <div class="player-info">
         <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar inactive-avatar" />
         <div class="player-details">
