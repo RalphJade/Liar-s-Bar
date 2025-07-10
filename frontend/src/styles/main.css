@@ -7,42 +7,42 @@
  * visual consistency, and simplifies maintenance.
  */
 :root {
-  /* --- TIPOGRAFIA (NOVO E CENTRALIZADO) --- */
+  /* --- TIPOGRAFIA --- */
   --font-display: "Pirata One", cursive;
   --font-body: "Merriweather", serif;
 
   /* Escala de Tamanhos de Fonte */
-  --font-size-xs: 0.75rem; /* 12px - Para detalhes muito pequenos */
-  --font-size-sm: 0.875rem; /* 14px - Labels, textos de ajuda */
-  --font-size-base: 1rem; /* 16px - Parágrafos, inputs */
-  --font-size-md: 1.125rem; /* 18px - Nomes de salas, etc. */
-  --font-size-lg: 1.25rem; /* 20px - Subtítulos de página */
-  --font-size-xl: 1.75rem; /* 28px - Títulos de card/seção */
-  --font-size-2xl: 2.5rem; /* 40px - Títulos de modal */
-  --font-size-display: 4rem; /* 64px - Títulos de página principal */
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-md: 1.125rem;
+  --font-size-lg: 1.25rem;
+  --font-size-xl: 1.75rem;
+  --font-size-2xl: 2.5rem;
+  --font-size-display: 4rem;
 
   /* Color Palette - Dark Bar Theme */
-  --color-primary: #8c6d5e; /* Wood Brown */
-  --color-primary-hover: #5c3d2e; /* Darker Wood */
+  --color-primary: #8c6d5e;
+  --color-primary-hover: #5c3d2e;
   --color-primary-disabled: #4a4a4a;
   --color-danger: #dc2626;
   --color-danger-hover: #b91c1c;
   --color-success: #16a34a;
   --color-text-dark: #1a1a1a;
   --color-text-medium: #6b7280;
-  --color-text-light: #f3e9dc; /* Off-white for text on dark bg */
-  --color-bg-light: #0f0f0f; /* Very dark background */
-  --color-bg-white: #1a1a1a; /* Dark card background */
+  --color-text-light: #f3e9dc;
+  --color-bg-light: #0f0f0f;
+  --color-bg-white: #1a1a1a;
   --color-border: #333333;
-  --color-accent-gold: #d4af37; /* Rich gold accent */
+  --color-accent-gold: #d4af37;
 
   /* Liar's Bar Theme - Enhanced Dark Atmosphere */
-  --color-wood-dark: #2c1810; /* Very dark wood for header */
-  --color-wood-light: #8b6f47; /* Lighter wood for accents */
-  --color-parchment: #2a2a2a; /* Dark parchment for modal */
-  --color-smoke: rgba(255, 255, 255, 0.05); /* Subtle smoke effect */
-  --color-shadow-dark: rgba(0, 0, 0, 0.8); /* Deep shadows */
-  --color-blood-red: #8b0000; /* Dark red for danger elements */
+  --color-wood-dark: #2c1810;
+  --color-wood-light: #8b6f47;
+  --color-parchment: #2a2a2a;
+  --color-smoke: rgba(255, 255, 255, 0.05);
+  --color-shadow-dark: rgba(0, 0, 0, 0.8);
+  --color-blood-red: #8b0000;
 
   /* Atmospheric Effects */
   --blur-smoke: blur(1px);
@@ -56,15 +56,15 @@
   --color-feedback-success-text: #51cf66;
 
   /* Color Palette (Dark Theme - for Lobby) */
-  --dark-bg: #111827; /* bg-gray-900 */
-  --dark-card: #1f2937; /* bg-gray-800 */
-  --dark-input: #374151; /* bg-gray-700 */
-  --dark-text: #f3f4f6; /* text-white / gray-100 */
-  --dark-border: #4b5563; /* border-gray-700 */
-  --dark-yellow: #f59e0b; /* amber-500 */
-  --dark-yellow-hover: #fbbf24; /* amber-400 */
-  --dark-blue: #3b82f6; /* blue-500 */
-  --dark-blue-hover: #60a5fa; /* blue-400 */
+  --dark-bg: #111827;
+  --dark-card: #1f2937;
+  --dark-input: #374151;
+  --dark-text: #f3f4f6;
+  --dark-border: #4b5563;
+  --dark-yellow: #f59e0b;
+  --dark-yellow-hover: #fbbf24;
+  --dark-blue: #3b82f6;
+  --dark-blue-hover: #60a5fa;
 
   /* Typography & Spacing */
   --font-family: var(--font-body);
@@ -102,10 +102,10 @@ body {
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
   background-attachment: fixed;
   color: var(--color-text-light);
-  height: 100vh; /* Ocupa 100% da altura da janela de visualização */
+  height: 100vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Previne barras de rolagem indesejadas no body */
+  overflow: hidden;
   position: relative;
 }
 
@@ -139,8 +139,8 @@ body::before {
 #app {
   display: flex;
   flex-direction: column;
-  height: 100vh; /* Garante que o app ocupe a altura total da tela */
-  overflow: hidden; /* Previne barras de rolagem duplas */
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* A general-purpose container for centering page content vertically and horizontally. */
@@ -326,16 +326,14 @@ body::before {
 
 .user-dropdown-menu {
   position: absolute;
-  top: calc(
-    100% + 5px
-  ); /* Posiciona logo abaixo do gatilho, com 5px de espaço */
+  top: calc(100% + 5px);
   right: 0;
   width: 200px;
   background: linear-gradient(135deg, #1f1f1f 0%, var(--color-parchment) 100%);
   border: 2px solid var(--color-wood-light);
   border-radius: var(--border-radius);
   box-shadow: var(--shadow-dramatic);
-  z-index: 20; /* Garante que fique acima de outros elementos */
+  z-index: 20;
   padding: 0.5rem 0;
   overflow: hidden;
 }
@@ -839,7 +837,7 @@ body::before {
 
 /**
  * ================================================================
- * LOBBY PAGE STYLES - NOVO
+ * LOBBY PAGE STYLES 
  * ================================================================
  */
 
@@ -873,16 +871,16 @@ body.lobby-theme {
   gap: 1rem;
 }
 .lobby-navbar .button {
-  width: auto; /* Botões na navbar não ocupam 100% da largura */
+  width: auto;
   padding: 0.5rem 1rem;
 }
 
 .lobby-main {
-  flex-grow: 1; /* Ocupa todo o espaço vertical restante */
+  flex-grow: 1;
   padding: 1rem;
   display: flex;
   gap: 1rem;
-  overflow: hidden; /* Previne scroll no nível do main */
+  overflow: hidden;
 }
 
 /* Colunas do Layout*/
@@ -891,7 +889,7 @@ body.lobby-theme {
   gap: 1.5rem;
   padding: 1.5rem;
   flex-grow: 1;
-  align-items: stretch; /* Faz as colunas terem a mesma altura */
+  align-items: stretch;
 }
 
 .lobby-main-column {
@@ -982,19 +980,19 @@ body.lobby-theme {
 }
 
 .scrollable-list {
-  overflow-y: auto; /* Permite que o conteúdo interno tenha scroll */
+  overflow-y: auto;
   padding-right: 0.5rem;
 }
 
 #lobbyContainer {
-  flex: 3; /* Pede para ocupar 2 partes do espaço vertical disponível */
+  flex: 3;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Garante que o conteúdo não vaze */
+  overflow: hidden;
 }
 
 #chatContainer {
-  flex: 2; /* Pede para ocupar 1 parte do espaço vertical disponível */
+  flex: 2;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -1002,11 +1000,11 @@ body.lobby-theme {
 }
 
 #onlineUserList {
-  flex-grow: 1; /* Faz a lista de usuários ocupar o espaço restante na sua coluna */
+  flex-grow: 1;
 }
 
 #chatMessages {
-  flex-grow: 1; /* Faz a área de mensagens ocupar o espaço restante no seu card */
+  flex-grow: 1;
   overflow-y: auto;
   margin-bottom: 0.5rem;
 }
@@ -1215,20 +1213,20 @@ body.lobby-theme {
 
 /**
  * ================================================================
- * PROFILE PAGE - LAYOUT CORRECTION
+ * PROFILE PAGE 
  * ================================================================
  */
 
 .profile-card {
-  max-width: 550px; /* Reduz a largura máxima do card */
+  max-width: 550px;
 }
 
 .profile-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 1.5rem; /* Espaçamento entre os blocos */
-  margin-top: 1rem; /* Margem reduzida do topo */
+  gap: 1.5rem;
+  margin-top: 1rem;
 }
 
 .profile-avatar-section {

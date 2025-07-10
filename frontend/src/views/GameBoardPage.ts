@@ -580,10 +580,313 @@ const handlePlayCardAction = () => {
  * Handles the "Call Bluff" action.
  */
 const handleCallBluffAction = () => {
-  if (confirm("Are you sure you want to call a bluff?")) {
-    sendWebSocketMessage({ type: "CALL_BLUFF", payload: {} });
-  }
+  showBluffConfirmationModal();
 };
+
+const showBluffConfirmationModal = () => {
+  const modalOverlay = document.createElement('div');
+  modalOverlay.id = 'bluff-confirmation-overlay';
+  modalOverlay.className = 'bluff-modal-overlay';
+  
+  modalOverlay.innerHTML = `
+    <div class="bluff-modal-content">
+      <div class="bluff-modal-header">
+        <h2 class="bluff-modal-title">🎭 Call Their Bluff?</h2>
+      </div>
+      <div class="bluff-modal-body">
+        <div class="bluff-modal-icon">🃏</div>
+        <p class="bluff-modal-text">
+          Are you sure you want to accuse the last player of lying?
+        </p>
+        <div class="bluff-warning">
+          <span class="warning-icon">⚠️</span>
+          <span>If you're wrong, you'll face the roulette!</span>
+        </div>
+      </div>
+      <div class="bluff-modal-actions">
+        <button id="bluff-cancel-btn" class="bluff-button bluff-button-secondary">
+          <span class="button-icon">🛡️</span>
+          <span>Stay Silent</span>
+        </button>
+        <button id="bluff-confirm-btn" class="bluff-button bluff-button-danger">
+          <span class="button-icon">🎯</span>
+          <span>Call Bluff!</span>
+        </button>
+      </div>
+    </div>
+  `;
+  
+  document.body.appendChild(modalOverlay);
+  
+  // Animação de entrada
+  requestAnimationFrame(() => {
+    modalOverlay.classList.add('show');
+  });
+  
+  // Event listeners
+  const cancelBtn = document.getElementById('bluff-cancel-btn');
+  const confirmBtn = document.getElementById('bluff-confirm-btn');
+  
+  const closeModal = () => {
+    modalOverlay.classList.remove('show');
+    setTimeout(() => {
+      document.body.removeChild(modalOverlay);
+    }, 300);
+  };
+  
+  cancelBtn?.addEventListener('click', closeModal);
+  
+  confirmBtn?.addEventListener('click', () => {
+    sendWebSocketMessage({ type: "CALL_BLUFF", payload: {} });
+    closeModal();
+  });
+  
+  // Fechar com ESC ou clique fora
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) closeModal();
+  });
+  
+  document.addEventListener('keydown', function escapeHandler(e) {
+    if (e.key === 'Escape') {
+      closeModal();
+      document.removeEventListener('keydown', escapeHandler);
+    }
+  });
+};
+
+const addBluffModalStyles = () => {
+  const existingStyles = document.querySelector('#bluff-modal-styles');
+  if (existingStyles) return;
+  
+  const style = document.createElement('style');
+  style.id = 'bluff-modal-styles';
+  style.textContent = `
+    /* Modal de Confirmação de Blefe */
+    .bluff-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, rgba(0,0,0,0.85), rgba(20,20,20,0.9));
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 3000;
+      opacity: 0;
+      transition: opacity 0.3s ease-in-out;
+    }
+    
+    .bluff-modal-overlay.show {
+      opacity: 1;
+    }
+    
+    .bluff-modal-content {
+      background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+      border: 3px solid var(--color-accent-gold);
+      border-radius: 1rem;
+      box-shadow: 
+        0 0 30px rgba(212, 175, 55, 0.4),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      max-width: 450px;
+      width: 90%;
+      transform: scale(0.8);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      overflow: hidden;
+    }
+    
+    .bluff-modal-overlay.show .bluff-modal-content {
+      transform: scale(1);
+    }
+    
+    .bluff-modal-header {
+      background: linear-gradient(90deg, var(--color-wood-dark), #2d1810);
+      padding: 1.5rem;
+      text-align: center;
+      border-bottom: 2px solid var(--color-accent-gold);
+    }
+    
+    .bluff-modal-title {
+      margin: 0;
+      font-family: var(--font-display);
+      font-size: 1.5rem;
+      color: var(--color-accent-gold);
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      animation: titlePulse 2s ease-in-out infinite;
+    }
+    
+    .bluff-modal-body {
+      padding: 2rem;
+      text-align: center;
+      color: #f1f5f9;
+    }
+    
+    .bluff-modal-icon {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      animation: cardFlip 3s ease-in-out infinite;
+    }
+    
+    .bluff-modal-text {
+      font-size: 1.1rem;
+      line-height: 1.6;
+      margin-bottom: 1.5rem;
+      color: #e2e8f0;
+    }
+    
+    .bluff-warning {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      background: rgba(220, 38, 38, 0.1);
+      border: 1px solid rgba(220, 38, 38, 0.3);
+      border-radius: 0.5rem;
+      padding: 0.75rem;
+      font-size: 0.9rem;
+      color: #fca5a5;
+    }
+    
+    .warning-icon {
+      font-size: 1.1rem;
+      animation: warningPulse 1.5s ease-in-out infinite;
+    }
+    
+    .bluff-modal-actions {
+      display: flex;
+      gap: 1rem;
+      padding: 1.5rem;
+      justify-content: center;
+      background: rgba(0,0,0,0.2);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .bluff-button {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border: 2px solid;
+      border-radius: 0.5rem;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      min-width: 140px;
+      justify-content: center;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .bluff-button::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+      transition: left 0.5s;
+    }
+    
+    .bluff-button:hover::before {
+      left: 100%;
+    }
+    
+    .bluff-button-secondary {
+      background: linear-gradient(135deg, #475569, #334155);
+      border-color: #64748b;
+      color: #f1f5f9;
+    }
+    
+    .bluff-button-secondary:hover {
+      background: linear-gradient(135deg, #64748b, #475569);
+      border-color: #94a3b8;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    }
+    
+    .bluff-button-danger {
+      background: linear-gradient(135deg, #dc2626, #b91c1c);
+      border-color: #ef4444;
+      color: white;
+    }
+    
+    .bluff-button-danger:hover {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      border-color: #f87171;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+    }
+    
+    .bluff-button:active {
+      transform: translateY(0);
+    }
+    
+    .button-icon {
+      font-size: 1.1rem;
+    }
+    
+    /* Animações */
+    @keyframes titlePulse {
+      0%, 100% { 
+        transform: scale(1); 
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+      }
+      50% { 
+        transform: scale(1.05); 
+        text-shadow: 2px 2px 8px rgba(212, 175, 55, 0.6);
+      }
+    }
+    
+    @keyframes cardFlip {
+      0%, 100% { transform: rotateY(0deg); }
+      50% { transform: rotateY(180deg); }
+    }
+    
+    @keyframes warningPulse {
+      0%, 100% { 
+        transform: scale(1); 
+        opacity: 1;
+      }
+      50% { 
+        transform: scale(1.1); 
+        opacity: 0.8;
+      }
+    }
+    
+    /* Responsividade */
+    @media (max-width: 480px) {
+      .bluff-modal-content {
+        width: 95%;
+        margin: 1rem;
+      }
+      
+      .bluff-modal-actions {
+        flex-direction: column;
+      }
+      
+      .bluff-button {
+        width: 100%;
+      }
+    }
+  `;
+  
+  document.head.appendChild(style);
+};
+
+// Inicializar os estilos quando a página carregar
+document.addEventListener('DOMContentLoaded', addBluffModalStyles);
+
+// Se já estiver carregado, adicionar os estilos imediatamente
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', addBluffModalStyles);
+} else {
+  addBluffModalStyles();
+}
 
 /**
  * Sets up all static event listeners for the page, such as chat and modals.
