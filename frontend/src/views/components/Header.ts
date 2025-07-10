@@ -92,53 +92,63 @@ export const renderHeader = (element: HTMLElement) => {
         </button>
         
         <!-- Game rules content -->
-        <h2 class="modal-title">How to Play Liar's Deck</h2>
+        <h2 class="modal-title">How to Play Liar's Bar</h2>
         <div class="modal-body">
           <h3>The Deadly Game</h3>
-          <p>Welcome to Liar's Bar, where deception is survival and one wrong move could be your last. In this high-stakes card game, players must master the art of bluffing while detecting lies from their opponents.</p>
+          <p>Welcome to Liar's Bar, where deception is survival and one wrong move could be your last. The objective is simple: be the last person standing. Eliminate your rivals by catching their bluffs, or bluff your way to victory.</p>
           
           <h3>Setup & Objective</h3>
           <ul>
-            <li>Each player receives 5 cards and a revolver with mixed ammunition</li>
-            <li>The goal is to be the last player standing by eliminating opponents through successful accusations</li>
-            <li>Cards include regular playing cards (2-A) and special Joker cards</li>
+            <li>The game is for up to 4 players. Each player starts with 5 cards.</li>
+            <li>The deck consists of <strong>Aces, Kings, Queens,</strong> and two valuable <strong>Jokers</strong>.</li>
+            <li>The last player who avoids elimination wins the entire pot.</li>
           </ul>
 
           <h3>Playing the Game</h3>
           <ol>
-            <li><strong>Card Declaration:</strong> Players take turns playing cards face down, declaring what they claim to have played. The declared value must match the current table requirement (e.g., "King" when Kings are being played).</li>
-            <li><strong>Bluffing Opportunity:</strong> You can lie about the card you've played. This is the core of the game - psychological warfare through deception.</li>
-            <li><strong>Challenging Lies:</strong> If you suspect another player is lying, you can call "Liar!" to challenge their claim.</li>
-            <li><strong>Jokers are Wild:</strong> Joker cards can be played as any value, making them safe to play but limited in quantity.</li>
+            <li><strong>The Round:</strong> A round begins with a required card type (e.g., 'ACE').</li>
+            <li><strong>Your Turn:</strong> On your turn, you must play one or more cards from your hand face-down. This action is an implicit claim that you are playing the required card type. You are, of course, encouraged to lie.</li>
+            <li><strong>The Challenge:</strong> After a player makes a move, the next player in line has a choice: either play their own cards, continuing the round, or challenge the previous player by calling a <strong>Bluff</strong>.</li>
           </ol>
 
-          <h3>The Stakes: Russian Roulette</h3>
-          <p>When a player is caught lying or makes a false accusation, they must face the consequences:</p>
+          <h3>The Reckoning</h3>
+          <p>When a bluff is called, the cards are revealed and someone must pay the price:</p>
           <ul>
-            <li>If the accused player was <strong>truthful</strong> (played the correct card or a Joker), the false accuser draws from their revolver</li>
-            <li>If the accused player was <strong>lying</strong> (played an incorrect card), they must draw from their revolver</li>
-            <li>Drawing a lethal round eliminates the player immediately</li>
-            <li>Drawing a blank allows the player to continue</li>
+            <li>If the accused player was <strong>LYING</strong> (played any card that wasn't the required type or a Joker), they are punished.</li>
+            <li>If the accused player was <strong>TELLING THE TRUTH</strong>, the accuser is punished for their false allegation.</li>
+            <li>After a challenge, all played cards are discarded and a new round begins.</li>
+          </ul>
+
+          <h3>The Stakes: Russian Roulette</h3>
+          <p>Punishment in the Liar's Bar is swift. The punished player faces a round of Russian Roulette:</p>
+          <ul>
+              <li>Your <strong>Risk Level</strong> increases by one. With each point of risk, the revolver's chamber gets smaller, making each spin more perilous.</li>
+              <li>A spin resulting in <strong>❤️ (Click)</strong> means you survive, but your increased risk remains.</li>
+              <li>A spin resulting in <strong>💀 (Bang)</strong> means you are immediately and permanently <strong>ELIMINATED</strong> from the game.</li>
+              <li>Taking too long on your turn (30 seconds) is a sign of weakness and results in an automatic punishment.</li>
+          </ul>
+
+          <h3>Special Rules</h3>
+          <ul>
+            <li><strong>Jokers are Wild:</strong> A Joker is always considered a valid card, regardless of the round's requirement. They are your only true allies.</li>
+            <li><strong>Empty Hand:</strong> If you play all of your cards, you become 'inactive' and are safe from challenges until the next deal.</li>
+            <li><strong>Stalemate:</strong> If all active players run out of cards, the deck is reshuffled, new hands are dealt, and the game continues with the remaining survivors.</li>
           </ul>
 
           <div class="warning">
-            <strong>⚠️ Warning:</strong> This is a game of elimination. Players who draw lethal rounds are permanently removed from the game. Only the most cunning and lucky will survive until the end.
+            <strong>⚠️ Warning:</strong> This is a game of elimination. Players who are eliminated are out for good. Only the most cunning and courageous will survive.
           </div>
-
-          <h3>Strategy Tips</h3>
-          <ul>
-            <li>Master the art of maintaining a poker face while lying</li>
-            <li>Study your opponents' behavior patterns and tells</li>
-            <li>Use Jokers strategically - they're your safety net</li>
-            <li>Consider the risk vs. reward of each accusation</li>
-            <li>Remember: in the bar, trust no one</li>
-          </ul>
         </div>
       </div>
     </div>
 
     <!-- Additional CSS for improved modal close button -->
     <style>
+      .modal-body {
+        /* AJUSTE AQUI: Adiciona espaço à direita para não colar na barra de rolagem */
+        padding-right: 1.5rem; 
+      }
+
       .modal-close-btn {
         position: absolute;
         top: 15px;
