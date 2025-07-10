@@ -3,7 +3,7 @@
 // These types are a copy from the backend, but without Node.js specific imports.
 // This is crucial for keeping the frontend and backend environments separate.
 
-export type CardType = "king" | "queen" | "ace" | "joker";
+export type CardType = "king" | "queen" | "jack" | "ace";
 export type CardSuit = "hearts" | "diamonds" | "clubs" | "spades";
 export type GamePhase = "waiting" | "playing" | "challenge" | "finished" | "paused";
 

@@ -304,21 +304,16 @@ function startNewRound(
   }
 
   let referenceType = newCardType;
+  
+  // Se o tipo for "ace" (coringa) ou não definido, escolher aleatoriamente
   if (referenceType === "ace" || !referenceType) {
-    let newReferenceCard: Card | undefined;
-    do {
-      newReferenceCard = room.game.deck.pop();
-    } while (newReferenceCard && newReferenceCard.type === "ace");
-
-    if (!newReferenceCard) {
-      log(`Deck is out of non-joker cards. Checking for winner.`);
-      checkForWinner(room);
-      return;
-    }
-    referenceType = newReferenceCard.type;
+    const validCardTypes: Exclude<CardType, "ace">[] = ["king", "queen", "jack"];
+    const randomIndex = Math.floor(Math.random() * validCardTypes.length);
+    referenceType = validCardTypes[randomIndex];
+    log(`Random card type selected for round: ${referenceType}`);
   }
 
-  room.game.currentCardType = referenceType as Exclude<CardType, "joker">;
+  room.game.currentCardType = referenceType as Exclude<CardType, "ace">;
   room.game.lastPlayedCard = [];
   room.game.lastPlayerId = null;
   room.game.playedCards = [];
