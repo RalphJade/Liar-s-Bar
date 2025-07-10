@@ -16,7 +16,7 @@ export const renderHeader = (element: HTMLElement) => {
   // Dynamically generate avatar element based on user's avatar availability
   // Uses either the user's uploaded avatar image or a default SVG icon
   const avatarElement = user.avatar_url
-    ? `<img src="http://localhost:3001${user.avatar_url}" alt="${user.username}'s avatar" class="avatar-icon" style="width: 28px; height: 28px; object-fit: cover; padding: 0;"/>`
+    ? `<img src="${user.avatar_url}" alt="${user.username}'s avatar" class="avatar-icon" style="width: 28px; height: 28px; object-fit: cover; padding: 0;"/>`
     : `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="avatar-icon">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
         <circle cx="12" cy="7" r="4"></circle>
@@ -197,7 +197,7 @@ export const renderHeader = (element: HTMLElement) => {
   // Legacy event listeners (kept for backwards compatibility)
   rulesBtn?.addEventListener('click', () => modalOverlay?.classList.remove('hidden'));
   closeModalBtn?.addEventListener('click', () => modalOverlay?.classList.add('hidden'));
-  
+
   // Modal control functions for consistent show/hide behavior
   const openModal = () => modalOverlay.style.display = 'flex';
   const closeModal = () => modalOverlay.style.display = 'none';
@@ -205,7 +205,7 @@ export const renderHeader = (element: HTMLElement) => {
   // Event listeners for modal interactions
   rulesBtn.addEventListener('click', openModal);
   closeModalBtn.addEventListener('click', closeModal);
-  
+
   // Close modal when clicking outside the modal content area
   modalOverlay.addEventListener('click', (e) => {
     if (e.target === modalOverlay) {
@@ -217,7 +217,7 @@ export const renderHeader = (element: HTMLElement) => {
   closeModalBtn.addEventListener('mouseenter', () => {
     closeModalBtn.style.transform = 'scale(1.1)';
   });
-  
+
   closeModalBtn.addEventListener('mouseleave', () => {
     closeModalBtn.style.transform = 'scale(1)';
   });

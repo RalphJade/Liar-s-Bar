@@ -1,14 +1,14 @@
 import { Pool } from 'pg';
 import dotenv from 'dotenv';
-import Redis from "ioredis";
+// import Redis from "ioredis";
 
 dotenv.config();
 
 // Create a new connection to the Redis database.
-const redisClient = new Redis({
-  host: process.env.REDIS_HOST,
-  port: Number(process.env.REDIS_PORT),
-})
+// const redisClient = new Redis({
+//   host: process.env.REDIS_HOST,
+//   port: Number(process.env.REDIS_PORT),
+// })
 
 // Create a new connection pool to the PostgreSQL database.
 // The pool manages multiple client connections for better performance.
@@ -24,7 +24,7 @@ const pool = new Pool({
 // This is useful for development but for production, a migration tool is recommended.
 //It also creates the Redis client
 export const initializeDatabase = async () => {
-  await redisClient.ping();
+  // await redisClient.ping();
 
   const client = await pool.connect();
   try {
@@ -53,4 +53,7 @@ export const initializeDatabase = async () => {
   }
 };
 
-export {pool, redisClient};
+export {
+  pool,
+  // redisClient
+};

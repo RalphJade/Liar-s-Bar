@@ -16,6 +16,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks: # <--- ADICIONADO
+      - app-network
 
   redis:
     image: redis:latest
@@ -23,13 +25,15 @@ services:
     restart: always
     volumes:
       - redis_data:/data
+    networks: # <--- ADICIONADO
+      - app-network
 
   backend:
     build: ./backend 
     container_name: liarsbar_backend
     restart: always
     env_file:
-      - ./backend/.env 
+      - ./.env 
     volumes:
       - ./backend/uploads:/app/uploads
     depends_on:
@@ -41,17 +45,17 @@ services:
       - app-network
 
   nginx:
-    image: nginx:stable-alpine
+    build: 
+      context: ./frontend
     container_name: liarsbar_nginx
     restart: always
     ports:
       - "80:80"  
       - "443:443" 
     volumes:
-      - ./frontend/dist:/usr/share/nginx/html
       - ./nginx.conf:/etc/nginx/conf.d/default.conf
       - ./certbot/www:/var/www/certbot
-      - ./certbot/conf:/etc/letsencrypt
+      - ./certbot/conf/letsencrypt:/etc/letsencrypt:ro
     depends_on:
       - backend
     networks:
@@ -63,4 +67,3 @@ volumes:
 
 networks:
   app-network:
-    driver: bridge

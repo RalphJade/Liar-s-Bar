@@ -9,18 +9,18 @@ import { renderHeader } from './components/Header.ts';
  */
 export const renderProfilePage = (element: HTMLElement) => {
   const user = getUser();
-  
+
   if (!user) {
     navigate('/'); // Redirect to login if user data is not available
     return;
   }
-  
+
   // Calculate win rate, avoiding division by zero
   const winRate = user.matches_played > 0 ? ((user.wins / user.matches_played) * 100).toFixed(1) : 0;
 
   // Dynamically render the avatar or a placeholder
   const avatarDisplay = user.avatar_url
-    ? `<img src="http://localhost:3001${user.avatar_url}" alt="Your avatar" class="avatar-placeholder" style="border-style: solid; padding: 0; object-fit: cover; cursor: pointer;" />`
+    ? `<img src="${user.avatar_url}" alt="Your avatar" class="avatar-placeholder" style="border-style: solid; padding: 0; object-fit: cover; cursor: pointer;" />`
     : `<div class="avatar-placeholder" style="cursor: pointer;"></div>`;
 
   element.innerHTML = `
@@ -114,7 +114,7 @@ export const renderProfilePage = (element: HTMLElement) => {
   // Render the header component
   const headerContainer = document.getElementById('header-container') as HTMLElement;
   renderHeader(headerContainer);
-  
+
   // --- Event Listeners for Avatar Upload ---
   const avatarContainer = document.getElementById('avatar-container')!;
   const avatarInput = document.getElementById('avatar-input') as HTMLInputElement;
@@ -139,11 +139,11 @@ export const renderProfilePage = (element: HTMLElement) => {
       const response = await api.patch('/users/me/avatar', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
-      
+
       // Update local state and re-render the entire page to show changes.
       updateUser(response.data.data.user);
       renderProfilePage(element); // Re-render to show new avatar and clear feedback
-      
+
     } catch (err: any) {
       const message = err.response?.data?.message || 'Upload failed. Please try again.';
       feedbackContainer.innerHTML = `<div class="form-feedback error">${message}</div>`;

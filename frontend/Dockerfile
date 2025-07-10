@@ -6,5 +6,5 @@ COPY . .
 RUN npm run build
 
 FROM nginx:stable-alpine
-COPY --from=builder /app/dist /usr/share/nginx/html
+COPY --from=builder /app/dist /var/www/html
 EXPOSE 80

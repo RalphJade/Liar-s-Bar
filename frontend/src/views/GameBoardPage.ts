@@ -8,10 +8,16 @@ import {
 import { navigate } from "../router/router.ts";
 import { renderHeader } from "./components/Header.ts";
 import { RoomStateForApi, Card, ChatMessage } from "../types/game.types.ts";
-import { MAX_PLAYERS } from "../../../backend/src/config/game.config.ts";
 
-// Base URL for the API.
-const API_BASE_URL = "http://localhost:3001";
+const  MAX_PLAYERS  = 4
+
+// Verifica o hostname atual
+const currentHost = window.location.hostname;
+
+// Define a nova URL com base no hostname
+const API_BASE_URL = currentHost === 'localhost'
+  ? 'http://localhost:3001/'
+  : 'https://equipe07.alphaedtech.org.br/';
 
 // Module-level state variables to hold game data.
 let gameState: RoomStateForApi | null = null;
@@ -203,9 +209,8 @@ const handleChallengeResult = (payload: any) => {
     // Reset and trigger the spin animation.
     cylinder.style.animation = "none";
     void cylinder.offsetWidth; // Trigger a reflow to restart the animation.
-    cylinder.style.animation = `spin ${
-      spinDuration / 1000
-    }s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
+    cylinder.style.animation = `spin ${spinDuration / 1000
+      }s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards`;
 
     // --- Step 3: After the spin animation finishes, show the result. ---
     setTimeout(() => {
@@ -292,7 +297,7 @@ const createRouletteWheel = (
       .filter((i) => i !== -1);
     targetChamberIndex =
       heartChamberIndices[
-        Math.floor(Math.random() * heartChamberIndices.length)
+      Math.floor(Math.random() * heartChamberIndices.length)
       ];
   }
 
@@ -470,9 +475,8 @@ const renderGameStatus = () => {
     const currentPlayer = gameState.players.find(
       (p) => p.id === gameState!.game!.currentPlayerId
     );
-    statusText.textContent = `Required: ${
-      gameState.game.currentCardType?.toUpperCase() || "ANY"
-    } | Turn: ${currentPlayer?.username}`;
+    statusText.textContent = `Required: ${gameState.game.currentCardType?.toUpperCase() || "ANY"
+      } | Turn: ${currentPlayer?.username}`;
   } else {
     statusText.textContent = `Waiting for players... (${gameState.players.length}/${MAX_PLAYERS})`;
   }
@@ -523,14 +527,13 @@ const renderChat = () => {
       (msg) => `
         <div class="message">
             <span class="timestamp">${new Date(
-              msg.timestamp
-            ).toLocaleTimeString([], {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}</span>
-            <span class="content"><strong>${msg.authorName}:</strong> ${
-        msg.message
-      }</span>
+        msg.timestamp
+      ).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}</span>
+            <span class="content"><strong>${msg.authorName}:</strong> ${msg.message
+        }</span>
         </div>
     `
     )
@@ -657,29 +660,26 @@ const createPlayerPod = (
   isCurrentTurn: boolean
 ) => {
   const avatarSrc = player.avatar_url
-    ? `${API_BASE_URL}${player.avatar_url}`
+    ? player.avatar_url
     : "https://via.placeholder.com/60";
   if (player.isInactive) {
     return createInactivePod(player, positionClass);
   }
   return `
-        <div class="player-pod ${positionClass} ${
-    isCurrentTurn ? "active-turn" : ""
-  }" data-player-id="${player.id}">
+        <div class="player-pod ${positionClass} ${isCurrentTurn ? "active-turn" : ""
+    }" data-player-id="${player.id}">
             <div class="opponent-hand">
                 ${Array(player.handSize || 0)
-                  .fill('<div class="card-back small-card"></div>')
-                  .join("")}
+      .fill('<div class="card-back small-card"></div>')
+      .join("")}
             </div>
             <div class="player-info">
-                <img src="${avatarSrc}" alt="${
-    player.username
-  }'s avatar" class="player-avatar" />
+                <img src="${avatarSrc}" alt="${player.username
+    }'s avatar" class="player-avatar" />
                 <div class="player-details">
                     <span class="player-name">${player.username}</span>
-                    <span class="player-risk-level">Risk: ${
-                      player.riskLevel || 0
-                    }/6</span>
+                    <span class="player-risk-level">Risk: ${player.riskLevel || 0
+    }/6</span>
                 </div>
             </div>
         </div>`;
@@ -696,9 +696,8 @@ const createMyInfoPod = (player: any) => {
     : "https://via.placeholder.com/60";
   const isMyTurn = gameState?.game?.currentPlayerId === player.id;
   return `
-        <img src="${avatarSrc}" alt="${
-    player.username
-  }'s avatar" class="my-avatar ${isMyTurn ? "active-turn" : ""}" />
+        <img src="${avatarSrc}" alt="${player.username
+    }'s avatar" class="my-avatar ${isMyTurn ? "active-turn" : ""}" />
         <div class="my-details">
             <span class="my-name">${player.username}</span>
             <span class="my-risk-level">Risk: ${player.riskLevel || 0}/6</span>
@@ -774,12 +773,10 @@ const createRevealedCards = (cards: Card[]) => {
  * @returns The HTML string for the action buttons.
  */
 const createActionButtons = (isMyTurn: boolean, canChallenge: boolean) => `
-    <button id="play-card-btn" class="button button-primary action-btn" ${
-      !isMyTurn ? "disabled" : ""
-    }>Play Card</button>
-    <button id="call-bluff-btn" class="button button-danger action-btn" ${
-      !isMyTurn || !canChallenge ? "disabled" : ""
-    }>Call Bluff</button>
+    <button id="play-card-btn" class="button button-primary action-btn" ${!isMyTurn ? "disabled" : ""
+  }>Play Card</button>
+    <button id="call-bluff-btn" class="button button-danger action-btn" ${!isMyTurn || !canChallenge ? "disabled" : ""
+  }>Call Bluff</button>
 `;
 
 /**

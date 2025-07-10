@@ -11,8 +11,12 @@ let messageHandler: (message: any) => void;
 function connect() {
   if (socket && socket.readyState === WebSocket.OPEN) return;
 
-  const wsUrl = `ws://localhost:3001`;
-  
+  // Determina dinamicamente o protocolo (ws ou wss) e o host
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  // O Nginx irá redirecionar qualquer conexão para /ws
+  const wsUrl = `${protocol}//${host}/ws`;
+
   socket = new WebSocket(wsUrl);
 
   socket.onopen = () => console.log('[WS] Conectado ao lobby.');
@@ -35,33 +39,33 @@ function connect() {
 }
 
 export function initLobbyConnection(
-    handler: (msg: any) => void,
+  handler: (msg: any) => void,
 ) {
-    messageHandler = handler;
-    connect();
+  messageHandler = handler;
+  connect();
 }
 
 
 export function sendWebSocketMessage(messageObject: WebSocketMessage): void {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify(messageObject));
-    } else {
-        console.warn('[WS] Tentativa de enviar mensagem quando o socket não está aberto.');
-    }
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify(messageObject));
+  } else {
+    console.warn('[WS] Tentativa de enviar mensagem quando o socket não está aberto.');
+  }
 }
 
 
 export function sendChatMessage(text: string) {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-            type: 'CHAT_MESSAGE',
-            payload: { text }
-        }));
-    }
+  if (socket && socket.readyState === WebSocket.OPEN) {
+    socket.send(JSON.stringify({
+      type: 'CHAT_MESSAGE',
+      payload: { text }
+    }));
+  }
 }
 
 export function disconnect() {
-    if (socket) {
-        socket.close();
-    }
+  if (socket) {
+    socket.close();
+  }
 }
