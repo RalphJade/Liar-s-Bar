@@ -9,16 +9,18 @@ import { renderHeader } from './components/Header.ts';
  */
 export const renderProfilePage = (element: HTMLElement) => {
   const user = getUser();
-  
+
   if (!user) {
     navigate('/');
     return;
   }
-  
+
+  // Calculate win rate, avoiding division by zero
+
   const winRate = user.matches_played > 0 ? ((user.wins / user.matches_played) * 100).toFixed(1) : 0;
 
   const avatarDisplay = user.avatar_url
-    ? `<img src="http://localhost:3001${user.avatar_url}" alt="Your avatar" class="avatar-placeholder" style="border-style: solid; padding: 0; object-fit: cover; cursor: pointer;" />`
+    ? `<img src="${user.avatar_url}" alt="Your avatar" class="avatar-placeholder" style="border-style: solid; padding: 0; object-fit: cover; cursor: pointer;" />`
     : `<div class="avatar-placeholder" style="cursor: pointer;"></div>`;
 
   // HTML simplificado, classes são controladas pelo main.css
@@ -59,8 +61,13 @@ export const renderProfilePage = (element: HTMLElement) => {
   // Render the header component
   const headerContainer = document.getElementById('header-container') as HTMLElement;
   renderHeader(headerContainer);
+<<<<<<< HEAD
   
   // Event Listeners
+=======
+
+  // --- Event Listeners for Avatar Upload ---
+>>>>>>> main
   const avatarContainer = document.getElementById('avatar-container')!;
   const avatarInput = document.getElementById('avatar-input') as HTMLInputElement;
   const feedbackContainer = document.getElementById('profile-feedback-container')!;
@@ -82,10 +89,18 @@ export const renderProfilePage = (element: HTMLElement) => {
       const response = await api.patch('/users/me/avatar', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+<<<<<<< HEAD
       
       updateUser(response.data.data.user);
       renderProfilePage(element);
       
+=======
+
+      // Update local state and re-render the entire page to show changes.
+      updateUser(response.data.data.user);
+      renderProfilePage(element); // Re-render to show new avatar and clear feedback
+
+>>>>>>> main
     } catch (err: any) {
       const message = err.response?.data?.message || 'Upload failed. Please try again.';
       feedbackContainer.innerHTML = `<div class="form-feedback error">${message}</div>`;

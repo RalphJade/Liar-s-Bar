@@ -22,3 +22,5 @@ dist/
 # IDE files
 .idea/
 .vscode/frontend/node_modules/
+
+certbot
