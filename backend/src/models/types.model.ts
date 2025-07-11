@@ -86,6 +86,7 @@ export interface RoomStateForApi {
     isReady?: boolean; 
     riskLevel?: number; 
     isEliminated?: boolean;
+    isInactive?: boolean;
   }[];
   spectators: { id: string; username: string }[];
   status: Room["status"];

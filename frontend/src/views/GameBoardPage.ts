@@ -443,7 +443,7 @@ const getPlayerPositionClass = (
  * @returns O HTML string para o pod.
  */
 const createReconnectingPod = (player: any, positionClass: string) => {
-    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : "https://via.placeholder.com/60";
+    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : "/default-avatar.jpg";
     return `
         <div class="player-pod ${positionClass} reconnecting" data-player-id="${player.id}">
             <div class="player-info">
@@ -488,6 +488,10 @@ const renderPlayerPods = (currentUserId: string) => {
 
       if (player.isEliminated) {
         return createEliminatedPod(player, positionClass);
+      }
+
+      if (player.isInactive) { 
+        return createInactivePod(player, positionClass);
       }
 
       if (!player.isOnline && player.reconnectingUntil) {
@@ -1066,10 +1070,7 @@ const createPlayerPod = (
 ) => {
   const avatarSrc = player.avatar_url
     ? `${API_BASE_URL}${player.avatar_url}`
-    : "https://via.placeholder.com/60";
-  if (player.isInactive) {
-    return createInactivePod(player, positionClass);
-  }
+    : "/default-avatar.jpg";
   return `
         <div class="player-pod ${positionClass} ${
     isCurrentTurn ? "active-turn" : ""
@@ -1101,7 +1102,7 @@ const createPlayerPod = (
 const createMyInfoPod = (player: any) => {
   const avatarSrc = player.avatar_url
     ? `${API_BASE_URL}${player.avatar_url}`
-    : "https://via.placeholder.com/60";
+    : "/default-avatar.jpg";
   const isMyTurn = gameState?.game?.currentPlayerId === player.id;
   return `
         <img src="${avatarSrc}" alt="${
@@ -1123,7 +1124,7 @@ const createMyInfoPod = (player: any) => {
 const createEliminatedPod = (player: any, positionClass: string) => {
   const avatarSrc = player.avatar_url
     ? `${API_BASE_URL}${player.avatar_url}`
-    : "https://via.placeholder.com/60";
+    : "/default-avatar.jpg";
   return `
         <div class="player-pod ${positionClass} eliminated" data-player-id="${player.id}">
             <div class="player-info">
@@ -1139,7 +1140,7 @@ const createEliminatedPod = (player: any, positionClass: string) => {
 const createInactivePod = (player: any, position: string) => {
   const avatarSrc = player.avatar_url
     ? `${API_BASE_URL}${player.avatar_url}`
-    : "https://via.placeholder.com/60";
+    : "/default-avatar.jpg";
   return `
     <div class="player-pod ${position} inactive" data-player-id="${player.id}">
       <div class="player-info">
@@ -1262,9 +1263,11 @@ const renderDynamicStyles = () => {
         .player-info-wrapper { display: flex; align-items: center; gap: 1rem; }
         .my-info-area { display: flex; align-items: center; gap: 1rem; background: rgba(0,0,0,0.4); padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid var(--color-border); }
         .my-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-accent-gold); transition: all 0.3s ease;}
+        
         .my-details { text-align: center; display: flex; flex-direction: column; }
         .my-name { font-weight: bold; color: var(--color-accent-gold); }
         .my-risk-level { font-size: 0.8rem; color: #fca5a5; }
+        .my-avatar.active-turn { box-shadow: 0 0 20px 5px #facc15; transform: scale(1.1); }
         
         /* Timer de Turno - Posicionado à direita do my-info-area */
         .turn-timer { 
