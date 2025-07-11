@@ -55,8 +55,11 @@ export const renderGameBoardPage = (
             <div id="game-area" class="game-area">
                 <div class="game-table">
                     <div id="player-pods-container"></div>
-                    <div class="center-pile">
-                        <div id="reference-card-container"></div>
+                    <div class="center-area">
+                        <div class="center-pile">
+                            <div id="reference-card-container"></div>
+                            <div id="last-play-area"></div> 
+                        </div>
                         <p id="game-status-text" class="game-status-text">Waiting for game to start...</p>
                     </div>
                 </div>
@@ -376,6 +379,38 @@ const showEndGameScreen = (didIWin: boolean, message: string) => {
 };
 
 /**
+ * Renders the cards from the last play onto the center of the table with animations.
+ */
+const renderLastPlay = () => {
+    const container = document.getElementById('last-play-area');
+    if (!container || !gameState || !gameState.game) return;
+
+    // Acessa a propriedade que contém as cartas da última jogada
+    const lastPlayedCards = gameState.game.lastPlayedCard;
+
+    if (lastPlayedCards && lastPlayedCards.length > 0) {
+        const cardCount = lastPlayedCards.length;
+        const cardOrCards = cardCount === 1 ? 'Card' : 'Cards';
+
+        // Gera o HTML para as cartas viradas para baixo, com um delay de animação para cada uma
+        const cardsHTML = lastPlayedCards.map((_, index) =>
+            `<div class="card-back small-card last-played-card" style="animation-delay: ${index * 0.1}s"></div>`
+        ).join('');
+
+        // Monta o HTML final com o contador de cartas animado e as próprias cartas
+        container.innerHTML = `
+            <div class="played-cards-count">${cardCount} ${cardOrCards} Played</div>
+            <div class="last-played-card-container">
+                ${cardsHTML}
+            </div>
+        `;
+    } else {
+        // Se não há uma última jogada (início de rodada), limpa a área
+        container.innerHTML = '';
+    }
+};
+
+/**
  * Main function to update the entire UI based on the current game state.
  */
 const updateUI = () => {
@@ -402,6 +437,7 @@ const updateUI = () => {
   renderGameStatus();
   renderActionButtons(isMyTurn, canChallenge);
   renderReferenceCard();
+  renderLastPlay(); 
 };
 
 /**
@@ -1219,10 +1255,23 @@ const renderDynamicStyles = () => {
         .game-area { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; padding: 1rem; position: relative; }
         
         /* Game Table */
-        .game-table { position: relative; width: 100%; flex-grow: 1; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at center, #166534 0%, #14532d 100%); border: 15px solid var(--color-wood-dark); border-radius: 50%; box-shadow: inset 0 0 50px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); }
-        
+        .game-table { 
+            position: relative; 
+            width: 100%; 
+            flex-grow: 1; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            background: radial-gradient(ellipse at center, #166534 0%, #14532d 100%); 
+            border: 15px solid var(--color-wood-dark); 
+            border-radius: 50%; 
+            box-shadow: inset 0 0 50px rgba(0,0,0,0.6), 0 10px 30px rgba(0,0,0,0.5); 
+        }
+
         /* Player Pods (Opponents) */
-        .player-pod { position: absolute; display: flex; flex-direction: column-reverse; align-items: center; gap: 0.5rem; transition: all 0.3s ease; }
+        .player-pod { position: absolute; display: flex; align-items: center; gap: 0.5rem; transition: all 0.3s ease; }
+        .player-pod.pos-top { flex-direction: row-reverse; gap: 1rem; }
+        .player-pod:not(.pos-top) { flex-direction: column-reverse; }
         .player-pod.active-turn .player-avatar { box-shadow: 0 0 20px 5px #facc15; transform: scale(1.1); }
         .player-pod.inactive .player-avatar { filter: grayscale(100%) brightness(0.8);  border-color: #64748b; }
         .inactive-avatar { opacity: 0.7; }
@@ -1232,13 +1281,16 @@ const renderDynamicStyles = () => {
         .player-details { display:flex; flex-direction:column; align-items: center; background: rgba(0,0,0,0.7); padding: 0.25rem 0.75rem; border-radius: 12px; }
         .player-name { font-weight: 700; color: #f1f5f9; font-size: var(--font-size-sm); }
         .player-risk-level { font-size: var(--font-size-xs); color: #fca5a5; }
-        .opponent-hand { display: flex; justify-content: center; gap: -20px; margin-bottom: 5px; }
+        .opponent-hand { display: flex; justify-content: center; gap: -20px; }
+        .player-pod:not(.pos-top) .opponent-hand { margin-bottom: 5px; }
+        .pos-top .opponent-hand { margin-bottom: 5px; }
+        .pos-left .opponent-hand, .pos-right .opponent-hand { margin-top: 5px; }
         .card-back { background: linear-gradient(45deg, #b91c1c, #7f1d1d); border: 1px solid var(--color-accent-gold); border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.3); }
         .small-card { width: 30px; height: 42px; }
 
         /* Generic positioning classes for players on the table. */
         .pos-top { /* Player positioned directly across from the user. */
-            top: 2rem; 
+            top: 1rem; 
             left: 50%; 
             transform: translateX(-50%); 
         }
@@ -1252,9 +1304,56 @@ const renderDynamicStyles = () => {
             right: 2rem;
             transform: translateY(-50%);
         }
+        
+        .center-area { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
 
         /* Center Pile */
-        .center-pile { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; display: flex; flex-direction: column; gap: 1rem; align-items: center; }
+        .center-pile { 
+            text-align: center; 
+            display: flex; 
+            gap: 2rem; /* Espaço entre carta de referência e descarte */
+            align-items: flex-end; /* Alinha as pilhas pela base */
+            justify-content: center;
+        }
+        
+        .game-status-text { 
+            background: rgba(0,0,0,0.7); 
+            padding: 0.5rem 1rem; 
+            border-radius: 20px; 
+            color: #f1f5f9;
+            white-space: nowrap;
+        }
+
+        /* Last Play Area Styles */
+        .last-play-area {
+            display: flex;
+            flex-direction: column-reverse;
+            align-items: center;
+            gap: 0.5rem;
+            min-height: 98px; /* Altura da carta de referência para alinhamento */
+            justify-content: flex-end;
+        }
+
+        .last-played-card-container {
+            display: flex;
+            justify-content: center;
+            padding-top: 28px; /* Espaço para o texto do contador não sobrepor */
+            position: relative;
+        }
+        
+        .played-cards-count {
+            position: absolute;
+            top: 0;
+            font-family: var(--font-display);
+            font-size: 1.2rem;
+            color: var(--color-accent-gold);
+            background: rgba(0,0,0,0.8);
+            padding: 0.2rem 0.8rem;
+            border-radius: 20px;
+            text-shadow: 1px 1px 3px var(--color-shadow-dark);
+            animation: popInAndFadeOut 3s ease-in-out forwards;
+            z-index: 5;
+        }
         .reference-card { width: 70px; height: 98px; }
         .game-status-text { background: rgba(0,0,0,0.7); padding: 0.5rem 1rem; border-radius: 20px; color: #f1f5f9; }
         
@@ -1356,6 +1455,67 @@ const renderDynamicStyles = () => {
         .end-game-screen.lose h1 { color: var(--color-danger); }
         .end-game-screen h1, .eliminated-screen h1 { font-family: var(--font-display); font-size: var(--font-size-2xl); }
         .end-game-screen p { font-size: 1.2rem; }
+
+        /* Last Play Area Styles */
+        .last-play-area {
+            display: flex;
+            flex-direction: column-reverse; /* Coloca o texto em cima das cartas */
+            align-items: center;
+            gap: 0.5rem;
+            min-height: 80px; /* Reserva espaço para evitar pulos no layout */
+            pointer-events: none; /* Impede que bloqueie cliques */
+            position: absolute; /* Posicionado relativo ao .center-pile */
+            bottom: 100%; /* Coloca logo acima do status text */
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+        }
+
+        .last-played-card-container {
+            display: flex;
+            justify-content: center;
+        }
+
+        .last-played-card {
+            width: 50px;
+            height: 70px;
+            margin: 0 -25px; /* Efeito de sobreposição */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+            animation: dealCardIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) both;
+        }
+
+        .played-cards-count {
+            font-family: var(--font-display);
+            font-size: 1.5rem;
+            color: var(--color-accent-gold);
+            background: rgba(0,0,0,0.8);
+            padding: 0.25rem 1rem;
+            border-radius: 20px;
+            text-shadow: 1px 1px 3px var(--color-shadow-dark);
+            animation: popInAndFadeOut 3s ease-in-out forwards;
+        }
+
+        /* Animações */
+        @keyframes dealCardIn {
+            from {
+                transform: translateY(100px) scale(0.6);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0) scale(1);
+                opacity: 1;
+            }
+        }
+
+        @keyframes popInAndFadeOut {
+            0% { transform: scale(0.5); opacity: 0; }
+            15% { transform: scale(1.1); opacity: 1; }
+            30% { transform: scale(1); opacity: 1; }
+            85% { transform: scale(1); opacity: 1; }
+            100% { transform: scale(0.8); opacity: 0; }
+        }
+
+        @keyframes shake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-5px); } 75% { transform: translateX(5px); } }
         
         /* Roulette Overlay */
         .roulette-overlay { 
