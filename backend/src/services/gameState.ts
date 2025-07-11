@@ -24,6 +24,10 @@ export function getAllRooms(): (Room & { game: CardGame })[] {
     return Array.from(gameRooms.values());
 }
 
+export function getAvailableRooms(): (Room & { game: CardGame })[] {
+    return Array.from(gameRooms.values()).filter(room => room.status === "waiting");
+}
+
 export function getHand(roomCode: string, playerId: string): PlayerHand | undefined {
     return playerHands.get(roomCode)?.get(playerId);
 }

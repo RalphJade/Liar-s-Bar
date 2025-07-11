@@ -1,4 +1,4 @@
-import { getRoom, addRoom, getAllRooms, removeRoom, getRoomHands, addRoomMessage, getRoomChatHistory } from './gameState';
+import { getRoom, addRoom, getAllRooms, getAvailableRooms, removeRoom, getRoomHands, addRoomMessage, getRoomChatHistory } from './gameState';
 import { log } from "../utils/logger";
 import {
   sendToClient,
@@ -95,7 +95,7 @@ export async function handleCreateRoom(
   LobbyManager.broadcast({
     type: "WAITING_ROOMS",
     payload: {
-      rooms: getAllRooms().map((room) => ({
+      rooms: getAvailableRooms().map((room) => ({
         code: room.roomCode,
         name: room.roomName,
         currentPlayers: room.players.size,
@@ -178,8 +178,7 @@ export async function handlePlayerJoinRoom(
 }
 
 export function handleWaitingRooms(ws: CustomWebSocket): void {
-  const allRooms = getAllRooms();
-  const availableRooms = allRooms.filter((room) => room.status === "waiting");
+  const availableRooms = getAvailableRooms();
   sendToClient(ws, "WAITING_ROOMS", {
     rooms: availableRooms.map((room) => ({
       code: room.roomCode,
@@ -322,7 +321,7 @@ export async function handleLeaveRoom(ws: CustomWebSocket): Promise<void> {
   LobbyManager.broadcast({ 
     type: "WAITING_ROOMS", 
     payload: { 
-      rooms: getAllRooms().map((r) => ({
+      rooms: getAvailableRooms().map((r) => ({
         code: r.roomCode,
         name: r.roomName,
         currentPlayers: r.players.size,

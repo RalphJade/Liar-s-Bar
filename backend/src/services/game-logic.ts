@@ -16,6 +16,8 @@ import {
 import { dealCards } from "./cards.service";
 import { broadcastRoomState } from "../utils/websocket.util";
 import { updatePlayerStatsAfterGame } from "./user.service";
+import { getAvailableRooms } from "./gameState";
+import * as LobbyManager from "./lobby.manager";
 
 function spinRoulette(riskLevel: number): boolean {
   const chamberCount = 6;
@@ -48,6 +50,20 @@ export async function startCardGame(
   const firstPlayerId = Array.from(room.players.keys())[0];
 
   await broadcastRoomState(room);
+
+  // Atualizar lista de salas disponíveis no lobby (remover esta sala da lista)
+  LobbyManager.broadcast({ 
+    type: "WAITING_ROOMS", 
+    payload: { 
+      rooms: getAvailableRooms().map((r) => ({
+        code: r.roomCode,
+        name: r.roomName,
+        currentPlayers: r.players.size,
+        maxPlayers: 4, // MAX_PLAYERS
+        hasPassword: !!r.password,
+      })) 
+    }, 
+  });
 
   startNewRound(room, firstPlayerId, true);
 }
