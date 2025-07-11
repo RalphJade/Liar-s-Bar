@@ -537,10 +537,10 @@ const renderLastPlay = () => {
   };
 
 /**
- * Cria o HTML para um jogador que está se reconectando.
- * @param player - O objeto do jogador.
- * @param positionClass - A classe de posicionamento CSS.
- * @returns O HTML string para o pod.
+ * Creates the HTML for a player that is reconnecting.
+ * @param player - The player object.
+ * @param positionClass - The CSS positioning class.
+ * @returns The HTML string for the pod.
  */
 const createReconnectingPod = (player: any, positionClass: string) => {
     const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : "/default-avatar.jpg";
@@ -551,7 +551,7 @@ const createReconnectingPod = (player: any, positionClass: string) => {
                 <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar" />
                 <div class="player-details">
                     <span class="player-name">${player.username}</span>
-                    <span class="player-risk-level">Desconectado</span>
+                    <span class="player-risk-level">Disconnected</span>
                 </div>
             </div>
             <div class="reconnection-overlay">
@@ -737,11 +737,11 @@ const renderChat = () => {
     const isSelected = selectedCardId.includes(cardId);
 
     if (isSelected) {
-      // Remove da seleção
+      // Remove from selection
       selectedCardId = selectedCardId.filter((id) => id !== cardId);
       cardEl.classList.remove("selected");
     } else {
-      // Adiciona à seleção
+      // Add to selection
       selectedCardId.push(cardId);
       cardEl.classList.add("selected");
     }
@@ -751,7 +751,7 @@ const renderChat = () => {
    * Handles the "Play Card" action.
    */
 let lastPlayCardTime = 0;
-const PLAY_CARD_COOLDOWN = 1000; // 1 segundo de cooldown
+const PLAY_CARD_COOLDOWN = 1000; // 1 second cooldown
 
   const handlePlayCardAction = () => {
   const now = Date.now();
@@ -763,7 +763,7 @@ const PLAY_CARD_COOLDOWN = 1000; // 1 segundo de cooldown
       return;
     }
   
-  // Verificar se as cartas selecionadas ainda existem na mão atual
+  // Check if the selected cards still exist in the current hand
   const invalidSelections = selectedCardId.filter(id => 
     !myCards.some(card => card.id === id)
   );
@@ -771,7 +771,7 @@ const PLAY_CARD_COOLDOWN = 1000; // 1 segundo de cooldown
   if (invalidSelections.length > 0) {
     console.log('[Play Card] Some selected cards are no longer valid, clearing selection');
     selectedCardId = [];
-    // Re-render para limpar seleções visuais
+    // Re-render to clear visual selections
     const container = document.getElementById("my-hand-cards");
     if (container) {
       container.querySelectorAll(".hand-card.selected").forEach(el => {
@@ -832,7 +832,7 @@ const PLAY_CARD_COOLDOWN = 1000; // 1 segundo de cooldown
     
     document.body.appendChild(modalOverlay);
     
-    // Animação de entrada
+    // Entry animation
     requestAnimationFrame(() => {
       modalOverlay.classList.add('show');
     });
@@ -875,7 +875,7 @@ const PLAY_CARD_COOLDOWN = 1000; // 1 segundo de cooldown
     const style = document.createElement('style');
     style.id = 'bluff-modal-styles';
     style.textContent = `
-      /* Modal de Confirmação de Blefe */
+      /* Bluff Confirmation Modal */
       .bluff-modal-overlay {
         position: fixed;
         top: 0;
@@ -1044,7 +1044,7 @@ const PLAY_CARD_COOLDOWN = 1000; // 1 segundo de cooldown
         font-size: 1.1rem;
       }
       
-      /* Animações */
+      /* Animations */
       @keyframes titlePulse {
         0%, 100% { 
           transform: scale(1); 
@@ -1092,10 +1092,10 @@ const PLAY_CARD_COOLDOWN = 1000; // 1 segundo de cooldown
     document.head.appendChild(style);
   };
 
-  // Inicializar os estilos quando a página carregar
+  // Initialize styles when the page loads
   document.addEventListener('DOMContentLoaded', addBluffModalStyles);
 
-  // Se já estiver carregado, adicionar os estilos imediatamente
+  // If already loaded, add styles immediately
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', addBluffModalStyles);
   } else {
@@ -1390,7 +1390,7 @@ const renderDynamicStyles = () => {
         .center-pile { 
             text-align: center; 
             display: flex; 
-            gap: 2rem; /* Espaço entre carta de referência e descarte */
+            gap: 2rem; /* Space between reference card and discard */
             align-items: flex-end; /* Alinha as pilhas pela base */
             justify-content: center;
         }
@@ -1409,14 +1409,14 @@ const renderDynamicStyles = () => {
             flex-direction: column-reverse;
             align-items: center;
             gap: 0.5rem;
-            min-height: 98px; /* Altura da carta de referência para alinhamento */
+            min-height: 98px; /* Reference card height for alignment */
             justify-content: flex-end;
         }
 
         .last-played-card-container {
             display: flex;
             justify-content: center;
-            padding-top: 28px; /* Espaço para o texto do contador não sobrepor */
+            padding-top: 28px; /* Space so counter text doesn't overlap */
             position: relative;
         }
         
@@ -1447,7 +1447,7 @@ const renderDynamicStyles = () => {
           .my-risk-level { font-size: 0.8rem; color: #fca5a5; }
         .my-avatar.active-turn { box-shadow: 0 0 20px 5px #facc15; transform: scale(1.1); }
         
-        /* Timer de Turno - Posicionado à direita do my-info-area */
+        /* Turn Timer - Positioned to the right of my-info-area */
         .turn-timer { 
             background: radial-gradient(circle, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 100%);
             border: 2px solid rgba(255, 255, 255, 0.2);
@@ -1541,7 +1541,7 @@ const renderDynamicStyles = () => {
             flex-direction: column-reverse; /* Coloca o texto em cima das cartas */
             align-items: center;
             gap: 0.5rem;
-            min-height: 80px; /* Reserva espaço para evitar pulos no layout */
+            min-height: 80px; /* Reserve space to avoid layout jumps */
             pointer-events: none; /* Impede que bloqueie cliques */
             position: absolute; /* Posicionado relativo ao .center-pile */
             bottom: 100%; /* Coloca logo acima do status text */
@@ -1558,7 +1558,7 @@ const renderDynamicStyles = () => {
         .last-played-card {
             width: 50px;
             height: 70px;
-            margin: 0 -25px; /* Efeito de sobreposição */
+            margin: 0 -25px; /* Overlap effect */
             box-shadow: 0 4px 8px rgba(0,0,0,0.4);
             animation: dealCardIn 0.5s cubic-bezier(0.25, 1, 0.5, 1) both;
         }
@@ -1574,7 +1574,7 @@ const renderDynamicStyles = () => {
             animation: popInAndFadeOut 3s ease-in-out forwards;
         }
 
-        /* Animações */
+        /* Animations */
         @keyframes dealCardIn {
             from {
                 transform: translateY(100px) scale(0.6);
@@ -1708,10 +1708,10 @@ const renderDynamicStyles = () => {
           .revealed-card { display: flex; flex-direction: column; align-items: center; }
           .revealed-card .hand-card { transform: none; cursor: default; transition: none; border-color: var(--color-accent-gold); box-shadow: 0 0 15px rgba(212, 175, 55, 0.5); }
 
-          /* Estilos para o estado de Reconexão */
+          /* Styles for Reconnection state */
           .player-pod.reconnecting {
               opacity: 0.7;
-              border: 3px dashed #f59e0b; /* Laranja/âmbar para alerta */
+              border: 3px dashed #f59e0b; /* Orange/amber for alert */
           }
           .reconnection-overlay {
               position: absolute;
@@ -1737,13 +1737,13 @@ const renderDynamicStyles = () => {
               box-shadow: 0 0 10px #f59e0b;
           }
 
-        /* Placeholder comentários para manter estrutura */
+        /* Placeholder comments to maintain structure */
       `;
     return style.outerHTML;
   };
 
  /**
- * Manipula o evento YOUR_TURN quando é a vez do jogador atual
+ * Handles the YOUR_TURN event when it's the current player's turn
  * @param payload - Dados do turno enviados pelo servidor
  */
 const handleYourTurn = (payload: any) => {
@@ -1765,7 +1765,7 @@ const handleYourTurn = (payload: any) => {
 };
 
 /**
- * Manipula o evento PLAYER_TURN quando é a vez de outro jogador
+ * Handles the PLAYER_TURN event when it's another player's turn
  * @param payload - Dados do turno enviados pelo servidor
  */
 const handlePlayerTurn = (payload: any) => {
@@ -1825,11 +1825,11 @@ const startTurnTimer = () => {
     
     // Muda a cor conforme o tempo restante
     if (seconds <= 5) {
-      timerProgress.style.stroke = '#ff4444'; // Vermelho para os últimos 5 segundos
+      timerProgress.style.stroke = '#ff4444'; // Red for the last 5 seconds
       timerElement.classList.add('timer-urgent');
       timerElement.classList.remove('timer-warning');
     } else if (seconds <= 10) {
-      timerProgress.style.stroke = '#ffa500'; // Laranja para os últimos 10 segundos
+      timerProgress.style.stroke = '#ffa500'; // Orange for the last 10 seconds
       timerElement.classList.add('timer-warning');
       timerElement.classList.remove('timer-urgent');
     } else {

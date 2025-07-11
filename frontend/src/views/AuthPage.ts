@@ -26,11 +26,11 @@ export const renderAuthPage = (element: HTMLElement) => {
       </div>
       <div class="header-center"></div>
       <div class="header-right">
-        <button id="auth-scroll-btn" class="button-rules">Registro / Login</button>
+        <button id="auth-scroll-btn" class="button-rules">Register / Login</button>
       </div>
     </header>
 
-    <!-- O conteúdo principal da página fica dentro do <main>, que será a área rolável -->
+    <!-- The main page content goes inside the <main> element, which will be the scrollable area -->
     <main class="page-container landing-page-container">
       
       <!-- 1. Hero Section: Welcome to the Bar -->
@@ -200,12 +200,12 @@ export const renderAuthPage = (element: HTMLElement) => {
   loginTabBtn.addEventListener('click', () => switchTab('login'));
   registerTabBtn.addEventListener('click', () => switchTab('register'));
 
-  // Adiciona o evento de clique para o botão de rolar a tela
+  // Add click event to the scroll button
   authScrollBtn?.addEventListener('click', () => {
     authSection?.scrollIntoView({ behavior: 'smooth' });
   });
 
-  // Animações
+  // Animations
   const observerOptions = {
     threshold: 0.1,
     rootMargin: '0px 0px -100px 0px'

@@ -10,7 +10,7 @@
     "resolveJsonModule": true,
     "esModuleInterop": true,
 
-    "noEmit": true, // Importante: Vite lida com a emissão de arquivos
+    "noEmit": true, // Important: Vite handles file emission
     "noUnusedLocals": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,

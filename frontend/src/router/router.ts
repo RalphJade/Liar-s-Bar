@@ -75,12 +75,12 @@ const handleLocation = () => {
     return;
   }
 
-  // Controla o comportamento de rolagem do contêiner principal da aplicação
+  // Controls the scroll behavior of the main application container
   if (path === '/') {
-    // Para a AuthPage (landing page), queremos a rolagem na página inteira
+    // For the AuthPage (landing page), we want scrolling on the entire page
     appDiv.style.overflowY = 'auto';
   } else {
-    // Para todas as outras páginas (Lobby, Profile, etc.), o scroll é interno
+    // For all other pages (Lobby, Profile, etc.), scrolling is internal
     appDiv.style.overflowY = 'hidden';
   }
 
