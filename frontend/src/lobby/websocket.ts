@@ -12,16 +12,16 @@ let reconnectionAttempt = 0;
 let pingInterval: number | null = null; // Timer para manter a conexão ativa
 
 function showReconnectionMessage(show: boolean) {
-    let messageDiv = document.getElementById('reconnection-overlay');
-    if (show && !messageDiv) {
-        messageDiv = document.createElement('div');
-        messageDiv.id = 'reconnection-overlay';
-        messageDiv.className = 'reconnection-overlay'; 
-        messageDiv.innerHTML = `<div class="reconnection-box">Connection lost. Attempting to reconnect...</div>`;
-        document.body.appendChild(messageDiv);
-    } else if (!show && messageDiv) {
-        messageDiv.remove();
-    }
+  let messageDiv = document.getElementById('reconnection-overlay');
+  if (show && !messageDiv) {
+    messageDiv = document.createElement('div');
+    messageDiv.id = 'reconnection-overlay';
+    messageDiv.className = 'reconnection-overlay';
+    messageDiv.innerHTML = `<div class="reconnection-box">Connection lost. Attempting to reconnect...</div>`;
+    document.body.appendChild(messageDiv);
+  } else if (!show && messageDiv) {
+    messageDiv.remove();
+  }
 }
 
 function startPing() {
@@ -29,7 +29,7 @@ function startPing() {
   if (pingInterval) {
     clearInterval(pingInterval);
   }
-  
+
   // Inicia um novo timer de ping a cada 5 segundos
   pingInterval = window.setInterval(() => {
     if (socket && socket.readyState === WebSocket.OPEN) {
@@ -59,41 +59,43 @@ function connect() {
     const path = window.location.pathname;
     wsUrl = `${protocol}://${host}/ws${path}`;
   }
-  
+
   console.log(`[WS] Tentando conectar a: ${wsUrl}`); // Log de depuração útil
-  
+
   socket = new WebSocket(wsUrl);
 
   socket.onopen = () => {
     console.log('[WS] Conectado ao lobby.');
     showReconnectionMessage(false); // Esconde a mensagem de reconexão
     if (reconnectInterval) {
-        clearInterval(reconnectInterval); // Para as tentativas de reconexão
-        reconnectInterval = null;
+      clearInterval(reconnectInterval); // Para as tentativas de reconexão
+      reconnectInterval = null;
     }
     reconnectionAttempt = 0;
 
     startPing();
-    sendWebSocketMessage({ type: "LIST_ROOMS", payload: {} });
+    if (window.location.pathname === '/ws/home') {
+      sendWebSocketMessage({ type: "LIST_ROOMS", payload: {} });
+    }
 
   };
-  
+
   socket.onclose = () => {
     if (!socket || socket.onclose === null) return;
     console.log('[WS] Desconectado do lobby.');
     socket = null;
     stopPing(); // Para o sistema de ping
     showReconnectionMessage(true); // Mostra a mensagem
-    
+
     // Tenta reconectar a cada 5 segundos
     if (!reconnectInterval) {
-        reconnectInterval = window.setInterval(() => {
-            console.log(`[WS] Tentativa de reconexão #${++reconnectionAttempt}...`);
-            connect(); 
-        }, 5000);
+      reconnectInterval = window.setInterval(() => {
+        console.log(`[WS] Tentativa de reconexão #${++reconnectionAttempt}...`);
+        connect();
+      }, 5000);
     }
   };
-  
+
   socket.onerror = (err) => console.error('[WS] Erro:', err);
 
   socket.onmessage = (event) => {
@@ -134,14 +136,14 @@ export function sendChatMessage(text: string) {
 
 export function disconnect() {
   stopPing(); // Para o ping antes de fechar a conexão
-    if (socket) {
-        socket.onclose = null;
-        if (reconnectInterval) {
-            clearInterval(reconnectInterval);
-            reconnectInterval = null;
-        }
-        socket.close();
-        socket = null;
-        showReconnectionMessage(false);
+  if (socket) {
+    socket.onclose = null;
+    if (reconnectInterval) {
+      clearInterval(reconnectInterval);
+      reconnectInterval = null;
     }
+    socket.close();
+    socket = null;
+    showReconnectionMessage(false);
+  }
 }
