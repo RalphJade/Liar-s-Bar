@@ -17,10 +17,7 @@ export const renderHeader = (element: HTMLElement) => {
   // Uses either the user's uploaded avatar image or a default SVG icon
   const avatarElement = user.avatar_url
     ? `<img src="http://localhost:3001${user.avatar_url}" alt="${user.username}'s avatar" class="avatar-icon" style="width: 28px; height: 28px; object-fit: cover; padding: 0;"/>`
-    : `<svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="avatar-icon">
-        <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
-        <circle cx="12" cy="7" r="4"></circle>
-      </svg>`;
+    : `<img src="/default-avatar.jpg" alt="Default avatar" class="avatar-icon" style="width: 28px; height: 28px; object-fit: cover; padding: 0;"/>`;
 
   // Render the complete header structure with logo, navigation, and user interface
   element.innerHTML = `
