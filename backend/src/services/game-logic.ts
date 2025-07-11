@@ -473,6 +473,9 @@ function handleTurnTimeout(
     }
   }
 
+  room.game.lastPlayedCard = [];
+  room.game.lastPlayerId = null;
+
   if (checkForWinner(room)) return;
 
   broadcastRoomState(room);

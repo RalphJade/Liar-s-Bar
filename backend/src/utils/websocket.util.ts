@@ -156,6 +156,7 @@ export async function getRoomStateForApi(
       playedCardsCount: room.game.playedCards.length,
       deckSize: room.game.deck.length,
       lastPlayerId: room.game.lastPlayerId,
+      lastPlayedCard: room.game.lastPlayedCard,
     },
     myCards: currentPlayerHand?.cards || [],
     myHandSize: currentPlayerHand?.cards.length || 0,
