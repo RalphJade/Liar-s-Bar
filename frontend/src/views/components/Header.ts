@@ -100,7 +100,7 @@ export const renderHeader = (element: HTMLElement) => {
           <h3>Setup & Objective</h3>
           <ul>
             <li>The game is for 4 players. Each player starts with 5 cards.</li>
-            <li>The deck consists of <strong>6 Aces, 6 Kings, 6 Queens,</strong> and two valuable <strong>Jokers</strong>.</li>
+            <li>The deck consists of <strong>6 Jacks, 6 Kings, 6 Queens,</strong> and two valuable <strong>Jokers</strong>.</li>
             <li>The last player who avoids elimination wins the entire pot.</li>
           </ul>
 

@@ -102,7 +102,8 @@ body {
   background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #0f0f0f 100%);
   background-attachment: fixed;
   color: var(--color-text-light);
-  min-height: 100vh; /* Alterado: Garante que o corpo ocupe pelo menos a altura da tela, mas possa crescer. */
+  height: 100vh;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -138,7 +139,7 @@ body::before {
 #app {
   display: flex;
   flex-direction: column;
-  flex-grow: 1; /* Alterado: Permite que o #app cresça para preencher o espaço, em vez de ter uma altura fixa. */
+  flex-grow: 1;
 }
 
 /* A general-purpose container for centering page content vertically and horizontally. */
@@ -148,10 +149,9 @@ body::before {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  flex-grow: 1; /* Alterado: Faz o container principal crescer para ocupar o espaço. */
+  flex-grow: 1;
   padding: 2rem 1rem;
   position: relative;
-  /* Removido 'overflow-y: auto' para permitir que o body controle o scroll. */
 }
 
 /**

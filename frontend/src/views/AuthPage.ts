@@ -8,6 +8,29 @@ import { renderRegisterForm } from './components/RegisterForm.ts';
  */
 export const renderAuthPage = (element: HTMLElement) => {
   element.innerHTML = `
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo">
+          <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" class="logo-icon">
+            <circle cx="12" cy="12" r="11" fill="#1a1a1a" stroke="#333" stroke-width="1.5"/>
+            <path d="M17.5 9C17.5 5 15 3 12 3S6.5 5 6.5 9c0 4 1 8 5.5 11 4.5-3 5.5-7 5.5-11z" fill="#f7fafc"/>
+            <circle cx="14.5" cy="10.5" r="1.5" fill="#1a1a1a"/>
+            <g transform="translate(7, 8.5) scale(0.2)">
+              <path d="M12 0C6.343 6.343 0 10.5 0 16c0 4.418 3.582 8 8 8s8-3.582 8-8c0-5.5-6.343-9.657-12-16zM12 21a1 1 0 110-2 1 1 0 010 2z" fill="#e53e3e"/>
+              <path d="M11 26h2v-8h-2v8z" fill="#e53e3e"/>
+            </g>
+            <path d="M11.5 3.5L10 9l2 2.5-2 3.5" fill="none" stroke="#1a1a1a" stroke-width="1.2" stroke-linecap="round"/>
+          </svg>
+          <span class="logo-text">Liar's Bar</span>
+        </div>
+      </div>
+      <div class="header-center"></div>
+      <div class="header-right">
+        <button id="auth-scroll-btn" class="button-rules">Registro / Login</button>
+      </div>
+    </header>
+
+    <!-- O conteúdo principal da página fica dentro do <main>, que será a área rolável -->
     <main class="page-container landing-page-container">
       
       <!-- 1. Hero Section: Welcome to the Bar -->
@@ -23,7 +46,6 @@ export const renderAuthPage = (element: HTMLElement) => {
             <span class="badge accent">🃏 PURE DECEPTION</span>
           </div>
         </div>
-        
       </section>
 
       <!-- 2. Game Preview Cards -->
@@ -59,7 +81,7 @@ export const renderAuthPage = (element: HTMLElement) => {
             <div class="rule-number">1</div>
             <div class="rule-content">
               <h3>The Setup</h3>
-              <p>4 players start with 5 cards each. The deck contains <strong>6 Aces, 6 Kings, 6 Queens</strong>, and two deadly <strong>Jokers</strong>.</p>
+              <p>4 players start with 5 cards each. The deck contains <strong>6 Jacks, 6 Kings, 6 Queens</strong>, and two deadly <strong>Jokers</strong>.</p>
             </div>
           </div>
           
@@ -153,13 +175,15 @@ export const renderAuthPage = (element: HTMLElement) => {
           </div>
         </div>
       </section>
-
     </main>
   `;
   
   const loginTabBtn = document.getElementById('login-tab-btn')!;
   const registerTabBtn = document.getElementById('register-tab-btn')!;
   const formContainer = document.getElementById('auth-form-container')!;
+  
+  const authScrollBtn = document.getElementById('auth-scroll-btn');
+  const authSection = document.getElementById('auth-section');
 
   const switchTab = (tab: 'login' | 'register') => {
     if (tab === 'login') {
@@ -176,7 +200,12 @@ export const renderAuthPage = (element: HTMLElement) => {
   loginTabBtn.addEventListener('click', () => switchTab('login'));
   registerTabBtn.addEventListener('click', () => switchTab('register'));
 
-  // Add scroll animations
+  // Adiciona o evento de clique para o botão de rolar a tela
+  authScrollBtn?.addEventListener('click', () => {
+    authSection?.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  // Animações
   const observerOptions = {
     threshold: 0.1,
     rootMargin: '0px 0px -100px 0px'
@@ -190,11 +219,9 @@ export const renderAuthPage = (element: HTMLElement) => {
     });
   }, observerOptions);
 
-  // Observe elements for animation
   document.querySelectorAll('.preview-card, .rule-card, .auth-container').forEach(el => {
     observer.observe(el);
   });
 
-  // Render the login form by default when the page first loads.
   renderLoginForm(formContainer);
 };

@@ -61,6 +61,7 @@ const handleLocation = () => {
     }
     
     // Chama renderGameBoardPage com roomCode
+    appDiv.style.overflowY = 'hidden'; 
     renderGameBoardPage(appDiv, roomCode);
     return;
   }
@@ -72,6 +73,15 @@ const handleLocation = () => {
   if (isAuthLoading()) {
     appDiv.innerHTML = '<div class="page-container"><h1>Loading...</h1></div>';
     return;
+  }
+
+  // Controla o comportamento de rolagem do contêiner principal da aplicação
+  if (path === '/') {
+    // Para a AuthPage (landing page), queremos a rolagem na página inteira
+    appDiv.style.overflowY = 'auto';
+  } else {
+    // Para todas as outras páginas (Lobby, Profile, etc.), o scroll é interno
+    appDiv.style.overflowY = 'hidden';
   }
 
   // --- Authentication Guards ---
