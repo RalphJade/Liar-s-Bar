@@ -469,8 +469,9 @@ const renderLastPlay = () => {
       return;
     }
 
-    const isMyTurn = gameState.game?.currentPlayerId === currentUser.id;
-    const canChallenge =
+    const isGamePlaying = gameState.status === "playing";
+    const isMyTurn = isGamePlaying && gameState.game?.currentPlayerId === currentUser.id;
+    const canChallenge = isGamePlaying &&
       gameState.game?.lastPlayerId !== null &&
       gameState.game?.lastPlayerId !== currentUser.id;
 
@@ -595,7 +596,8 @@ const createReconnectingPod = (player: any, positionClass: string) => {
 
     const me = gameState.players.find((p) => p.id === currentUserId);
     if (me) {
-    const isMyTurn = gameState.game?.currentPlayerId === currentUserId;
+    const isGamePlaying = gameState.status === "playing";
+    const isMyTurn = isGamePlaying && gameState.game?.currentPlayerId === currentUserId;
     container.innerHTML = createMyInfoPod(me, isMyTurn);
     }
   };
