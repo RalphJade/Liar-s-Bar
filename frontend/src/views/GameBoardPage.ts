@@ -10,10 +10,10 @@
 
   const  MAX_PLAYERS  = 4
 
-  // Verifica o hostname atual
+  // Check current hostname
   const currentHost = window.location.hostname;
 
-  // Define a nova URL com base no hostname
+  // Define the new URL based on hostname
   const API_BASE_URL = currentHost === 'localhost'
     ? 'http://localhost:3001/'
     : 'https://equipe07.alphaedtech.org.br/';
@@ -27,7 +27,7 @@
   let selectedCardId: string[] = [];
   let countdownInterval: number | null = null;
 
-// Timer de turno do jogador
+// Player turn timer
 let turnTimer: {
   timeLeft: number;
   timeLimit: number;
@@ -129,9 +129,9 @@ let turnTimer: {
     renderHeader(document.getElementById("header-container")!);
     // Initialize the WebSocket connection and set up the message handler.
     initLobbyConnection(handleGameMessage);
-    // Limpa qualquer timer antigo antes de criar um novo
+    // Clear any old timer before creating a new one
     if (countdownInterval) clearInterval(countdownInterval);
-    // Inicia o timer para atualizar a UI a cada segundo
+    // Start the timer to update UI every second
     countdownInterval = window.setInterval(updateCountdownTimers, 1000);
     // Set up all event listeners for the page.
     setupEventListeners();
@@ -151,7 +151,7 @@ let turnTimer: {
             const oldCards = myCards;
               myCards = message.payload.myCards || myCards;
             
-            // Se as cartas mudaram (redistribuição), limpar seleções antigas
+            // If cards changed (redistribution), clear old selections
             if (oldCards.length > 0 && myCards.length > 0) {
                 const oldCardIds = oldCards.map(c => c.id);
                 const newCardIds = myCards.map(c => c.id);
@@ -162,12 +162,12 @@ let turnTimer: {
                 }
             }
             
-            // Se eu era inativo e agora tenho cartas, fui reativado
+            // If I was inactive and now have cards, I was reactivated
             if (oldCards.length === 0 && myCards.length > 0) {
                 console.log('[GameBoard] Player reactivated with new cards');
                 selectedCardId = [];
                 
-                // Mostrar notificação de reativação
+                // Show reactivation notification
                 const statusText = document.getElementById("game-status-text");
                 if (statusText) {
                     statusText.textContent = "🎯 You're back in the game! New cards dealt.";
@@ -200,7 +200,7 @@ let turnTimer: {
         case 'GAME_FINISHED':
             setTimeout(() => {
                 showEndGameScreen(message.payload.winnerId === currentUser?.id, message.payload.message);
-                // Automaticamente sair da sala após 10 segundos
+                // Automatically leave room after 10 seconds
                 setTimeout(() => {
                     sendWebSocketMessage({ type: 'LEAVE_ROOM', payload: {} });
                 }, 10000);
@@ -422,7 +422,7 @@ const showEndGameScreen = (didIWin: boolean, message: string) => {
         </div>
     `;
   
-  // Iniciar contador regressivo visual
+  // Start visual countdown timer
   let timeLeft = 10;
   const timerElement = document.getElementById("auto-leave-timer");
   const countdown = setInterval(() => {
@@ -448,19 +448,19 @@ const renderLastPlay = () => {
     const container = document.getElementById('last-play-area');
     if (!container || !gameState || !gameState.game) return;
 
-    // Acessa a propriedade que contém as cartas da última jogada
+    // Access the property that contains the last played cards
     const lastPlayedCards = gameState.game.lastPlayedCard;
 
     if (lastPlayedCards && lastPlayedCards.length > 0) {
         const cardCount = lastPlayedCards.length;
         const cardOrCards = cardCount === 1 ? 'Card' : 'Cards';
 
-        // Gera o HTML para as cartas viradas para baixo, com um delay de animação para cada uma
+        // Generate HTML for face-down cards, with animation delay for each one
         const cardsHTML = lastPlayedCards.map((_, index) =>
             `<div class="card-back small-card last-played-card" style="animation-delay: ${index * 0.1}s"></div>`
         ).join('');
 
-        // Monta o HTML final com o contador de cartas animado e as próprias cartas
+        // Build final HTML with animated card counter and the cards themselves
         container.innerHTML = `
             <div class="played-cards-count">${cardCount} ${cardOrCards} Played</div>
             <div class="last-played-card-container">
@@ -468,7 +468,7 @@ const renderLastPlay = () => {
             </div>
         `;
     } else {
-        // Se não há uma última jogada (início de rodada), limpa a área
+        // If there's no last play (beginning of round), clear the area
         container.innerHTML = '';
     }
 };

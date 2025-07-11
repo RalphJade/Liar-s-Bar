@@ -74,7 +74,7 @@ export function getNextPlayer(room: Room & { game: { currentPlayerIndex: number;
     const nextPlayerHand = roomHands.get(nextPlayerId);
     const nextParticipant = room.players.get(nextPlayerId);
     
-    // PULAR jogadores eliminados OU inativos
+    // SKIP eliminated OR inactive players
     if (nextPlayerHand && nextParticipant && nextParticipant.ws !== null && !nextPlayerHand.isEliminated && !nextPlayerHand.isInactive) {
       return nextPlayerId;
     }
@@ -85,7 +85,7 @@ export function getNextPlayer(room: Room & { game: { currentPlayerIndex: number;
 }
 
 export function broadcastRoomState(room: Room & { game: CardGame }): void {
-  log(`Transmitindo estado da sala ${room.roomCode} para todos os participantes.`);
+  log(`Broadcasting room state ${room.roomCode} to all participants.`);
   const allParticipants = [...room.players.values(), ...room.spectators.values()];
 
   allParticipants.forEach(async (participant) => {

@@ -156,8 +156,8 @@ export const renderLobbyPage = (element: HTMLElement) => {
       const userElement = document.createElement("div");
       userElement.className = "online-user-item";
       const statusIcon = user.status === 'In Game' 
-        ? '<span class="status-icon in-game">⚔️</span>' // Ícone de espadas para "Em Jogo"
-        : '<span class="status-icon in-lobby">🟢</span>'; // Ícone verde para "No Lobby"
+        ? '<span class="status-icon in-game">⚔️</span>' // Sword icon for "In Game"
+        : '<span class="status-icon in-lobby">🟢</span>'; // Green icon for "In Lobby"
 
       userElement.innerHTML = `
         ${statusIcon}
@@ -188,13 +188,13 @@ export const renderLobbyPage = (element: HTMLElement) => {
     const allRooms = lobbyState.getRooms();
 
     if (!searchTerm.trim()) {
-      return allRooms; // Se não há termo de busca, retorna todas
+      return allRooms; // If no search term, return all rooms
     }
 
     const searchLower = searchTerm.toLowerCase().trim();
 
     return allRooms.filter((room) => {
-      // Busca tanto pelo nome quanto pelo código (ambos completos)
+      // Search by both name and code (both complete matches)
       const nameMatch = room.name.toLowerCase() === searchLower;
       const codeMatch = room.code.toLowerCase() === searchLower;
 
@@ -202,7 +202,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
     });
   };
 
-  // Adicione os event listeners do search input após os outros event listeners
+  // Add search input event listeners after other event listeners
   roomSearchInput?.addEventListener("input", (e) => {
     const searchTerm = (e.target as HTMLInputElement).value;
     const filteredRooms = filterRooms(searchTerm);
@@ -211,7 +211,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
 
   roomSearchInput?.addEventListener("keyup", (e) => {
     if ((e.target as HTMLInputElement).value === "") {
-      renderRoomList(); // Mostra todas as salas quando o campo está vazio
+      renderRoomList(); // Show all rooms when field is empty
     }
   });
 
@@ -219,7 +219,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
     const roomListDiv = document.getElementById("roomList");
     if (!roomListDiv) return;
 
-    const rooms = filteredRooms || lobbyState.getRooms(); // Usa o estado igual ao chat e usuários
+    const rooms = filteredRooms || lobbyState.getRooms(); // Use the same state as chat and users
 
 
     if (rooms.length === 0) {

@@ -40,7 +40,7 @@ export async function startCardGame(
   roomHands.forEach((hand) => {
     hand.isEliminated = false;
     hand.riskLevel = 0;
-    hand.isInactive = false; // Garantir que todos iniciem ativos
+    hand.isInactive = false; // Ensure all players start active
   });
 
   room.status = "playing";
@@ -77,14 +77,14 @@ export function advanceTurn(room: Room & { game: CardGame }): void {
   const currentPlayerId = allPlayerIds[room.game.currentPlayerIndex] || null;
   const nextPlayerId = getNextPlayer(room);
   
-  // Verificar se o próximo jogador é o mesmo que o atual (indica que só há um jogador ativo)
+  // Check if next player is the same as current player (indicates only one active player)
   if (nextPlayerId && currentPlayerId && nextPlayerId === currentPlayerId) {
     log(`Next player is the same as current player (${currentPlayerId}). Starting new round.`);
     
-    // Redistribuir cartas e iniciar nova rodada
+    // Redistribute cards and start new round
     redistributeCards(room);
     
-    // Reativar todos os jogadores não eliminados
+    // Reactivate all non-eliminated players
     const roomHands = getRoomHands(room.roomCode);
     if (roomHands) {
       roomHands.forEach((hand, playerId) => {
@@ -201,15 +201,15 @@ export function handlePlayCard(
     }
   }
 
-  // Se algumas cartas não foram encontradas, tentar fallback inteligente
+  // If some cards were not found, try intelligent fallback
   if (missingCardIds.length > 0) {
     
-    // Tentar encontrar cartas similares (mesmo tipo) para substituir as ausentes
+    // Try to find similar cards (same type) to replace missing ones
     for (const missingId of missingCardIds) {
-      // Extrair o tipo da carta do ID (assumindo formato "type_suit_number")
+      // Extract card type from ID (assuming format "type_suit_number")
       const cardType = missingId.split('_')[0] as CardType;
       
-      // Procurar uma carta do mesmo tipo que ainda não foi selecionada
+      // Look for a card of the same type that hasn't been selected yet
       const similarCard = playerHand.cards.find(c => 
         c.type === cardType && !cardsToPlay.includes(c)
       );
@@ -219,7 +219,7 @@ export function handlePlayCard(
       }
     }
     
-    // Se ainda não temos cartas suficientes, tentar pegar qualquer carta disponível
+    // If we still don't have enough cards, try to get any available card
     const remainingNeeded = cardsId.length - cardsToPlay.length;
     if (remainingNeeded > 0) {
       const availableCards = playerHand.cards.filter(c => !cardsToPlay.includes(c));
@@ -229,14 +229,14 @@ export function handlePlayCard(
     }
   }
 
-  // Se ainda não conseguimos encontrar cartas para jogar, retornar erro informativo
+  // If we still couldn't find cards to play, return informative error
   if (cardsToPlay.length === 0) {
     return sendToClient(ws, "ERROR", {
       message: `Your hand appears to be out of sync. Please wait for the next update.`,
     });
   }
 
-  // Se conseguimos menos cartas do que solicitado, informar o jogador
+  // If we got fewer cards than requested, inform the player
   if (cardsToPlay.length < cardsId.length) {
   }
 
@@ -419,7 +419,7 @@ function checkForWinner(room: Room & { game: CardGame }): boolean {
     }
   }
 
-  // ✅ VERIFICAR: Se todos os jogadores não eliminados estão inativos
+  // CHECK: If all non-eliminated players are inactive
   const nonEliminatedPlayers = allPlayerIds.filter(id => {
     const hand = roomHands.get(id);
     return hand && !hand.isEliminated;
@@ -430,27 +430,27 @@ function checkForWinner(room: Room & { game: CardGame }): boolean {
     return hand && !hand.isInactive;
   });
 
-  // ✅ NOVA LÓGICA: Se todos estão inativos, nova rodada
+  // NEW LOGIC: If all are inactive, new round
   if (nonEliminatedPlayers.length > 1 && activePlayers.length === 0) {
     log(`All players are inactive. Starting new round.`);
     
-    // Redistribuir cartas e reativar jogadores
+    // Redistribute cards and reactivate players
     redistributeCards(room);
     
-    // Reativar todos os jogadores não eliminados
+    // Reactivate all non-eliminated players
     roomHands.forEach((hand, playerId) => {
       if (!hand.isEliminated) {
         hand.isInactive = false;
       }
     });
     
-    // Iniciar nova rodada
+    // Start new round
     const firstActivePlayer = nonEliminatedPlayers[0];
     startNewRound(room, firstActivePlayer, false);
-    return false; // Não terminar o jogo
+    return false; // Don't end the game
   }
 
-  // ✅ VITÓRIA: Apenas 1 jogador não eliminado
+  // VICTORY: Only 1 non-eliminated player
   if (nonEliminatedPlayers.length <= 1) {
     winnerId = nonEliminatedPlayers[0] || null;
     if (winnerId) {
@@ -528,33 +528,33 @@ function redistributeCards(room: Room & { game: CardGame }): void {
   // Marcar timestamp da redistribuição
   room.game.lastRedistribution = Date.now();
 
-  // Reutilizar dealCards - ela já cria novo deck e distribui 5 cartas
+  // Reuse dealCards - it already creates new deck and deals 5 cards
   const newHands = dealCards(room);
 
-  // Manter apenas dados dos jogadores ativos (não eliminados)
+  // Keep only data from active players (not eliminated)
   roomHands.forEach((existingHand, playerId) => {
     const newHand = newHands.get(playerId);
     if (newHand && !existingHand.isEliminated) {
-      // Manter dados do jogador, mas trocar apenas as cartas
+      // Keep player data, but swap only the cards
       existingHand.cards = newHand.cards;
       existingHand.hasPlayedThisTurn = false;
-      existingHand.handVersion = (existingHand.handVersion || 0) + 1; // Incrementar versão
+      existingHand.handVersion = (existingHand.handVersion || 0) + 1; // Increment version
       existingHand.isInactive = false;
     } else if (existingHand.isEliminated) {
-      // Jogadores eliminados não recebem cartas
+      // Eliminated players don't receive cards
       existingHand.cards = [];
     }
   });
 
-  // O deck já foi atualizado pela função dealCards
-  // Limpar cartas jogadas
+  // The deck was already updated by dealCards function
+  // Clear played cards
   room.game.playedCards = [];
 
   log(
     `Cards redistributed using dealCards. Remaining deck: ${room.game.deck.length}`
   );
   
-  // Log de jogadores reativados
+  // Log reactivated players
   const reactivatedPlayers = Array.from(roomHands.entries())
     .filter(([_, hand]) => !hand.isEliminated && !hand.isInactive)
     .map(([playerId, _]) => {
@@ -562,6 +562,6 @@ function redistributeCards(room: Room & { game: CardGame }): void {
       return player?.username || playerId;
     });
     
-  // Força uma atualização imediata do estado para todos os clientes
+  // Force immediate state update to all clients
   broadcastRoomState(room);
   }
