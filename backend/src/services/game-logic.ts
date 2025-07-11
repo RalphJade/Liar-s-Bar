@@ -72,7 +72,32 @@ export function advanceTurn(room: Room & { game: CardGame }): void {
   if (checkForWinner(room)) {
     return;
   }
+  
+  const allPlayerIds = Array.from(room.players.keys());
+  const currentPlayerId = allPlayerIds[room.game.currentPlayerIndex] || null;
   const nextPlayerId = getNextPlayer(room);
+  
+  // Verificar se o próximo jogador é o mesmo que o atual (indica que só há um jogador ativo)
+  if (nextPlayerId && currentPlayerId && nextPlayerId === currentPlayerId) {
+    log(`Next player is the same as current player (${currentPlayerId}). Starting new round.`);
+    
+    // Redistribuir cartas e iniciar nova rodada
+    redistributeCards(room);
+    
+    // Reativar todos os jogadores não eliminados
+    const roomHands = getRoomHands(room.roomCode);
+    if (roomHands) {
+      roomHands.forEach((hand, playerId) => {
+        if (!hand.isEliminated) {
+          hand.isInactive = false;
+        }
+      });
+    }
+    
+    startNewRound(room, currentPlayerId, false);
+    return;
+  }
+  
   if (nextPlayerId) {
     startPlayerTurn(room, nextPlayerId);
   } else {
