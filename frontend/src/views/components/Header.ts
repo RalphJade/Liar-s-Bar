@@ -96,8 +96,8 @@ export const renderHeader = (element: HTMLElement) => {
           
           <h3>Setup & Objective</h3>
           <ul>
-            <li>The game is for up to 4 players. Each player starts with 5 cards.</li>
-            <li>The deck consists of <strong>Aces, Kings, Queens,</strong> and two valuable <strong>Jokers</strong>.</li>
+            <li>The game is for 4 players. Each player starts with 5 cards.</li>
+            <li>The deck consists of <strong>6 Aces, 6 Kings, 6 Queens,</strong> and two valuable <strong>Jokers</strong>.</li>
             <li>The last player who avoids elimination wins the entire pot.</li>
           </ul>
 
@@ -116,10 +116,10 @@ export const renderHeader = (element: HTMLElement) => {
             <li>After a challenge, all played cards are discarded and a new round begins.</li>
           </ul>
 
-          <h3>The Stakes: Russian Roulette</h3>
-          <p>Punishment in the Liar's Bar is swift. The punished player faces a round of Russian Roulette:</p>
+          <h3>The Stakes: Roulette</h3>
+          <p>Punishment in the Liar's Bar is swift. The punished player faces a round of Roulette:</p>
           <ul>
-              <li>Your <strong>Risk Level</strong> increases by one. With each point of risk, the revolver's chamber gets smaller, making each spin more perilous.</li>
+              <li>Your <strong>Strike</strong> increases by one. With each point of risk, the revolver's chamber gets smaller, making each spin more perilous.</li>
               <li>A spin resulting in <strong>❤️ (Click)</strong> means you survive, but your increased risk remains.</li>
               <li>A spin resulting in <strong>💀 (Bang)</strong> means you are immediately and permanently <strong>ELIMINATED</strong> from the game.</li>
               <li>Taking too long on your turn (30 seconds) is a sign of weakness and results in an automatic punishment.</li>
@@ -142,7 +142,6 @@ export const renderHeader = (element: HTMLElement) => {
     <!-- Additional CSS for improved modal close button -->
     <style>
       .modal-body {
-        /* AJUSTE AQUI: Adiciona espaço à direita para não colar na barra de rolagem */
         padding-right: 1.5rem; 
       }
 
