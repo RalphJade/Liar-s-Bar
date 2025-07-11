@@ -49,12 +49,19 @@ function stopPing() {
 function connect() {
   if (socket && socket.readyState === WebSocket.OPEN) return;
 
-  // Determina dinamicamente o protocolo (ws ou wss) e o host
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const host = window.location.host;
-  // O Nginx irá redirecionar qualquer conexão para /ws
-  const wsUrl = `${protocol}//${host}/ws`;
+  let wsUrl: string;
 
+  if (import.meta.env.DEV) {
+    wsUrl = `ws://localhost:3001${window.location.pathname}`;
+  } else {
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const host = window.location.host;
+    const path = window.location.pathname;
+    wsUrl = `${protocol}://${host}${path}`;
+  }
+  
+  console.log(`[WS] Tentando conectar a: ${wsUrl}`); // Log de depuração útil
+  
   socket = new WebSocket(wsUrl);
 
   socket.onopen = () => {
@@ -65,12 +72,14 @@ function connect() {
         reconnectInterval = null;
     }
     reconnectionAttempt = 0;
-    startPing(); // Inicia o sistema de ping
-    // Após conectar, o frontend deve pedir o estado atual (salas, etc.)
-    // sendWebSocketMessage({ type: 'REQUEST_LOBBY_STATE', payload: {} });
+
+    startPing();
+    sendWebSocketMessage({ type: "LIST_ROOMS", payload: {} });
+
   };
   
   socket.onclose = () => {
+    if (!socket || socket.onclose === null) return;
     console.log('[WS] Desconectado do lobby.');
     socket = null;
     stopPing(); // Para o sistema de ping
@@ -120,12 +129,7 @@ export function sendWebSocketMessage(messageObject: WebSocketMessage): void {
 
 
 export function sendChatMessage(text: string) {
-  if (socket && socket.readyState === WebSocket.OPEN) {
-    socket.send(JSON.stringify({
-      type: 'CHAT_MESSAGE',
-      payload: { text }
-    }));
-  }
+  sendWebSocketMessage({ type: 'CHAT_MESSAGE', payload: { text } });
 }
 
 export function disconnect() {

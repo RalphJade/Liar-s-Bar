@@ -18,6 +18,8 @@
     ? 'http://localhost:3001/'
     : 'https://equipe07.alphaedtech.org.br/';
 
+    const RECONNECTION_TIME_LIMIT = 15000;
+
   // Module-level state variables to hold game data.
   let gameState: RoomStateForApi | null = null;
   let myCards: Card[] = [];
@@ -185,51 +187,55 @@ let turnTimer: {
         case 'PLAYER_TURN':
             handlePlayerTurn(message.payload);
             break;
-          case 'CHAT_BROADCAST':
-              chatMessages.push(message.payload);
-              if (chatMessages.length > 100) chatMessages.shift();
-              renderChat();
-              break;
-          case 'GAME_STARTED':
-              alert(message.payload.message);
-              break;
-          case 'GAME_FINISHED':
-              setTimeout(() => {
-                  showEndGameScreen(message.payload.winnerId === currentUser?.id, message.payload.message);
-              }, 1000);
-              break;
-          case 'CHALLENGE_RESULT':
-              handleChallengeResult(message.payload);
-              break;
-          case 'PLAYER_RECONNECTED':
-              const systemText = message.payload.message;
-              console.log(message.payload.message);
-              const systemMessage = {
-                  authorId: 'system',
-                  authorName: 'System',
-                  message: systemText,
-                  timestamp: new Date().toISOString()
-              };
-              chatMessages.push(systemMessage);
-              renderChat();
-              break;
-          case 'ERROR':
-              alert(`Server error: ${message.payload.message}`);
-              break;
-          case 'LEFT_ROOM':
-              if (countdownInterval) clearInterval(countdownInterval);
-              countdownInterval = null;
-              alert(message.payload.message);
-              navigate('/home');
-              break;
-          case 'ROOM_CLOSED':
-              if (countdownInterval) clearInterval(countdownInterval);
-              countdownInterval = null;
-              alert(`The room "${message.payload.name}" has been closed.`);
-              navigate('/home');
-              break;
-      }
-  };
+        case 'ROOM_CHAT_MESSAGE':
+            chatMessages.push(message.payload);
+            if (chatMessages.length > 100) chatMessages.shift();
+            renderChat();
+            break;
+        case 'GAME_STARTED':
+            alert(message.payload.message);
+            break;
+        case 'GAME_FINISHED':
+            setTimeout(() => {
+                showEndGameScreen(message.payload.winnerId === currentUser?.id, message.payload.message);
+            }, 1000);
+            break;
+        case 'CHALLENGE_RESULT':
+            handleChallengeResult(message.payload);
+            break;
+        case 'PLAYER_RECONNECTED':
+            const systemText = message.payload.message;
+            console.log(message.payload.message);
+            const systemMessage = {
+                authorId: 'system',
+                authorName: 'System',
+                message: systemText,
+                timestamp: new Date().toISOString()
+            };
+            chatMessages.push(systemMessage);
+            renderChat();
+            break;
+        case 'ERROR':
+            alert(`Server error: ${message.payload.message}`);
+            break;
+        case 'LEFT_ROOM':
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = null;
+            alert(message.payload.message);
+            navigate('/home');
+            break;
+        case 'FORCE_REDIRECT_TO_LOBBY':
+            alert(message.payload.message);
+            navigate('/home');
+            break;
+        case 'ROOM_CLOSED':
+            if (countdownInterval) clearInterval(countdownInterval);
+            countdownInterval = null;
+            alert(`The room "${message.payload.name}" has been closed.`);
+            navigate('/home');
+            break;
+    }
+};
 
   /**
    * Handles the visual sequence for a challenge result, including the roulette spin.
@@ -474,29 +480,30 @@ let turnTimer: {
     return ""; // Fallback for any other case.
   };
 
-  /**
-   * Cria o HTML para um jogador que está se reconectando.
-   * @param player - O objeto do jogador.
-   * @param positionClass - A classe de posicionamento CSS.
-   * @returns O HTML string para o pod.
-   */
-  const createReconnectingPod = (player: any, positionClass: string) => {
-      const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : "https://via.placeholder.com/60";
-      return `
-          <div class="player-pod ${positionClass} reconnecting" data-player-id="${player.id}">
-              <div class="player-info">
-                  <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar" />
-                  <div class="player-details">
-                      <span class="player-name">${player.username}</span>
-                      <span class="player-risk-level">Desconectado</span>
-                  </div>
-              </div>
-              <div class="reconnection-overlay">
-                  <span class="reconnection-timer" data-player-id="${player.id}">--s</span>
-              </div>
-          </div>
-      `;
-  };
+/**
+ * Cria o HTML para um jogador que está se reconectando.
+ * @param player - O objeto do jogador.
+ * @param positionClass - A classe de posicionamento CSS.
+ * @returns O HTML string para o pod.
+ */
+const createReconnectingPod = (player: any, positionClass: string) => {
+    const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : "/default-avatar.jpg";
+    const initialTime = player.reconnectTimeLeft || Math.round(RECONNECTION_TIME_LIMIT / 1000);
+    return `
+        <div class="player-pod ${positionClass} reconnecting" data-player-id="${player.id}">
+            <div class="player-info">
+                <img src="${avatarSrc}" alt="${player.username}'s avatar" class="player-avatar" />
+                <div class="player-details">
+                    <span class="player-name">${player.username}</span>
+                    <span class="player-risk-level">Desconectado</span>
+                </div>
+            </div>
+            <div class="reconnection-overlay">
+                <span class="reconnection-timer" data-player-id="${player.id}">${initialTime}s</span>
+            </div>
+        </div>
+    `;
+};
 
   /**
    * Renders the pods for all opponent players around the table in a clockwise order.
@@ -532,9 +539,9 @@ let turnTimer: {
         return createInactivePod(player, positionClass);
         }
 
-        if (!player.isOnline && player.reconnectingUntil) {
-          return createReconnectingPod(player, positionClass);
-        }
+      if (!player.isOnline && player.reconnectTimeLeft != null) {
+        return createReconnectingPod(player, positionClass);
+      }
 
         const isCurrentTurn = player.id === gameState?.game?.currentPlayerId;
         return createPlayerPod(player, positionClass, isCurrentTurn);
@@ -1095,31 +1102,21 @@ const PLAY_CARD_COOLDOWN = 1000; // 1 segundo de cooldown
       .concat(reordered.slice(0, currentUserIndex));
   }
 
-  function updateCountdownTimers() {
-      if (!gameState) return;
-
-      // Encontra todos os elementos de timer renderizados
-      const timerElements = document.querySelectorAll<HTMLElement>('.reconnection-timer');
-      
-      timerElements.forEach(timerEl => {
-          const playerId = timerEl.dataset.playerId;
-          if (!playerId) return;
-
-          const player = gameState?.players.find(p => p.id === playerId);
-          
-          if (player && player.reconnectingUntil) {
-              const timeLeft = Math.round((player.reconnectingUntil - Date.now()) / 1000);
-              
-              if (timeLeft > 0) {
-                  timerEl.textContent = `${timeLeft}s`;
-              } else {
-                  // Quando o tempo acabar no frontend, apenas mostramos 'REMOVIDO'
-                  // O backend cuidará da remoção real e enviará um novo estado.
-                  timerEl.textContent = 'Removido';
-              }
-          }
-      });
-  }
+function updateCountdownTimers() {
+    const timerElements = document.querySelectorAll<HTMLElement>('.reconnection-timer');
+    
+    timerElements.forEach(timerEl => {
+        let currentTime = parseInt(timerEl.textContent || '0', 10);
+        
+        currentTime -= 1;
+        
+        if (currentTime > 0) {
+            timerEl.textContent = `${currentTime}s`;
+        } else {
+            timerEl.textContent = 'Removido';
+        }
+    });
+}
 
   // --- HTML Template Creation Functions ---
 

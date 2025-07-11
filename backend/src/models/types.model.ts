@@ -60,7 +60,7 @@ export interface Participant {
   username: string;
   ws: CustomWebSocket | null;
   disconnectionTimer?: NodeJS.Timeout;
-  reconnectingUntil?: number; // <--- ADICIONE ESTA LINHA (timestamp)
+  reconnectingUntil?: number;
 }
 
 export interface Room {
@@ -88,6 +88,7 @@ export interface RoomStateForApi {
     isReady?: boolean; 
     riskLevel?: number; 
     isEliminated?: boolean;
+    reconnectTimeLeft?: number | null;
     isInactive?: boolean;
   }[];
   spectators: { id: string; username: string }[];
@@ -154,7 +155,9 @@ export type ServerMessage =
   | { type: "PLAYER_TIMEOUT"; payload: { playerId: string; playerName: string; message: string; }; }
   | { type: "HAND_DEALT"; payload: { cards: Card[]; handSize: number; }; }
   | { type: "CARD_PLAYED_CONFIRMATION"; payload: { cardId: string; handSize: number; message: string; }; }
-  | { type: "CHAT_BROADCAST"; payload: { authorId: string; authorName: string; message: string; timestamp: string; }; }
+  | { type: "LOBBY_CHAT_MESSAGE"; payload: ChatMessage; }
+  | { type: "ROOM_CHAT_MESSAGE"; payload: ChatMessage; }
   | { type: "PLAYER_DISCONNECTED"; payload: { playerId: string; playerName: string; message: string; }; }
   | { type: "CHALLENGE_RESULT"; payload: { wasLie: boolean; punishedPlayerId: string; punishedPlayerName: string; revealedCard: Card; message: string; isEliminated: boolean; newRiskLevel: number; }; }
-  | { type: "PLAYER_ELIMINATED"; payload: { playerId: string; playerName: string; message: string; }; };
+  | { type: "PLAYER_ELIMINATED"; payload: { playerId: string; playerName: string; message: string }; }
+  | { type: "FORCE_REDIRECT_TO_LOBBY"; payload: { message: string; }; };

@@ -73,7 +73,11 @@ server.on(
   ) => {
     const pathname = request.url ? parse(request.url).pathname : "";
 
-    if (pathname !== "/ws" && pathname !== "/") {
+    const isLobbyPath = pathname === "/" || pathname === "/ws" || pathname === "/home";
+    const isGamePath = /^\/gameboard\/[A-Z0-9]{5}$/.test(pathname || '');
+
+    if (!isLobbyPath && !isGamePath) {
+      log(`Conexão WebSocket rejeitada para o caminho inválido: ${pathname}`);
       socket.destroy();
       return;
     }

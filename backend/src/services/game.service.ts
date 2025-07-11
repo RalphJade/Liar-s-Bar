@@ -12,12 +12,31 @@ import * as GameLogic from "./game-logic"
  * @param wss The WebSocket server instance.
  */
 export function initializeGameService(wss: WebSocketServer): void {
-  wss.on("connection", async (ws: CustomWebSocket) => {
-    const reconnected = await RoomManager.attemptPlayerReconnection(ws);
+  wss.on("connection", async (ws: CustomWebSocket, request) => {
+    const reconnectionStatus = await RoomManager.attemptPlayerReconnection(ws);
 
-    if (!reconnected) {
-      LobbyManager.handleNewConnection(ws);
-      RoomManager.handleWaitingRooms(ws);
+    if (reconnectionStatus === 'reconnected') {
+        // Nada mais a fazer aqui.
+    } else {
+        // Se não reconectou a uma sala, ele é, por definição, um cliente do lobby.
+        // Primeiro, registre-o no lobby.
+        LobbyManager.handleNewConnection(ws);
+
+        // Em seguida, envie a ele todo o estado inicial do lobby.
+        RoomManager.handleWaitingRooms(ws); // Envia lista de salas.
+        LobbyManager.sendLobbyChatHistory(ws); // Envia histórico de chat.
+        // handleNewConnection já transmite a nova lista de usuários para todos.
+
+        // Se não reconectou, verificamos se ele TENTOU ir para uma sala pela URL
+        const url = request.url || '';
+        const gameboardMatch = url.match(/^\/gameboard\/([A-Z0-9]+)$/);
+
+        if (gameboardMatch) {
+            // Ele tentou acessar uma sala mas falhou (provavelmente foi expulso)
+            // Envia uma mensagem para forçar o redirecionamento
+            log(`Jogador ${ws.clientUsername} tentou reconectar a uma sala inválida. Forçando redirecionamento.`);
+            sendToClient(ws, "FORCE_REDIRECT_TO_LOBBY", { message: "Você não está mais nesta sala." });
+        }
     }
 
     ws.on("message", (message) => {
@@ -60,6 +79,7 @@ function handleClientMessage(ws: CustomWebSocket, data: ClientMessage): void {
         break
       case "LIST_ROOMS":
         RoomManager.handleWaitingRooms(ws);
+        LobbyManager.sendOnlineUserList(ws);
         break;
       case "CREATE_ROOM":
         RoomManager.handleCreateRoom(ws, data.payload);
