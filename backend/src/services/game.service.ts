@@ -16,35 +16,35 @@ export function initializeGameService(wss: WebSocketServer): void {
     const reconnectionStatus = await RoomManager.attemptPlayerReconnection(ws);
 
     if (reconnectionStatus === 'reconnected') {
-        // Nada mais a fazer aqui.
+      // Nada mais a fazer aqui.
     } else {
-        // Se não reconectou a uma sala, ele é, por definição, um cliente do lobby.
-        // Primeiro, registre-o no lobby.
-        LobbyManager.handleNewConnection(ws);
+      // Se não reconectou a uma sala, ele é, por definição, um cliente do lobby.
+      // Primeiro, registre-o no lobby.
+      LobbyManager.handleNewConnection(ws);
 
-        // Em seguida, envie a ele todo o estado inicial do lobby.
-        RoomManager.handleWaitingRooms(ws); // Envia lista de salas.
-        LobbyManager.sendLobbyChatHistory(ws); // Envia histórico de chat.
-        // handleNewConnection já transmite a nova lista de usuários para todos.
+      // Em seguida, envie a ele todo o estado inicial do lobby.
+      RoomManager.handleWaitingRooms(ws); // Envia lista de salas.
+      LobbyManager.sendLobbyChatHistory(ws); // Envia histórico de chat.
+      // handleNewConnection já transmite a nova lista de usuários para todos.
 
-        // Se não reconectou, verificamos se ele TENTOU ir para uma sala pela URL
-        const url = request.url || '';
-        const gameboardMatch = url.match(/^\/gameboard\/([A-Z0-9]+)$/);
+      // Se não reconectou, verificamos se ele TENTOU ir para uma sala pela URL
+      const url = request.url || '';
+      const gameboardMatch = url.match(/^\/gameboard\/([A-Z0-9]+)$/);
 
-        if (gameboardMatch) {
-            // Ele tentou acessar uma sala mas falhou (provavelmente foi expulso)
-            // Envia uma mensagem para forçar o redirecionamento
-            log(`Jogador ${ws.clientUsername} tentou reconectar a uma sala inválida. Forçando redirecionamento.`);
-            sendToClient(ws, "FORCE_REDIRECT_TO_LOBBY", { message: "Você não está mais nesta sala." });
-        }
+      if (gameboardMatch) {
+        // Ele tentou acessar uma sala mas falhou (provavelmente foi expulso)
+        // Envia uma mensagem para forçar o redirecionamento
+        log(`Jogador ${ws.clientUsername} tentou reconectar a uma sala inválida. Forçando redirecionamento.`);
+        sendToClient(ws, "FORCE_REDIRECT_TO_LOBBY", { message: "Você não está mais nesta sala." });
+      }
     }
 
     ws.on("message", (message) => {
       try {
         const data: ClientMessage = JSON.parse(message.toString());
         if (data.type !== "PING") {
-        log("Message received.", { ws, data });
-        handleClientMessage(ws, data);
+          log("Message received.", { ws, data });
+          handleClientMessage(ws, data);
         }
       } catch (error: any) {
         log("Error handling client message.", { ws, data: { error: error.message, originalMessage: message.toString() } });
