@@ -1340,7 +1340,7 @@ const renderDynamicStyles = () => {
         .chat-sidebar { width: 350px; flex-shrink: 0; display: flex; flex-direction: column; background: #1e293b; border-left: 2px solid var(--color-wood-light); }
         .chat-panel { flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
         .chat-header { padding: 1rem; background: var(--color-wood-dark); color: var(--color-accent-gold); }
-        .chat-title { font-weight: bold; font-family: var(--font-display) }
+        .chat-title { font-weight: bold; font-family: var(--font-display); font-size: var(--font-size-lg) }
         .chat-messages { flex-grow: 1; padding: 1rem; overflow-y: auto; background: var(--color-parchment); }
         .chat-messages .message { display: flex; flex-direction: column; gap: 0.2rem; margin-bottom: 0.75rem; }
         .chat-messages .timestamp { font-size: 0.7rem; color: var(--color-text-medium); }
