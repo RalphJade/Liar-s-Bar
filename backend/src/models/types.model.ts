@@ -38,6 +38,7 @@ export interface PlayerHand {
   riskLevel: number; 
   isEliminated: boolean;
   isInactive?: boolean;
+  handVersion?: number; // Versão da mão para detectar redistribuições
 }
 
 export interface CardGame {
@@ -52,6 +53,7 @@ export interface CardGame {
   playedCards: Card[]; 
   lastPlayedCard: Card[]; 
   lastPlayerId: string | null;
+  lastRedistribution?: number; // Timestamp da última redistribuição
 }
 
 export interface Participant {
@@ -86,6 +88,7 @@ export interface RoomStateForApi {
     isReady?: boolean; 
     riskLevel?: number; 
     isEliminated?: boolean;
+    isInactive?: boolean;
   }[];
   spectators: { id: string; username: string }[];
   status: Room["status"];

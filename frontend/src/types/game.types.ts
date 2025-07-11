@@ -35,6 +35,7 @@ export interface RoomStateForApi {
     isReady?: boolean;
     riskLevel?: number;
     isEliminated?: boolean;
+    isInactive?: boolean;
     avatar_url?: string | null;
     reconnectingUntil?: number | null;
   }[];

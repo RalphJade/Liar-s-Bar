@@ -1,4 +1,4 @@
-// // import { redisClient } from "../database";
+// import { redisClient } from "../database";
 // import { generateCodeWithFaker } from "../utils/room.util";
 // import { CreateRoomInput, EnterRoomInput } from "../models/lobby.model";
 

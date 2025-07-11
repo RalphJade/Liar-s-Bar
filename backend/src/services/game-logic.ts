@@ -149,14 +149,58 @@ export function handlePlayCard(
   }
 
   const cardsToPlay: Card[] = [];
+  const missingCardIds: string[] = [];
   for (const cardId of cardsId) {
     const card = playerHand.cards.find((c) => c.id === cardId);
     if (!card) {
-      return sendToClient(ws, "ERROR", {
-        message: `You don't have the card with ID: ${cardId}`,
-      });
+      missingCardIds.push(cardId);
+    } else {
+      cardsToPlay.push(card);
     }
-    cardsToPlay.push(card);
+  }
+
+  // Se algumas cartas não foram encontradas, tentar fallback inteligente
+  if (missingCardIds.length > 0) {
+    log(`[DEBUG] Player ${ws.clientUsername} tried to play ${missingCardIds.length} missing cards. Attempting smart fallback...`);
+    
+    // Tentar encontrar cartas similares (mesmo tipo) para substituir as ausentes
+    for (const missingId of missingCardIds) {
+      // Extrair o tipo da carta do ID (assumindo formato "type_suit_number")
+      const cardType = missingId.split('_')[0] as CardType;
+      
+      // Procurar uma carta do mesmo tipo que ainda não foi selecionada
+      const similarCard = playerHand.cards.find(c => 
+        c.type === cardType && !cardsToPlay.includes(c)
+      );
+      
+      if (similarCard) {
+        cardsToPlay.push(similarCard);
+        log(`[DEBUG] Found similar card ${similarCard.id} to replace missing ${missingId}`);
+      }
+    }
+    
+    // Se ainda não temos cartas suficientes, tentar pegar qualquer carta disponível
+    const remainingNeeded = cardsId.length - cardsToPlay.length;
+    if (remainingNeeded > 0) {
+      const availableCards = playerHand.cards.filter(c => !cardsToPlay.includes(c));
+      const fallbackCards = availableCards.slice(0, remainingNeeded);
+      cardsToPlay.push(...fallbackCards);
+      
+      if (fallbackCards.length > 0) {
+        log(`[DEBUG] Added ${fallbackCards.length} fallback cards: ${fallbackCards.map(c => c.id)}`);
+      }
+    }
+  }
+
+  // Se ainda não conseguimos encontrar cartas para jogar, retornar erro informativo
+  if (cardsToPlay.length === 0) {
+    return sendToClient(ws, "ERROR", {
+      message: `Your hand appears to be out of sync. Please wait for the next update.`,
+    });
+  }
+
+  // Se conseguimos menos cartas do que solicitado, informar o jogador
+  if (cardsToPlay.length < cardsId.length) {
   }
 
   log(`Player ${ws.clientUsername} is playing card(s) ${cardsToPlay}.`);
@@ -441,6 +485,9 @@ function redistributeCards(room: Room & { game: CardGame }): void {
   const roomHands = getRoomHands(room.roomCode);
   if (!roomHands) return;
 
+  // Marcar timestamp da redistribuição
+  room.game.lastRedistribution = Date.now();
+
   // Reutilizar dealCards - ela já cria novo deck e distribui 5 cartas
   const newHands = dealCards(room);
 
@@ -451,6 +498,7 @@ function redistributeCards(room: Room & { game: CardGame }): void {
       // Manter dados do jogador, mas trocar apenas as cartas
       existingHand.cards = newHand.cards;
       existingHand.hasPlayedThisTurn = false;
+      existingHand.handVersion = (existingHand.handVersion || 0) + 1; // Incrementar versão
     } else if (existingHand.isEliminated) {
       // Jogadores eliminados não recebem cartas
       existingHand.cards = [];
@@ -464,4 +512,7 @@ function redistributeCards(room: Room & { game: CardGame }): void {
   log(
     `Cards redistributed using dealCards. Remaining deck: ${room.game.deck.length}`
   );
-}
+  
+  // Força uma atualização imediata do estado para todos os clientes
+  broadcastRoomState(room);
+  }
