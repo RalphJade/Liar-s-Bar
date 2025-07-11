@@ -14,7 +14,6 @@ export function sendToClient<T extends ServerMessage["type"]>(
     return;
   }
   const message = { type, payload };
-  console.log(`[DEBUG] Enviando mensagem ${type} para ${ws.clientUsername}`); // ADICIONE AQUI
   ws.send(JSON.stringify(message));
 }
 

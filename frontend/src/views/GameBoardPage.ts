@@ -159,7 +159,6 @@ let turnTimer: {
                 
                 if (cardsChanged) {
                     selectedCardId = [];
-                    // Log para debug de redistribuição
                 }
             }
             

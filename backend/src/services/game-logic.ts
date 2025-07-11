@@ -203,7 +203,6 @@ export function handlePlayCard(
 
   // Se algumas cartas não foram encontradas, tentar fallback inteligente
   if (missingCardIds.length > 0) {
-    log(`[DEBUG] Player ${ws.clientUsername} tried to play ${missingCardIds.length} missing cards. Attempting smart fallback...`);
     
     // Tentar encontrar cartas similares (mesmo tipo) para substituir as ausentes
     for (const missingId of missingCardIds) {
@@ -217,7 +216,6 @@ export function handlePlayCard(
       
       if (similarCard) {
         cardsToPlay.push(similarCard);
-        log(`[DEBUG] Found similar card ${similarCard.id} to replace missing ${missingId}`);
       }
     }
     
@@ -228,9 +226,6 @@ export function handlePlayCard(
       const fallbackCards = availableCards.slice(0, remainingNeeded);
       cardsToPlay.push(...fallbackCards);
       
-      if (fallbackCards.length > 0) {
-        log(`[DEBUG] Added ${fallbackCards.length} fallback cards: ${fallbackCards.map(c => c.id)}`);
-      }
     }
   }
 

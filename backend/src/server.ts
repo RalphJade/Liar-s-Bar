@@ -62,7 +62,6 @@ const server = http.createServer(app);
 const wss = new WebSocket.Server({ noServer: true });
 
 initializeGameService(wss);
-// initializeLobbyService(wss);
 
 server.on(
   "upgrade",
@@ -112,7 +111,6 @@ server.on(
 // Also, initialize the database schema upon server startup.
 server.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
-  console.log(`🚀 Redis is running on http://localhost:${process.env.REDIS_PORT}`)
   console.log(`🚀 Server (HTTP & WebSocket) is running on http://localhost:${PORT}`);
   initializeDatabase();
 });
