@@ -20,12 +20,13 @@
 
     const RECONNECTION_TIME_LIMIT = 15000;
 
-  // Module-level state variables to hold game data.
-  let gameState: RoomStateForApi | null = null;
-  let myCards: Card[] = [];
-  let chatMessages: ChatMessage[] = [];
-  let selectedCardId: string[] = [];
-  let countdownInterval: number | null = null;
+// Module-level state variables to hold game data.
+let gameState: RoomStateForApi | null = null;
+let myCards: Card[] = [];
+let chatMessages: ChatMessage[] = [];
+let selectedCardId: string[] = [];
+let countdownInterval: number | null = null;
+let isChallengeSequenceActive = false;
 
 // Player turn timer
 let turnTimer: {
@@ -61,6 +62,7 @@ let turnTimer: {
         <div id="header-container"></div>
         <div class="game-layout">
             <div id="game-area" class="game-area">
+             <div id="new-round-message" class="new-round-message hidden">New Round!</div>
                 <div class="game-table">
                     <div id="player-pods-container"></div>
                     <div class="center-area">
@@ -106,24 +108,25 @@ let turnTimer: {
 
                       <button id="button-quit-game" class="button button-danger">
 
-                          <span class="quit-icon">🚪</span><span class="quit-text">Leave Table</span>
-                      </button>
-                  </div>
-              </div>
-          </div>
-          ${renderQuitModal()}
-          ${renderDynamicStyles()}
-          <!-- Roulette overlay is hidden by default and shown during challenges -->
-          <div id="roulette-overlay" class="roulette-overlay hidden">
-              <div id="roulette-modal" class="roulette-modal">
-                  <h2 id="roulette-title"></h2>
-                  <div id="revealed-card-container"></div>
-                  <!-- This container holds the roulette wheel -->
-                  <div id="roulette-wheel-container"></div>
-                  <p id="roulette-result"></p>
-              </div>
-          </div>
-      `;
+                        <span class="quit-icon">🚪</span><span class="quit-text">Leave Table</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+       
+        ${renderQuitModal()}
+        ${renderDynamicStyles()}
+        <!-- Roulette overlay is hidden by default and shown during challenges -->
+        <div id="roulette-overlay" class="roulette-overlay hidden">
+            <div id="roulette-modal" class="roulette-modal">
+                <h2 id="roulette-title"></h2>
+                <div id="revealed-card-container"></div>
+                <!-- This container holds the roulette wheel -->
+                <div id="roulette-wheel-container"></div>
+                <p id="roulette-result"></p>
+            </div>
+        </div>
+    `;
 
     // Render the header component.
     renderHeader(document.getElementById("header-container")!);
@@ -141,48 +144,44 @@ let turnTimer: {
    * Handles incoming WebSocket messages from the server.
    * @param {any} message - The message object received from the server.
    */
-  const handleGameMessage = (message: any) => {
-    console.log("[Game WS] Received:", message);
-    const currentUser = getUser();
+const handleGameMessage = (message: any) => {
+  console.log("[Game WS] Received:", message);
+  const currentUser = getUser();
 
-      switch(message.type) {
-          case 'ROOM_STATE_UPDATE':
-              gameState = message.payload;
-            const oldCards = myCards;
-              myCards = message.payload.myCards || myCards;
-            
-            // If cards changed (redistribution), clear old selections
-            if (oldCards.length > 0 && myCards.length > 0) {
-                const oldCardIds = oldCards.map(c => c.id);
-                const newCardIds = myCards.map(c => c.id);
-                const cardsChanged = !oldCardIds.every(id => newCardIds.includes(id));
-                
-                if (cardsChanged) {
-                    selectedCardId = [];
-                }
-            }
-            
-            // If I was inactive and now have cards, I was reactivated
-            if (oldCards.length === 0 && myCards.length > 0) {
-                console.log('[GameBoard] Player reactivated with new cards');
+    switch(message.type) {
+        case 'ROOM_STATE_UPDATE':
+    const oldGameState = gameState;
+    // Apenas armazena os novos dados por enquanto
+    gameState = message.payload;
+    myCards = message.payload.myCards || myCards;
+
+    // Se a sequência de animação da roleta está ativa, não faça NADA.
+    // A função handleChallengeResult será responsável por chamar updateUI().
+    if (isChallengeSequenceActive) {
+        break; // Simplesmente ignora a renderização por agora.
+    }
+
+    const isNewRound = oldGameState && oldGameState.game?.roundNumber !== gameState?.game?.roundNumber;
+    
+    // Esta lógica agora só será executada para "New Round" que NÃO vêm de um desafio
+    if (isNewRound) {
+        const newRoundMessage = document.getElementById('new-round-message');
+        if (newRoundMessage) {
+            newRoundMessage.classList.remove('hidden');
+            newRoundMessage.classList.add('blinking-animation');
+
+            setTimeout(() => {
+                newRoundMessage.classList.add('hidden');
+                newRoundMessage.classList.remove('blinking-animation');
                 selectedCardId = [];
-                
-                // Show reactivation notification
-                const statusText = document.getElementById("game-status-text");
-                if (statusText) {
-                    statusText.textContent = "🎯 You're back in the game! New cards dealt.";
-                    statusText.style.color = "#10b981";
-                    setTimeout(() => {
-                        statusText.style.color = "";
-                        if (gameState) {
-                            renderGameStatus();
-                        }
-                    }, 3000);
-                }
-            }
-            
-              updateUI();
-              break;
+                updateUI();
+            }, 3000);
+        }
+    } else {
+        // Se for uma atualização de estado normal (sem novo round), atualiza a UI imediatamente.
+        updateUI();
+    }
+    break;
         case 'YOUR_TURN':
             handleYourTurn(message.payload);
             break;
@@ -241,19 +240,20 @@ let turnTimer: {
     }
 };
 
-  /**
-   * Handles the visual sequence for a challenge result, including the roulette spin.
-   * @param {any} payload - The data from the server about the challenge result.
-   */
-  const handleChallengeResult = (payload: any) => {
-    // Get all necessary DOM elements for the roulette modal.
-    const overlay = document.getElementById("roulette-overlay")!;
-    const title = document.getElementById("roulette-title")!;
-    const wheelContainer = document.getElementById("roulette-wheel-container")!;
-    const result = document.getElementById("roulette-result")!;
-    const revealedCardContainer = document.getElementById(
-      "revealed-card-container"
-    )!;
+/**
+ * Handles the visual sequence for a challenge result, including the roulette spin.
+ * @param {any} payload - The data from the server about the challenge result.
+ */
+const handleChallengeResult = (payload: any) => {
+    isChallengeSequenceActive = true;
+  // Get all necessary DOM elements for the roulette modal.
+  const overlay = document.getElementById("roulette-overlay")!;
+  const title = document.getElementById("roulette-title")!;
+  const wheelContainer = document.getElementById("roulette-wheel-container")!;
+  const result = document.getElementById("roulette-result")!;
+  const revealedCardContainer = document.getElementById(
+    "revealed-card-container"
+  )!;
 
     const punishedPlayer = gameState?.players.find(
       (p) => p.username === payload.punishedPlayerName
@@ -322,13 +322,35 @@ let turnTimer: {
           }, 500);
         }
 
-        // --- Step 4: After showing the result, hide the overlay. ---
-        setTimeout(() => {
-          overlay.classList.add("hidden");
-        }, resultDisplayDuration);
-      }, spinDuration);
-    }, accusationDuration);
-  };
+      // --- Step 4: After showing the result, hide the overlay. ---
+      setTimeout(() => {
+        overlay.classList.add("hidden");
+      }, resultDisplayDuration);
+      setTimeout(() => {
+        overlay.classList.add("hidden"); // Esconde a roleta
+
+        const newRoundMessage = document.getElementById('new-round-message');
+        if (newRoundMessage) {
+            newRoundMessage.classList.remove('hidden');
+            newRoundMessage.classList.add('blinking-animation');
+            
+            // Inicia o timer de 3 segundos para a mensagem "New Round!"
+            setTimeout(() => {
+                newRoundMessage.classList.add('hidden');
+                newRoundMessage.classList.remove('blinking-animation');
+                
+                isChallengeSequenceActive = false; // Desativa a flag de controle
+                updateUI(); // AGORA, finalmente, renderiza a UI com as novas cartas
+            }, 3000);
+        } else {
+            // Fallback caso o elemento não exista
+            isChallengeSequenceActive = false;
+            updateUI();
+        }
+      }, resultDisplayDuration);
+    }, spinDuration);
+  }, accusationDuration);
+};
 
   /**
    * Creates a visual roulette wheel, separating the rotating cylinder from the static firing pin.
@@ -1385,6 +1407,30 @@ const renderDynamicStyles = () => {
         }
         
         .center-area { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
+
+        /* New Round Message */
+        .new-round-message {
+            position: absolute; 
+            top: 45%; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-display);
+            font-size: 5rem;
+            color: var(--color-accent-gold);
+            text-shadow: 3px 3px 10px rgba(0, 0, 0, 0.8);
+            z-index: 5000;
+            pointer-events: none;
+        }
+        
+        .blinking-animation {
+            animation: blink 0.5s step-start 0s 6;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
 
         /* Center Pile */
         .center-pile { 
