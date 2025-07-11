@@ -19,6 +19,19 @@ let chatMessages: ChatMessage[] = [];
 let selectedCardId: string[] = [];
 let countdownInterval: number | null = null;
 
+// Timer de turno do jogador
+let turnTimer: {
+  timeLeft: number;
+  timeLimit: number;
+  isMyTurn: boolean;
+  interval: number | null;
+} = {
+  timeLeft: 0,
+  timeLimit: 30000,
+  isMyTurn: false,
+  interval: null
+};
+
 /**
  * Renders the main game board page.
  * @param {HTMLElement} element - The root element to render the page into.
@@ -49,7 +62,18 @@ export const renderGameBoardPage = (
                 </div>
 
                 <div class="player-hand-container">
-                    <div id="my-info-area" class="my-info-area"></div>
+                    <div class="player-info-wrapper">
+                        <div id="my-info-area" class="my-info-area"></div>
+                        <div id="turn-timer" class="turn-timer" style="display: none;">
+                            <div class="timer-circle">
+                                <svg>
+                                    <circle class="timer-circle-bg" cx="25" cy="25" r="22"></circle>
+                                    <circle class="timer-progress" id="timer-progress" cx="25" cy="25" r="22"></circle>
+                                </svg>
+                                <div class="timer-text" id="timer-text">30</div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="player-hand-area">
                         <div id="my-hand-cards" class="hand-cards"></div>
                     </div>
@@ -115,6 +139,12 @@ const handleGameMessage = (message: any) => {
             gameState = message.payload;
             myCards = message.payload.myCards || myCards;
             updateUI();
+            break;
+        case 'YOUR_TURN':
+            handleYourTurn(message.payload);
+            break;
+        case 'PLAYER_TURN':
+            handlePlayerTurn(message.payload);
             break;
         case 'CHAT_BROADCAST':
             chatMessages.push(message.payload);
@@ -570,15 +600,27 @@ const renderChat = () => {
     const container = document.getElementById('chat-messages');
     if (!container) return;
     container.innerHTML = chatMessages.map(msg =>{
-        const messageClass = msg.authorId === 'system' 
-            ? 'message system-message' 
-            : 'message player-message';
+        const isSystemMessage = msg.authorId === 'system';
+        const messageClass = isSystemMessage ? 'message system-message' : 'message player-message';
+
+        const timestamp = new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        
+        const escapeHTML = (str: string) => {
+            const p = document.createElement('p');
+            p.textContent = str;
+            return p.innerHTML;
+        };
+
+        const authorHTML = `<strong>${escapeHTML(msg.authorName)}:</strong>`;
+        const messageHTML = escapeHTML(msg.message);
+
         return `
-        <div class="${messageClass}">
-            <span class="timestamp">${new Date(msg.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
-            <span class="content"><strong>${msg.authorName}:</strong> ${msg.message}</span>
-        </div>
-    `}).join('');
+            <div class="${messageClass}">
+                <span class="timestamp">${timestamp}</span>
+                <span class="content">${authorHTML} ${messageHTML}</span>
+            </div>
+        `;
+    }).join('');
     container.scrollTop = container.scrollHeight;
 };
 
@@ -1218,6 +1260,7 @@ const renderDynamicStyles = () => {
         
         /* My Info and Hand */
         .player-hand-container { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        .player-info-wrapper { display: flex; align-items: center; gap: 1rem; }
         .my-info-area { display: flex; align-items: center; gap: 1rem; background: rgba(0,0,0,0.4); padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid var(--color-border); }
         .my-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-accent-gold); transition: all 0.3s ease;}
         
@@ -1225,6 +1268,76 @@ const renderDynamicStyles = () => {
         .my-name { font-weight: bold; color: var(--color-accent-gold); }
         .my-risk-level { font-size: 0.8rem; color: #fca5a5; }
         .my-avatar.active-turn { box-shadow: 0 0 20px 5px #facc15; transform: scale(1.1); }
+        
+        /* Timer de Turno - Posicionado à direita do my-info-area */
+        .turn-timer { 
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+        .timer-circle { 
+            position: relative; 
+            width: 50px; 
+            height: 50px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .timer-circle svg { 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50px; 
+            height: 50px; 
+            transform: rotate(-90deg); 
+        }
+        .timer-circle-bg { 
+            fill: none; 
+            stroke: rgba(255, 255, 255, 0.15); 
+            stroke-width: 3; 
+        }
+        .timer-progress { 
+            fill: none; 
+            stroke: #4CAF50; 
+            stroke-width: 3; 
+            stroke-linecap: round; 
+            transition: stroke 0.3s ease; 
+        }
+        .timer-text { 
+            position: relative;
+            z-index: 2;
+            font-size: 16px; 
+            font-weight: bold; 
+            color: #fff; 
+            text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.7);
+            font-family: 'Segoe UI', monospace;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+        }
+        .turn-timer.timer-warning { 
+            border-color: rgba(255, 165, 0, 0.5);
+            background: radial-gradient(circle, rgba(139, 69, 19, 0.7) 0%, rgba(139, 69, 19, 0.4) 100%);
+        }
+        .turn-timer.timer-warning .timer-progress { 
+            stroke: #ffa500; 
+        }
+        .turn-timer.timer-urgent { 
+            border-color: rgba(255, 68, 68, 0.5);
+            background: radial-gradient(circle, rgba(139, 0, 0, 0.7) 0%, rgba(139, 0, 0, 0.4) 100%);
+            animation: pulse 0.5s infinite; 
+        }
+        .turn-timer.timer-urgent .timer-progress { 
+            stroke: #ff4444; 
+        }
+        
         .player-hand-area { min-height: 100px; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 1rem; }
         .hand-cards { display: flex; gap: 0.5rem; }
         .card-face { width: 70px; height: 98px; background: white; border: 2px solid #333; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: var(--font-size-xl); font-weight: bold; color: #333; cursor: pointer; transition: all 0.2s ease; }
@@ -1384,6 +1497,129 @@ const renderDynamicStyles = () => {
             text-shadow: none;
             box-shadow: 0 0 10px #f59e0b;
         }
+
+        /* Placeholder comentários para manter estrutura */
     `;
   return style.outerHTML;
+};
+
+ /**
+ * Manipula o evento YOUR_TURN quando é a vez do jogador atual
+ * @param payload - Dados do turno enviados pelo servidor
+ */
+const handleYourTurn = (payload: any) => {
+  console.log('[Timer] YOUR_TURN received:', payload);
+  
+  // Configura o timer para o jogador atual
+  turnTimer.timeLeft = payload.timeLimit || 30000;
+  turnTimer.timeLimit = payload.timeLimit || 30000;
+  turnTimer.isMyTurn = true;
+  
+  // Atualiza o status do jogo
+  const statusText = document.getElementById('game-status-text');
+  if (statusText) {
+    statusText.textContent = payload.message || `Your turn! Play a ${payload.currentCardType}.`;
+  }
+  
+  // Inicia o timer visual
+  startTurnTimer();
+};
+
+/**
+ * Manipula o evento PLAYER_TURN quando é a vez de outro jogador
+ * @param payload - Dados do turno enviados pelo servidor
+ */
+const handlePlayerTurn = (payload: any) => {
+  console.log('[Timer] PLAYER_TURN received:', payload);
+  
+  // Para o timer do jogador anterior
+  stopTurnTimer();
+  
+  // Atualiza o status do jogo
+  const statusText = document.getElementById('game-status-text');
+  if (statusText) {
+    statusText.textContent = payload.message || `${payload.playerName}'s turn.`;
+  }
+};
+
+/**
+ * Inicia o timer visual para o turno do jogador
+ */
+const startTurnTimer = () => {
+  const timerElement = document.getElementById('turn-timer');
+  const timerText = document.getElementById('timer-text');
+  const timerProgress = document.getElementById('timer-progress') as unknown as SVGCircleElement;
+  
+  if (!timerElement || !timerText || !timerProgress) return;
+  
+  // Mostra o timer
+  timerElement.style.display = 'block';
+  
+  // Para qualquer timer anterior
+  if (turnTimer.interval) {
+    clearInterval(turnTimer.interval);
+  }
+  
+  // Calcula o tempo inicial em segundos
+  const initialSeconds = Math.ceil(turnTimer.timeLeft / 1000);
+  timerText.textContent = initialSeconds.toString();
+  
+  // Reseta o progresso
+  const circumference = 2 * Math.PI * 22; // raio = 22 (novo tamanho menor)
+  timerProgress.style.strokeDasharray = circumference.toString();
+  timerProgress.style.strokeDashoffset = '0';
+  
+  // Inicia o countdown
+  const startTime = Date.now();
+  turnTimer.interval = window.setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, turnTimer.timeLimit - elapsed);
+    const seconds = Math.ceil(remaining / 1000);
+    
+    // Atualiza o texto
+    timerText.textContent = seconds.toString();
+    
+    // Atualiza o progresso circular
+    const progress = remaining / turnTimer.timeLimit;
+    const offset = circumference * (1 - progress);
+    timerProgress.style.strokeDashoffset = offset.toString();
+    
+    // Muda a cor conforme o tempo restante
+    if (seconds <= 5) {
+      timerProgress.style.stroke = '#ff4444'; // Vermelho para os últimos 5 segundos
+      timerElement.classList.add('timer-urgent');
+      timerElement.classList.remove('timer-warning');
+    } else if (seconds <= 10) {
+      timerProgress.style.stroke = '#ffa500'; // Laranja para os últimos 10 segundos
+      timerElement.classList.add('timer-warning');
+      timerElement.classList.remove('timer-urgent');
+    } else {
+      timerProgress.style.stroke = '#4CAF50'; // Verde para tempo normal
+      timerElement.classList.remove('timer-urgent', 'timer-warning');
+    }
+    
+    // Para o timer quando acaba
+    if (remaining <= 0) {
+      stopTurnTimer();
+    }
+  }, 100); // Atualiza a cada 100ms para suavidade
+};
+
+/**
+ * Para o timer visual do turno
+ */
+const stopTurnTimer = () => {
+  const timerElement = document.getElementById('turn-timer');
+  
+  if (turnTimer.interval) {
+    clearInterval(turnTimer.interval);
+    turnTimer.interval = null;
+  }
+  
+  if (timerElement) {
+    timerElement.style.display = 'none';
+    timerElement.classList.remove('timer-urgent', 'timer-warning');
+  }
+  
+  turnTimer.isMyTurn = false;
 };
