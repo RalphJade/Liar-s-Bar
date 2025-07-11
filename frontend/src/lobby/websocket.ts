@@ -26,7 +26,18 @@ function showReconnectionMessage(show: boolean) {
 function connect() {
   if (socket && socket.readyState === WebSocket.OPEN) return;
 
-  const wsUrl = `ws://localhost:3001`;
+  let wsUrl: string;
+
+  if (import.meta.env.DEV) {
+    wsUrl = `ws://localhost:3001${window.location.pathname}`;
+  } else {
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const host = window.location.host;
+    const path = window.location.pathname;
+    wsUrl = `${protocol}://${host}${path}`;
+  }
+  
+  console.log(`[WS] Tentando conectar a: ${wsUrl}`); // Log de depuração útil
   
   socket = new WebSocket(wsUrl);
 
@@ -38,10 +49,10 @@ function connect() {
         reconnectInterval = null;
     }
     reconnectionAttempt = 0;
-    // Após conectar, o frontend deve pedir o estado atual (salas, etc.)
-    // sendWebSocketMessage({ type: 'REQUEST_LOBBY_STATE', payload: {} });
+    sendWebSocketMessage({ type: "LIST_ROOMS", payload: {} });
   };
   socket.onclose = () => {
+    if (!socket || socket.onclose === null) return;
     console.log('[WS] Desconectado do lobby.');
     socket = null;
     showReconnectionMessage(true); // Mostra a mensagem
@@ -89,12 +100,7 @@ export function sendWebSocketMessage(messageObject: WebSocketMessage): void {
 
 
 export function sendChatMessage(text: string) {
-    if (socket && socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-            type: 'CHAT_MESSAGE',
-            payload: { text }
-        }));
-    }
+  sendWebSocketMessage({ type: 'CHAT_MESSAGE', payload: { text } });
 }
 
 export function disconnect() {

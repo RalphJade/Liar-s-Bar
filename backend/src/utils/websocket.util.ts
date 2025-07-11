@@ -120,6 +120,11 @@ export async function getRoomStateForApi(
     ownerId: room.ownerId,
     players: Array.from(room.players.entries()).map(([id, p]) => {
       const hand = roomHands?.get(id);
+      let reconnectTimeLeft: number | null = null;
+      if (p.reconnectingUntil) {
+        const timeLeftMs = p.reconnectingUntil - Date.now();
+        reconnectTimeLeft = timeLeftMs > 0 ? Math.round(timeLeftMs / 1000) : 0;
+      }
       return {
         id,
         username: p.username,
@@ -132,7 +137,7 @@ export async function getRoomStateForApi(
         isEliminated: hand?.isEliminated || false,
         isInactive: hand?.isInactive || false,
         avatar_url: userAvatars.get(id) || null,
-        reconnectingUntil: p.reconnectingUntil || null,
+        reconnectTimeLeft: reconnectTimeLeft,
       };
     }),
     spectators: Array.from(room.spectators.entries()).map(([id, s]) => ({

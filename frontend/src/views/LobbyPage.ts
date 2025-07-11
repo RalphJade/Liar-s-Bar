@@ -280,7 +280,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
 
   const handleWebSocketMessage = (message: any) => {
     switch (message.type) {
-      case "NEW_CHAT_MESSAGE":
+      case "LOBBY_CHAT_MESSAGE":
         lobbyState.addMessage(message.payload);
         renderChatMessages();
         break;
@@ -338,7 +338,7 @@ export const renderLobbyPage = (element: HTMLElement) => {
 
   websocket.initLobbyConnection(handleWebSocketMessage);
 
-  websocket.sendWebSocketMessage({ type: "LIST_ROOMS", payload: {} });
+  // websocket.sendWebSocketMessage({ type: "LIST_ROOMS", payload: {} });
 
   renderOnlineUserList();
   renderChatMessages();

@@ -13,6 +13,9 @@ export const renderHeader = (element: HTMLElement) => {
   const user = getUser();
   if (!user) return; // Early return if user is not authenticated - header should not be rendered
 
+  const isInGame = window.location.pathname.startsWith('/gameboard/');
+  const profileLinkDisabled = isInGame ? 'disabled' : '';
+
   // Dynamically generate avatar element based on user's avatar availability
   // Uses either the user's uploaded avatar image or a default SVG icon
   const avatarElement = user.avatar_url
@@ -70,7 +73,7 @@ export const renderHeader = (element: HTMLElement) => {
         <!-- Dropdown menu for user actions (hidden by default) -->
         <div id="user-dropdown" class="user-dropdown-menu hidden">
           <ul>
-            <li id="profile-menu-item">My Profile</li>
+            <li id="profile-menu-item" class="${profileLinkDisabled}">My Profile</li>
             <li id="logout-menu-item">Leave</li>
           </ul>
         </div>
@@ -191,6 +194,16 @@ export const renderHeader = (element: HTMLElement) => {
     </style>
   `;
 
+  const style = document.createElement('style');
+  style.textContent = `
+    .user-dropdown-menu li.disabled {
+      color: var(--color-text-medium);
+      cursor: not-allowed;
+      background-color: transparent !important; /* Impede o efeito hover */
+    }
+  `;
+  document.head.appendChild(style);
+
   // Get DOM element references for event handling
   const rulesBtn = document.getElementById('rules-btn') as HTMLButtonElement;
   const modalOverlay = document.getElementById('rules-modal-overlay') as HTMLDivElement;
@@ -236,6 +249,11 @@ export const renderHeader = (element: HTMLElement) => {
 
   // Profile navigation handler
   profileMenuItem?.addEventListener('click', () => {
+    if (profileMenuItem.classList.contains('disabled')) {
+      alert("Você não pode acessar seu perfil durante uma partida.");
+      userDropdown?.classList.add('hidden');
+      return;
+    }
     navigate('/profile');
     userDropdown?.classList.add('hidden');
   });
