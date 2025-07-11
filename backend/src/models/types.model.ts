@@ -105,6 +105,7 @@ export interface RoomStateForApi {
     playedCardsCount: number;
     deckSize: number;
     lastPlayerId: string | null;
+    lastPlayedCard?: Card[];
   };
   myCards?: Card[];
   myHandSize?: number;
