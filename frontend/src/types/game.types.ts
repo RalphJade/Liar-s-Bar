@@ -37,7 +37,7 @@ export interface RoomStateForApi {
     isEliminated?: boolean;
     isInactive?: boolean;
     avatar_url?: string | null;
-    reconnectingUntil?: number | null;
+    reconnectTimeLeft?: number | null;
   }[];
   spectators: { id: string; username: string }[];
   status: "waiting" | "playing";

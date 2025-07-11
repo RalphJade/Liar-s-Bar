@@ -310,7 +310,7 @@ export async function handleLeaveRoom(ws: CustomWebSocket): Promise<void> {
     const notificationMessage = `${ws.clientUsername} has left the table.`;
     const chatMessage = { authorId: 'system', authorName: 'System', message: notificationMessage, timestamp: new Date().toISOString() };
     addRoomMessage(roomCode, chatMessage);
-    broadcastToRoom(room, "CHAT_BROADCAST", chatMessage);
+    broadcastToRoom(room, "ROOM_CHAT_MESSAGE", chatMessage);
 
     if (room.status === 'playing') {
       advanceTurnAfterInterruption(room);
@@ -373,7 +373,7 @@ export function handlePlayerDisconnect(ws: CustomWebSocket): void {
       timestamp: new Date().toISOString(),
     };
     addRoomMessage(roomCode, chatMessage);
-    broadcastToRoom(room, "CHAT_BROADCAST", chatMessage);
+    broadcastToRoom(room, "ROOM_CHAT_MESSAGE", chatMessage);
     broadcastRoomState(room); // Atualiza a UI para mostrar o jogador como offline
 
     // Se era o turno dele, avança o jogo
@@ -410,7 +410,7 @@ export function handlePlayerDisconnect(ws: CustomWebSocket): void {
           timestamp: new Date().toISOString(),
         };
         addRoomMessage(roomCode, removalMessage);
-        broadcastToRoom(currentRoomState, "CHAT_BROADCAST", removalMessage);
+        broadcastToRoom(currentRoomState, "ROOM_CHAT_MESSAGE", removalMessage);
         
         // Agora que ele foi removido permanentemente do jogo,
         // também o removemos da lista global de clientes conectados.
@@ -441,7 +441,7 @@ export function handlePlayerDisconnect(ws: CustomWebSocket): void {
  * @returns {Promise<RoomStateForApi>} A safe, serializable version of the room state.
  */
 
-export async function attemptPlayerReconnection(ws: CustomWebSocket): Promise<boolean> {
+export async function attemptPlayerReconnection(ws: CustomWebSocket): Promise<'reconnected' | 'not_found'> {
   for (const room of getAllRooms()) {
     const participant = room.players.get(ws.clientId) || room.spectators.get(ws.clientId);
     
@@ -470,13 +470,13 @@ export async function attemptPlayerReconnection(ws: CustomWebSocket): Promise<bo
       
       const chatHistory = getRoomChatHistory(room.roomCode);
       chatHistory.forEach(msg => {
-          sendToClient(ws, "CHAT_BROADCAST", msg);
+          sendToClient(ws, "ROOM_CHAT_MESSAGE", msg);
       });
 
-      return true;
+      return 'reconnected';
     }
   }
-  return false;
+  return 'not_found';
 }
 
 export function handleRoomChatMessage(ws: CustomWebSocket, payload: { message: string }): void {
@@ -494,6 +494,6 @@ export function handleRoomChatMessage(ws: CustomWebSocket, payload: { message: s
             timestamp: new Date().toISOString(),
         };
         addRoomMessage(roomCode, chatMessage);
-        broadcastToRoom(room, "CHAT_BROADCAST", chatMessage);
+        broadcastToRoom(room, "ROOM_CHAT_MESSAGE", chatMessage);
     }
 }

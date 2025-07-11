@@ -1,7 +1,9 @@
 import { WebSocket } from "ws";
-import { CustomWebSocket } from '../models/types.model';
+import { CustomWebSocket, ChatMessage } from '../models/types.model';
+import { sendToClient } from "../utils/websocket.util";
 
 const connectedClients = new Map<string, CustomWebSocket>();
+const lobbyChatHistory: ChatMessage[] = [];
 
 /**
  * Adiciona um novo cliente à lista de conectados e notifica a todos.
@@ -36,16 +38,23 @@ export function handleChatMessage(sender: CustomWebSocket, payload: any) {
         return; // Ignora mensagens vazias ou mal formatadas
     }
 
-    const chatMessage = {
-        type: 'NEW_CHAT_MESSAGE',
-        payload: {
-            authorId: sender.clientId,
-            authorName: sender.clientUsername,
-            message: payload.text.trim(),
-            timestamp: new Date().toISOString()
-        }
+    const chatMessage: ChatMessage = {
+        authorId: sender.clientId,
+        authorName: sender.clientUsername,
+        message: payload.text.trim(),
+        timestamp: new Date().toISOString()
     };
-    broadcast(chatMessage);
+    
+    lobbyChatHistory.push(chatMessage);
+    if (lobbyChatHistory.length > 100) {
+        lobbyChatHistory.shift();
+    }
+
+    const messageToBroadcast = {
+        type: 'LOBBY_CHAT_MESSAGE',
+        payload: chatMessage
+    };
+    broadcastToLobby(messageToBroadcast);
 }
 
 /**
@@ -63,7 +72,7 @@ export function broadcastOnlineUserList() {
         payload: { users }
     };
 
-    broadcast(message);
+    broadcastToLobby(message);
 }
 
 /**
@@ -78,13 +87,23 @@ export function broadcast(message: object) {
   }
 }
 
+function broadcastToLobby(message: object) {
+  const serializedMessage = JSON.stringify(message);
+  for (const client of connectedClients.values()) {
+    if (!client.currentRoomCode && client.readyState === WebSocket.OPEN) {
+      client.send(serializedMessage);
+    }
+  }
+}
+
 /**
  * Envia a lista atual de usuários online para um cliente específico.
  */
-function sendOnlineUserList(ws: CustomWebSocket) {
+export function sendOnlineUserList(ws: CustomWebSocket) {
     const users = Array.from(connectedClients.values()).map(client => ({
         userId: client.clientId,
-        username: client.clientUsername
+        username: client.clientUsername,
+        status: client.currentRoomCode ? 'In Game' : 'In Lobby' 
     }));
 
     const message = {
@@ -93,4 +112,11 @@ function sendOnlineUserList(ws: CustomWebSocket) {
     };
 
     ws.send(JSON.stringify(message));
+}
+
+export function sendLobbyChatHistory(ws: CustomWebSocket) {
+    lobbyChatHistory.forEach(chatMessage => {
+        // Envia cada mensagem do histórico para o cliente que acabou de conectar.
+        sendToClient(ws, "LOBBY_CHAT_MESSAGE", chatMessage);
+    });
 }

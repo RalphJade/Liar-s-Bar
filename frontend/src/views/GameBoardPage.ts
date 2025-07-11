@@ -11,6 +11,7 @@ import { MAX_PLAYERS } from "../../../backend/src/config/game.config.ts";
 
 // Base URL for the API.
 const API_BASE_URL = "http://localhost:3001";
+const RECONNECTION_TIME_LIMIT = 15000;
 
 // Module-level state variables to hold game data.
 let gameState: RoomStateForApi | null = null;
@@ -159,7 +160,7 @@ const handleGameMessage = (message: any) => {
         case 'PLAYER_TURN':
             handlePlayerTurn(message.payload);
             break;
-        case 'CHAT_BROADCAST':
+        case 'ROOM_CHAT_MESSAGE':
             chatMessages.push(message.payload);
             if (chatMessages.length > 100) chatMessages.shift();
             renderChat();
@@ -193,6 +194,10 @@ const handleGameMessage = (message: any) => {
         case 'LEFT_ROOM':
             if (countdownInterval) clearInterval(countdownInterval);
             countdownInterval = null;
+            alert(message.payload.message);
+            navigate('/home');
+            break;
+        case 'FORCE_REDIRECT_TO_LOBBY':
             alert(message.payload.message);
             navigate('/home');
             break;
@@ -457,6 +462,7 @@ const getPlayerPositionClass = (
  */
 const createReconnectingPod = (player: any, positionClass: string) => {
     const avatarSrc = player.avatar_url ? `${API_BASE_URL}${player.avatar_url}` : "/default-avatar.jpg";
+    const initialTime = player.reconnectTimeLeft || Math.round(RECONNECTION_TIME_LIMIT / 1000);
     return `
         <div class="player-pod ${positionClass} reconnecting" data-player-id="${player.id}">
             <div class="player-info">
@@ -467,7 +473,7 @@ const createReconnectingPod = (player: any, positionClass: string) => {
                 </div>
             </div>
             <div class="reconnection-overlay">
-                <span class="reconnection-timer" data-player-id="${player.id}">--s</span>
+                <span class="reconnection-timer" data-player-id="${player.id}">${initialTime}s</span>
             </div>
         </div>
     `;
@@ -507,7 +513,7 @@ const renderPlayerPods = (currentUserId: string) => {
         return createInactivePod(player, positionClass);
       }
 
-      if (!player.isOnline && player.reconnectingUntil) {
+      if (!player.isOnline && player.reconnectTimeLeft != null) {
         return createReconnectingPod(player, positionClass);
       }
 
@@ -1071,27 +1077,17 @@ function assignPlayerPositions(players: any[], currentUserId: string): any[] {
 }
 
 function updateCountdownTimers() {
-    if (!gameState) return;
-
-    // Encontra todos os elementos de timer renderizados
     const timerElements = document.querySelectorAll<HTMLElement>('.reconnection-timer');
     
     timerElements.forEach(timerEl => {
-        const playerId = timerEl.dataset.playerId;
-        if (!playerId) return;
-
-        const player = gameState?.players.find(p => p.id === playerId);
+        let currentTime = parseInt(timerEl.textContent || '0', 10);
         
-        if (player && player.reconnectingUntil) {
-            const timeLeft = Math.round((player.reconnectingUntil - Date.now()) / 1000);
-            
-            if (timeLeft > 0) {
-                timerEl.textContent = `${timeLeft}s`;
-            } else {
-                // Quando o tempo acabar no frontend, apenas mostramos 'REMOVIDO'
-                // O backend cuidará da remoção real e enviará um novo estado.
-                timerEl.textContent = 'Removido';
-            }
+        currentTime -= 1;
+        
+        if (currentTime > 0) {
+            timerEl.textContent = `${currentTime}s`;
+        } else {
+            timerEl.textContent = 'Removido';
         }
     });
 }
