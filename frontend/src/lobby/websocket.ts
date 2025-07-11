@@ -52,12 +52,12 @@ function connect() {
   let wsUrl: string;
 
   if (import.meta.env.DEV) {
-    wsUrl = `ws://localhost:3001${window.location.pathname}`;
+    wsUrl = `ws://localhost:3001/ws${window.location.pathname}`;
   } else {
     const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
     const host = window.location.host;
     const path = window.location.pathname;
-    wsUrl = `${protocol}://${host}${path}`;
+    wsUrl = `${protocol}://${host}/ws${path}`;
   }
   
   console.log(`[WS] Tentando conectar a: ${wsUrl}`); // Log de depuração útil
