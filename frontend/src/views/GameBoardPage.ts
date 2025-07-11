@@ -154,6 +154,26 @@ let turnTimer: {
                 
                 if (cardsChanged) {
                     selectedCardId = [];
+                    // Log para debug de redistribuição
+                }
+            }
+            
+            // Se eu era inativo e agora tenho cartas, fui reativado
+            if (oldCards.length === 0 && myCards.length > 0) {
+                console.log('[GameBoard] Player reactivated with new cards');
+                selectedCardId = [];
+                
+                // Mostrar notificação de reativação
+                const statusText = document.getElementById("game-status-text");
+                if (statusText) {
+                    statusText.textContent = "🎯 You're back in the game! New cards dealt.";
+                    statusText.style.color = "#10b981";
+                    setTimeout(() => {
+                        statusText.style.color = "";
+                        if (gameState) {
+                            renderGameStatus();
+                        }
+                    }, 3000);
                 }
             }
             

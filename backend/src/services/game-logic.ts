@@ -38,6 +38,7 @@ export async function startCardGame(
   roomHands.forEach((hand) => {
     hand.isEliminated = false;
     hand.riskLevel = 0;
+    hand.isInactive = false; // Garantir que todos iniciem ativos
   });
 
   room.status = "playing";
@@ -499,6 +500,7 @@ function redistributeCards(room: Room & { game: CardGame }): void {
       existingHand.cards = newHand.cards;
       existingHand.hasPlayedThisTurn = false;
       existingHand.handVersion = (existingHand.handVersion || 0) + 1; // Incrementar versão
+      existingHand.isInactive = false;
     } else if (existingHand.isEliminated) {
       // Jogadores eliminados não recebem cartas
       existingHand.cards = [];
@@ -513,6 +515,14 @@ function redistributeCards(room: Room & { game: CardGame }): void {
     `Cards redistributed using dealCards. Remaining deck: ${room.game.deck.length}`
   );
   
+  // Log de jogadores reativados
+  const reactivatedPlayers = Array.from(roomHands.entries())
+    .filter(([_, hand]) => !hand.isEliminated && !hand.isInactive)
+    .map(([playerId, _]) => {
+      const player = room.players.get(playerId);
+      return player?.username || playerId;
+    });
+    
   // Força uma atualização imediata do estado para todos os clientes
   broadcastRoomState(room);
   }
