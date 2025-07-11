@@ -19,6 +19,7 @@ let myCards: Card[] = [];
 let chatMessages: ChatMessage[] = [];
 let selectedCardId: string[] = [];
 let countdownInterval: number | null = null;
+let isChallengeSequenceActive = false;
 
 // Timer de turno do jogador
 let turnTimer: {
@@ -54,6 +55,7 @@ export const renderGameBoardPage = (
         <div id="header-container"></div>
         <div class="game-layout">
             <div id="game-area" class="game-area">
+             <div id="new-round-message" class="new-round-message hidden">New Round!</div>
                 <div class="game-table">
                     <div id="player-pods-container"></div>
                     <div class="center-area">
@@ -104,6 +106,7 @@ export const renderGameBoardPage = (
                 </div>
             </div>
         </div>
+       
         ${renderQuitModal()}
         ${renderDynamicStyles()}
         <!-- Roulette overlay is hidden by default and shown during challenges -->
@@ -140,23 +143,38 @@ const handleGameMessage = (message: any) => {
 
     switch(message.type) {
         case 'ROOM_STATE_UPDATE':
-            gameState = message.payload;
-            const oldCards = myCards;
-            myCards = message.payload.myCards || myCards;
-            
-            // Se as cartas mudaram (redistribuição), limpar seleções antigas
-            if (oldCards.length > 0 && myCards.length > 0) {
-                const oldCardIds = oldCards.map(c => c.id);
-                const newCardIds = myCards.map(c => c.id);
-                const cardsChanged = !oldCardIds.every(id => newCardIds.includes(id));
-                
-                if (cardsChanged) {
-                    selectedCardId = [];
-                }
-            }
-            
-            updateUI();
-            break;
+    const oldGameState = gameState;
+    // Apenas armazena os novos dados por enquanto
+    gameState = message.payload;
+    myCards = message.payload.myCards || myCards;
+
+    // Se a sequência de animação da roleta está ativa, não faça NADA.
+    // A função handleChallengeResult será responsável por chamar updateUI().
+    if (isChallengeSequenceActive) {
+        break; // Simplesmente ignora a renderização por agora.
+    }
+
+    const isNewRound = oldGameState && oldGameState.game?.roundNumber !== gameState.game?.roundNumber;
+    
+    // Esta lógica agora só será executada para "New Round" que NÃO vêm de um desafio
+    if (isNewRound) {
+        const newRoundMessage = document.getElementById('new-round-message');
+        if (newRoundMessage) {
+            newRoundMessage.classList.remove('hidden');
+            newRoundMessage.classList.add('blinking-animation');
+
+            setTimeout(() => {
+                newRoundMessage.classList.add('hidden');
+                newRoundMessage.classList.remove('blinking-animation');
+                selectedCardId = [];
+                updateUI();
+            }, 3000);
+        }
+    } else {
+        // Se for uma atualização de estado normal (sem novo round), atualiza a UI imediatamente.
+        updateUI();
+    }
+    break;
         case 'YOUR_TURN':
             handleYourTurn(message.payload);
             break;
@@ -218,6 +236,7 @@ const handleGameMessage = (message: any) => {
  * @param {any} payload - The data from the server about the challenge result.
  */
 const handleChallengeResult = (payload: any) => {
+    isChallengeSequenceActive = true;
   // Get all necessary DOM elements for the roulette modal.
   const overlay = document.getElementById("roulette-overlay")!;
   const title = document.getElementById("roulette-title")!;
@@ -298,6 +317,28 @@ const handleChallengeResult = (payload: any) => {
       // --- Step 4: After showing the result, hide the overlay. ---
       setTimeout(() => {
         overlay.classList.add("hidden");
+      }, resultDisplayDuration);
+      setTimeout(() => {
+        overlay.classList.add("hidden"); // Esconde a roleta
+
+        const newRoundMessage = document.getElementById('new-round-message');
+        if (newRoundMessage) {
+            newRoundMessage.classList.remove('hidden');
+            newRoundMessage.classList.add('blinking-animation');
+            
+            // Inicia o timer de 3 segundos para a mensagem "New Round!"
+            setTimeout(() => {
+                newRoundMessage.classList.add('hidden');
+                newRoundMessage.classList.remove('blinking-animation');
+                
+                isChallengeSequenceActive = false; // Desativa a flag de controle
+                updateUI(); // AGORA, finalmente, renderiza a UI com as novas cartas
+            }, 3000);
+        } else {
+            // Fallback caso o elemento não exista
+            isChallengeSequenceActive = false;
+            updateUI();
+        }
       }, resultDisplayDuration);
     }, spinDuration);
   }, accusationDuration);
@@ -1344,6 +1385,30 @@ const renderDynamicStyles = () => {
         }
         
         .center-area { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; gap: 1.5rem; }
+
+        /* New Round Message */
+        .new-round-message {
+            position: absolute; 
+            top: 45%; 
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-family: var(--font-display);
+            font-size: 5rem;
+            color: var(--color-accent-gold);
+            text-shadow: 3px 3px 10px rgba(0, 0, 0, 0.8);
+            z-index: 5000;
+            pointer-events: none;
+        }
+        
+        .blinking-animation {
+            animation: blink 0.5s step-start 0s 6;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0;
+            }
+        }
 
         /* Center Pile */
         .center-pile { 
