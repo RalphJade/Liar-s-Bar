@@ -284,12 +284,6 @@ export async function handleLeaveRoom(ws: CustomWebSocket): Promise<void> {
   if (room.game.turnTimer) {
     clearTimeout(room.game.turnTimer);
   }
-    
-  if (room.ownerId === ws.clientId) {
-    log(`Dono ${ws.clientUsername} saiu da sala ${roomCode}, fechando a sala.`);
-    handleCloseRoom(ws); 
-    return;
-  }
   
   let playerLeft = false;
   if (room.players.has(ws.clientId)) {
@@ -304,6 +298,17 @@ export async function handleLeaveRoom(ws: CustomWebSocket): Promise<void> {
   ws.currentRoomCode = undefined;
   sendToClient(ws, "LEFT_ROOM", { message: `You have left the room ${room.roomName}.` });
   LobbyManager.broadcastOnlineUserList();
+
+  // Verificar se a sala ficou vazia (sem jogadores e espectadores)
+  if (room.players.size === 0 && room.spectators.size === 0) {
+    log(`Sala ${room.roomCode} ficou vazia, fechando a sala.`);
+    removeRoom(room.roomCode);
+    LobbyManager.broadcast({ 
+      type: "ROOM_REMOVED", 
+      payload: { code: room.roomCode } 
+    });
+    return;
+  }
 
   if (playerLeft) {
     const notificationMessage = `${ws.clientUsername} has left the table.`;
@@ -495,4 +500,4 @@ export function handleRoomChatMessage(ws: CustomWebSocket, payload: { message: s
         addRoomMessage(roomCode, chatMessage);
         broadcastToRoom(room, "ROOM_CHAT_MESSAGE", chatMessage);
     }
-}
+} 
