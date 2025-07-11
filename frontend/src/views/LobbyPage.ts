@@ -325,7 +325,6 @@ export const renderLobbyPage = (element: HTMLElement) => {
         const currentUrl = window.location.pathname;
         if (currentUrl.includes(`/gameboard/${closedRoomCode}`)) {
           navigate("/home");
-          alert("A sala foi fechada pelo dono.");
         }
         break;
       case "LEFT_ROOM":

@@ -224,7 +224,6 @@ let turnTimer: {
         case 'LEFT_ROOM':
             if (countdownInterval) clearInterval(countdownInterval);
             countdownInterval = null;
-            alert(message.payload.message);
             navigate('/home');
             break;
         case 'FORCE_REDIRECT_TO_LOBBY':
@@ -234,7 +233,6 @@ let turnTimer: {
         case 'ROOM_CLOSED':
             if (countdownInterval) clearInterval(countdownInterval);
             countdownInterval = null;
-            alert(`The room "${message.payload.name}" has been closed.`);
             navigate('/home');
             break;
     }
@@ -741,7 +739,6 @@ const PLAY_CARD_COOLDOWN = 1000; // 1 segundo de cooldown
   }
   
     if (selectedCardId.length === 0) {
-      alert("Please select a card to play.");
       return;
     }
   
@@ -760,7 +757,6 @@ const PLAY_CARD_COOLDOWN = 1000; // 1 segundo de cooldown
         el.classList.remove("selected");
       });
     }
-    alert("Your hand has been updated. Please select cards again.");
     return;
   }
   
@@ -1223,7 +1219,7 @@ const avatarSrc = player.avatar_url
    */
   const createEliminatedPod = (player: any, positionClass: string) => {
     const avatarSrc = player.avatar_url
-      ? `${API_BASE_URL}${player.avatar_url}`
+      ?   player.avatar_url
       : "/default-avatar.jpg";
     return `
           <div class="player-pod ${positionClass} eliminated" data-player-id="${player.id}">
@@ -1239,7 +1235,7 @@ const avatarSrc = player.avatar_url
 
 const createInactivePod = (player: any, position: string) => {
   const avatarSrc = player.avatar_url
-    ? `${API_BASE_URL}${player.avatar_url}`
+    ? player.avatar_url
     : "/default-avatar.jpg";
   return `
     <div class="player-pod ${position} inactive" data-player-id="${player.id}">

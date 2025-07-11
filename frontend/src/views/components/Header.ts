@@ -250,7 +250,6 @@ export const renderHeader = (element: HTMLElement) => {
   // Profile navigation handler
   profileMenuItem?.addEventListener('click', () => {
     if (profileMenuItem.classList.contains('disabled')) {
-      alert("Você não pode acessar seu perfil durante uma partida.");
       userDropdown?.classList.add('hidden');
       return;
     }
