@@ -476,7 +476,7 @@ function checkForWinner(room: Room & { game: CardGame }): boolean {
 
     updatePlayerStatsAfterGame(allPlayerIds, winnerId);
 
-    room.status = "waiting";
+    room.status = "finished";
     room.game.phase = "finished";
 
     broadcastToRoom(room, "GAME_FINISHED", {

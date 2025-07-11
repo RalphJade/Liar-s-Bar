@@ -69,7 +69,7 @@ export interface Room {
   ownerId: string;
   players: Map<string, Participant>; 
   spectators: Map<string, Participant>; 
-  status: "waiting" | "playing";
+  status: "waiting" | "playing"|"finished";
   choices: Map<string, Choice>; 
   password?: string; 
 }

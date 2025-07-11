@@ -40,7 +40,7 @@ export interface RoomStateForApi {
     reconnectTimeLeft?: number | null;
   }[];
   spectators: { id: string; username: string }[];
-  status: "waiting" | "playing";
+  status: "waiting" | "playing"|"finished";
   myChoice?: any | null; // This field seems unused in the card game
 
   game?: {

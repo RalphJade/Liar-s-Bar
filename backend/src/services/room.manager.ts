@@ -285,7 +285,7 @@ export async function handleLeaveRoom(ws: CustomWebSocket): Promise<void> {
     clearTimeout(room.game.turnTimer);
   }
   
-  let playerLeft = false;
+    let playerLeft = false;
   if (room.players.has(ws.clientId)) {
     log(`Jogador ${ws.clientUsername} saiu da sala ${room.roomCode}.`);
     room.players.delete(ws.clientId);

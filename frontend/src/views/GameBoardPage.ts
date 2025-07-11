@@ -201,6 +201,10 @@ let turnTimer: {
         case 'GAME_FINISHED':
             setTimeout(() => {
                 showEndGameScreen(message.payload.winnerId === currentUser?.id, message.payload.message);
+                // Automaticamente sair da sala após 10 segundos
+                setTimeout(() => {
+                    sendWebSocketMessage({ type: 'LEAVE_ROOM', payload: {} });
+                }, 10000);
             }, 1000);
             break;
         case 'CHALLENGE_RESULT':
@@ -412,10 +416,28 @@ const showEndGameScreen = (didIWin: boolean, message: string) => {
         <div class="end-game-screen ${didIWin ? "win" : "lose"}">
             <h1>${didIWin ? "Victory!" : "Defeat!"}</h1>
             <p>${message}</p>
-            <button id="back-to-lobby" class="button button-primary">Back to Lobby</button>
+            <div class="auto-leave-info">
+                <p>Returning to lobby in <span id="auto-leave-timer">10</span> seconds...</p>
+            </div>
+            <button id="back-to-lobby" class="button button-primary">Back to Lobby Now</button>
         </div>
     `;
+  
+  // Iniciar contador regressivo visual
+  let timeLeft = 10;
+  const timerElement = document.getElementById("auto-leave-timer");
+  const countdown = setInterval(() => {
+    timeLeft--;
+    if (timerElement) {
+      timerElement.textContent = timeLeft.toString();
+    }
+    if (timeLeft <= 0) {
+      clearInterval(countdown);
+    }
+  }, 1000);
+  
   document.getElementById("back-to-lobby")?.addEventListener("click", () => {
+    clearInterval(countdown);
     sendWebSocketMessage({ type: 'LEAVE_ROOM', payload: {} });
   });
 };
