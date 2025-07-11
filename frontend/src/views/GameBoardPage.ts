@@ -57,21 +57,23 @@ export const renderGameBoardPage = (
                     <div id="player-pods-container"></div>
                     <div class="center-pile">
                         <div id="reference-card-container"></div>
-                        <div id="turn-timer" class="turn-timer" style="display: none;">
-                            <div class="timer-circle">
-                                <svg>
-                                    <circle class="timer-circle-bg" cx="40" cy="40" r="36"></circle>
-                                    <circle class="timer-progress" id="timer-progress" cx="40" cy="40" r="36"></circle>
-                                </svg>
-                                <div class="timer-text" id="timer-text">30</div>
-                            </div>
-                        </div>
                         <p id="game-status-text" class="game-status-text">Waiting for game to start...</p>
                     </div>
                 </div>
 
                 <div class="player-hand-container">
-                    <div id="my-info-area" class="my-info-area"></div>
+                    <div class="player-info-wrapper">
+                        <div id="my-info-area" class="my-info-area"></div>
+                        <div id="turn-timer" class="turn-timer" style="display: none;">
+                            <div class="timer-circle">
+                                <svg>
+                                    <circle class="timer-circle-bg" cx="25" cy="25" r="22"></circle>
+                                    <circle class="timer-progress" id="timer-progress" cx="25" cy="25" r="22"></circle>
+                                </svg>
+                                <div class="timer-text" id="timer-text">30</div>
+                            </div>
+                        </div>
+                    </div>
                     <div class="player-hand-area">
                         <div id="my-hand-cards" class="hand-cards"></div>
                     </div>
@@ -1257,11 +1259,81 @@ const renderDynamicStyles = () => {
         
         /* My Info and Hand */
         .player-hand-container { display: flex; flex-direction: column; align-items: center; gap: 1rem; }
+        .player-info-wrapper { display: flex; align-items: center; gap: 1rem; }
         .my-info-area { display: flex; align-items: center; gap: 1rem; background: rgba(0,0,0,0.4); padding: 0.5rem 1rem; border-radius: 20px; border: 1px solid var(--color-border); }
         .my-avatar { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; border: 3px solid var(--color-accent-gold); transition: all 0.3s ease;}
         .my-details { text-align: center; display: flex; flex-direction: column; }
         .my-name { font-weight: bold; color: var(--color-accent-gold); }
         .my-risk-level { font-size: 0.8rem; color: #fca5a5; }
+        
+        /* Timer de Turno - Posicionado à direita do my-info-area */
+        .turn-timer { 
+            background: radial-gradient(circle, rgba(0, 0, 0, 0.7) 0%, rgba(0, 0, 0, 0.4) 100%);
+            border: 2px solid rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            padding: 2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.5);
+        }
+        .timer-circle { 
+            position: relative; 
+            width: 50px; 
+            height: 50px; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .timer-circle svg { 
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 50px; 
+            height: 50px; 
+            transform: rotate(-90deg); 
+        }
+        .timer-circle-bg { 
+            fill: none; 
+            stroke: rgba(255, 255, 255, 0.15); 
+            stroke-width: 3; 
+        }
+        .timer-progress { 
+            fill: none; 
+            stroke: #4CAF50; 
+            stroke-width: 3; 
+            stroke-linecap: round; 
+            transition: stroke 0.3s ease; 
+        }
+        .timer-text { 
+            position: relative;
+            z-index: 2;
+            font-size: 16px; 
+            font-weight: bold; 
+            color: #fff; 
+            text-shadow: 0 0 8px rgba(0,0,0,0.9), 0 0 4px rgba(0,0,0,0.7);
+            font-family: 'Segoe UI', monospace;
+            line-height: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 24px;
+        }
+        .turn-timer.timer-warning { 
+            border-color: rgba(255, 165, 0, 0.5);
+            background: radial-gradient(circle, rgba(139, 69, 19, 0.7) 0%, rgba(139, 69, 19, 0.4) 100%);
+        }
+        .turn-timer.timer-warning .timer-progress { 
+            stroke: #ffa500; 
+        }
+        .turn-timer.timer-urgent { 
+            border-color: rgba(255, 68, 68, 0.5);
+            background: radial-gradient(circle, rgba(139, 0, 0, 0.7) 0%, rgba(139, 0, 0, 0.4) 100%);
+            animation: pulse 0.5s infinite; 
+        }
+        .turn-timer.timer-urgent .timer-progress { 
+            stroke: #ff4444; 
+        }
         
         .player-hand-area { min-height: 100px; display: flex; justify-content: center; align-items: flex-end; padding-bottom: 1rem; }
         .hand-cards { display: flex; gap: 0.5rem; }
@@ -1423,73 +1495,7 @@ const renderDynamicStyles = () => {
             box-shadow: 0 0 10px #f59e0b;
         }
 
-        /* Timer de Turno */
-        .turn-timer {
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0.5rem 0;
-        }
-        
-        .timer-circle {
-            position: relative;
-            width: 80px;
-            height: 80px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        
-        .timer-circle svg {
-            position: absolute;
-            width: 80px;
-            height: 80px;
-            transform: rotate(-90deg);
-        }
-        
-        .timer-progress {
-            fill: none;
-            stroke: #4CAF50;
-            stroke-width: 6;
-            stroke-linecap: round;
-            stroke-dasharray: 283;
-            stroke-dashoffset: 0;
-            transition: stroke-dashoffset 0.1s ease, stroke 0.3s ease;
-        }
-        
-        .timer-circle-bg {
-            fill: none;
-            stroke: rgba(255, 255, 255, 0.2);
-            stroke-width: 6;
-        }
-        
-        .timer-text {
-            position: relative;
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: white;
-            text-shadow: 0 0 10px rgba(0,0,0,0.8);
-            z-index: 1;
-        }
-        
-        .turn-timer.timer-warning .timer-circle {
-            animation: pulse-warning 1s infinite;
-        }
-        
-        .turn-timer.timer-urgent .timer-circle {
-            animation: pulse-urgent 0.5s infinite;
-        }
-        
-        @keyframes pulse-warning {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.05); }
-        }
-        
-        @keyframes pulse-urgent {
-            0%, 100% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-        }
+        /* Placeholder comentários para manter estrutura */
     `;
   return style.outerHTML;
 };
@@ -1556,7 +1562,7 @@ const startTurnTimer = () => {
   timerText.textContent = initialSeconds.toString();
   
   // Reseta o progresso
-  const circumference = 2 * Math.PI * 36; // raio = 36
+  const circumference = 2 * Math.PI * 22; // raio = 22 (novo tamanho menor)
   timerProgress.style.strokeDasharray = circumference.toString();
   timerProgress.style.strokeDashoffset = '0';
   
