@@ -137,7 +137,20 @@ const handleGameMessage = (message: any) => {
     switch(message.type) {
         case 'ROOM_STATE_UPDATE':
             gameState = message.payload;
+            const oldCards = myCards;
             myCards = message.payload.myCards || myCards;
+            
+            // Se as cartas mudaram (redistribuição), limpar seleções antigas
+            if (oldCards.length > 0 && myCards.length > 0) {
+                const oldCardIds = oldCards.map(c => c.id);
+                const newCardIds = myCards.map(c => c.id);
+                const cardsChanged = !oldCardIds.every(id => newCardIds.includes(id));
+                
+                if (cardsChanged) {
+                    selectedCardId = [];
+                }
+            }
+            
             updateUI();
             break;
         case 'YOUR_TURN':
@@ -648,11 +661,40 @@ const handleCardSelection = (cardEl: Element) => {
 /**
  * Handles the "Play Card" action.
  */
+let lastPlayCardTime = 0;
+const PLAY_CARD_COOLDOWN = 1000; // 1 segundo de cooldown
+
 const handlePlayCardAction = () => {
+  const now = Date.now();
+  if (now - lastPlayCardTime < PLAY_CARD_COOLDOWN) {
+    return;
+  }
+  
   if (selectedCardId.length === 0) {
     alert("Please select a card to play.");
     return;
   }
+  
+  // Verificar se as cartas selecionadas ainda existem na mão atual
+  const invalidSelections = selectedCardId.filter(id => 
+    !myCards.some(card => card.id === id)
+  );
+  
+  if (invalidSelections.length > 0) {
+    console.log('[Play Card] Some selected cards are no longer valid, clearing selection');
+    selectedCardId = [];
+    // Re-render para limpar seleções visuais
+    const container = document.getElementById("my-hand-cards");
+    if (container) {
+      container.querySelectorAll(".hand-card.selected").forEach(el => {
+        el.classList.remove("selected");
+      });
+    }
+    alert("Your hand has been updated. Please select cards again.");
+    return;
+  }
+  
+  lastPlayCardTime = now;
   sendWebSocketMessage({
     type: "PLAY_CARD",
     payload: { cardsId: selectedCardId },
