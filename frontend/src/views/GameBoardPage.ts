@@ -19,6 +19,19 @@ let chatMessages: ChatMessage[] = [];
 let selectedCardId: string[] = [];
 let countdownInterval: number | null = null;
 
+// Timer de turno do jogador
+let turnTimer: {
+  timeLeft: number;
+  timeLimit: number;
+  isMyTurn: boolean;
+  interval: number | null;
+} = {
+  timeLeft: 0,
+  timeLimit: 30000,
+  isMyTurn: false,
+  interval: null
+};
+
 /**
  * Renders the main game board page.
  * @param {HTMLElement} element - The root element to render the page into.
@@ -44,6 +57,15 @@ export const renderGameBoardPage = (
                     <div id="player-pods-container"></div>
                     <div class="center-pile">
                         <div id="reference-card-container"></div>
+                        <div id="turn-timer" class="turn-timer" style="display: none;">
+                            <div class="timer-circle">
+                                <svg>
+                                    <circle class="timer-circle-bg" cx="40" cy="40" r="36"></circle>
+                                    <circle class="timer-progress" id="timer-progress" cx="40" cy="40" r="36"></circle>
+                                </svg>
+                                <div class="timer-text" id="timer-text">30</div>
+                            </div>
+                        </div>
                         <p id="game-status-text" class="game-status-text">Waiting for game to start...</p>
                     </div>
                 </div>
@@ -115,6 +137,12 @@ const handleGameMessage = (message: any) => {
             gameState = message.payload;
             myCards = message.payload.myCards || myCards;
             updateUI();
+            break;
+        case 'YOUR_TURN':
+            handleYourTurn(message.payload);
+            break;
+        case 'PLAYER_TURN':
+            handlePlayerTurn(message.payload);
             break;
         case 'CHAT_BROADCAST':
             chatMessages.push(message.payload);
@@ -1394,6 +1422,195 @@ const renderDynamicStyles = () => {
             text-shadow: none;
             box-shadow: 0 0 10px #f59e0b;
         }
+
+        /* Timer de Turno */
+        .turn-timer {
+            position: relative;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0.5rem 0;
+        }
+        
+        .timer-circle {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .timer-circle svg {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            transform: rotate(-90deg);
+        }
+        
+        .timer-progress {
+            fill: none;
+            stroke: #4CAF50;
+            stroke-width: 6;
+            stroke-linecap: round;
+            stroke-dasharray: 283;
+            stroke-dashoffset: 0;
+            transition: stroke-dashoffset 0.1s ease, stroke 0.3s ease;
+        }
+        
+        .timer-circle-bg {
+            fill: none;
+            stroke: rgba(255, 255, 255, 0.2);
+            stroke-width: 6;
+        }
+        
+        .timer-text {
+            position: relative;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: white;
+            text-shadow: 0 0 10px rgba(0,0,0,0.8);
+            z-index: 1;
+        }
+        
+        .turn-timer.timer-warning .timer-circle {
+            animation: pulse-warning 1s infinite;
+        }
+        
+        .turn-timer.timer-urgent .timer-circle {
+            animation: pulse-urgent 0.5s infinite;
+        }
+        
+        @keyframes pulse-warning {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+        }
+        
+        @keyframes pulse-urgent {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
     `;
   return style.outerHTML;
+};
+
+ /**
+ * Manipula o evento YOUR_TURN quando é a vez do jogador atual
+ * @param payload - Dados do turno enviados pelo servidor
+ */
+const handleYourTurn = (payload: any) => {
+  console.log('[Timer] YOUR_TURN received:', payload);
+  
+  // Configura o timer para o jogador atual
+  turnTimer.timeLeft = payload.timeLimit || 30000;
+  turnTimer.timeLimit = payload.timeLimit || 30000;
+  turnTimer.isMyTurn = true;
+  
+  // Atualiza o status do jogo
+  const statusText = document.getElementById('game-status-text');
+  if (statusText) {
+    statusText.textContent = payload.message || `Your turn! Play a ${payload.currentCardType}.`;
+  }
+  
+  // Inicia o timer visual
+  startTurnTimer();
+};
+
+/**
+ * Manipula o evento PLAYER_TURN quando é a vez de outro jogador
+ * @param payload - Dados do turno enviados pelo servidor
+ */
+const handlePlayerTurn = (payload: any) => {
+  console.log('[Timer] PLAYER_TURN received:', payload);
+  
+  // Para o timer do jogador anterior
+  stopTurnTimer();
+  
+  // Atualiza o status do jogo
+  const statusText = document.getElementById('game-status-text');
+  if (statusText) {
+    statusText.textContent = payload.message || `${payload.playerName}'s turn.`;
+  }
+};
+
+/**
+ * Inicia o timer visual para o turno do jogador
+ */
+const startTurnTimer = () => {
+  const timerElement = document.getElementById('turn-timer');
+  const timerText = document.getElementById('timer-text');
+  const timerProgress = document.getElementById('timer-progress') as unknown as SVGCircleElement;
+  
+  if (!timerElement || !timerText || !timerProgress) return;
+  
+  // Mostra o timer
+  timerElement.style.display = 'block';
+  
+  // Para qualquer timer anterior
+  if (turnTimer.interval) {
+    clearInterval(turnTimer.interval);
+  }
+  
+  // Calcula o tempo inicial em segundos
+  const initialSeconds = Math.ceil(turnTimer.timeLeft / 1000);
+  timerText.textContent = initialSeconds.toString();
+  
+  // Reseta o progresso
+  const circumference = 2 * Math.PI * 36; // raio = 36
+  timerProgress.style.strokeDasharray = circumference.toString();
+  timerProgress.style.strokeDashoffset = '0';
+  
+  // Inicia o countdown
+  const startTime = Date.now();
+  turnTimer.interval = window.setInterval(() => {
+    const elapsed = Date.now() - startTime;
+    const remaining = Math.max(0, turnTimer.timeLimit - elapsed);
+    const seconds = Math.ceil(remaining / 1000);
+    
+    // Atualiza o texto
+    timerText.textContent = seconds.toString();
+    
+    // Atualiza o progresso circular
+    const progress = remaining / turnTimer.timeLimit;
+    const offset = circumference * (1 - progress);
+    timerProgress.style.strokeDashoffset = offset.toString();
+    
+    // Muda a cor conforme o tempo restante
+    if (seconds <= 5) {
+      timerProgress.style.stroke = '#ff4444'; // Vermelho para os últimos 5 segundos
+      timerElement.classList.add('timer-urgent');
+      timerElement.classList.remove('timer-warning');
+    } else if (seconds <= 10) {
+      timerProgress.style.stroke = '#ffa500'; // Laranja para os últimos 10 segundos
+      timerElement.classList.add('timer-warning');
+      timerElement.classList.remove('timer-urgent');
+    } else {
+      timerProgress.style.stroke = '#4CAF50'; // Verde para tempo normal
+      timerElement.classList.remove('timer-urgent', 'timer-warning');
+    }
+    
+    // Para o timer quando acaba
+    if (remaining <= 0) {
+      stopTurnTimer();
+    }
+  }, 100); // Atualiza a cada 100ms para suavidade
+};
+
+/**
+ * Para o timer visual do turno
+ */
+const stopTurnTimer = () => {
+  const timerElement = document.getElementById('turn-timer');
+  
+  if (turnTimer.interval) {
+    clearInterval(turnTimer.interval);
+    turnTimer.interval = null;
+  }
+  
+  if (timerElement) {
+    timerElement.style.display = 'none';
+    timerElement.classList.remove('timer-urgent', 'timer-warning');
+  }
+  
+  turnTimer.isMyTurn = false;
 };
