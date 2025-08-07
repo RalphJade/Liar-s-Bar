@@ -1,20 +1,25 @@
 import axios from 'axios';
 
-let baseURL: string;
-
-if (import.meta.env.DEV) {
-  baseURL = 'http://localhost:3001/api';
-} else {
-  baseURL = '/api';
-}
-
 const api = axios.create({
-  // Sets the base URL for all API requests to our backend server.
-
-  baseURL: baseURL,
-
-  //This instructs Axios to include credentials (like cookies) in all cross-origin requests, allowing the backend to read the auth token
+  baseURL: import.meta.env.DEV
+    ? 'http://localhost:3001/api'
+    : 'https://liar-s-bar-zylt.onrender.com/api', // Updated production URL
   withCredentials: true,
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
+
+// Handle session expiration
+api.interceptors.response.use(
+  response => response,
+  error => {
+    if (error.response?.status === 401) {
+      window.location.href = '/login';
+      localStorage.removeItem('user');
+    }
+    return Promise.reject(error);
+  }
+);
 
 export default api;
