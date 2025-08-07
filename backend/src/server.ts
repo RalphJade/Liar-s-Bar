@@ -28,12 +28,16 @@ const PORT = process.env.PORT || 3001;
 // Configure Cross-Origin Resource Sharing (CORS)
 // 'credentials: true' is essential for allowing the browser to send cookies
 // across different origins (e.g., from frontend at port 5174 to backend at 3001).
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || "http://localhost:5174",
-    credentials: true,
-  })
-);
+app.use(cors({
+  origin: [
+    process.env.FRONTEND_URL || "http://localhost:5174",
+    "https://liar-s-bar-1.onrender.com" // Add your production frontend URL
+  ],
+  credentials: true,
+  exposedHeaders: ['set-cookie'],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Cookie']
+}));
 
 // Add the cookie-parser middleware to parse cookies attached to the client request object.
 app.use(cookieParser());
