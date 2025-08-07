@@ -23,26 +23,22 @@ declare global {
  * decoded payload to the request object for use in subsequent handlers.
  */
 export const protect = (req: Request, res: Response, next: NextFunction) => {
-  // Attempt to retrieve the token from the request's cookies.
-  const token = req.cookies.token;
+  // Check both cookie and Authorization header
+  const token = req.cookies.token || req.headers.authorization?.split(' ')[1];
 
   if (!token) {
     return res.status(401).json({ status: 'fail', message: 'Not authorized, no token provided' });
   }
 
   try {
-    // Verify the token's signature using the secret key.
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as UserPayload;
-    
-    // Attach the decoded user payload to the request object.
     req.user = decoded;
-
-    // Proceed to the next middleware or route handler.
     next();
   } catch (error) {
     res.status(401).json({ status: 'fail', message: 'Not authorized, token is invalid' });
   }
 };
+
 
 /**
  * Function to verify a JWT token extracted manually (e.g., in WebSocket handshake).
